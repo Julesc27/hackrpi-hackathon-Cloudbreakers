@@ -79,12 +79,13 @@ test('new town can build a shelter and finish First Steps', async ({ page }) => 
   await expect(page.getByRole('dialog', { name: "Captain's Log" }).getByText('First Steps')).toBeVisible()
 })
 
-test('after First Steps the player can build an anchor', async ({ page }) => {
+test('after First Steps the player can unlock bridges without placing an anchor', async ({ page }) => {
   await startAt(page, 'shelter-built')
   await page.locator('[data-tutorial="rail-build"]').click()
   await page.locator('[data-tutorial="build-btn-bridgeAnchor"]').click()
-  await page.locator('[data-tutorial="plot-newHaven"]').click()
-  await expectSave(page, (town) => town.completed.includes('anchor') && town.buildings.some((b) => b.type === 'bridgeAnchor'))
+  await expect(page.getByRole('dialog', { name: 'Bridge routes' })).toBeVisible()
+  await expect(page.locator('.skymap .slot')).toHaveCount(0)
+  await expectSave(page, (town) => town.completed.includes('anchor') && town.buildings.some((b) => b.type === 'bridgeAnchor' && b.slot === -3))
 })
 
 test('after the anchor the player can connect Verdant Reach', async ({ page }) => {

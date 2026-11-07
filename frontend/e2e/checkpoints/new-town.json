@@ -1,13 +1,23 @@
 {
-  "version": 3,
+  "version": 5,
   "townName": "New Haven",
   "resources": {
     "wood": 24,
     "water": 30,
     "food": 24,
     "energy": 12,
-    "coins": 40
+    "coins": 40,
+    "stone": 8,
+    "seeds": 2,
+    "crystals": 0,
+    "materials": 0,
+    "fish": 0
   },
+  "deposits": {
+    "wood": 36,
+    "stone": 18
+  },
+  "lastInteraction": null,
   "happiness": 62,
   "population": 6,
   "sustainability": 40,
@@ -39,8 +49,7 @@
     "newHaven",
     "verdant",
     "rain",
-    "mistral",
-    "gardens",
+    "prism",
     "mercy",
     "hearth"
   ],

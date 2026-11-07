@@ -16,7 +16,7 @@ town = gameReducer(town, { type: 'BUILD', buildingType: 'shelter', island: 'newH
 if (!town.completed.includes('firstSteps')) throw new Error('Shelter checkpoint did not complete First Steps')
 save('shelter-built', town)
 
-town = gameReducer(town, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven', slot: 1 })
+town = gameReducer(town, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
 if (!town.completed.includes('anchor')) throw new Error('Anchor checkpoint did not complete Hold Fast')
 for (let i = 0; i < 2; i++) town = gameReducer(town, { type: 'GATHER_WOOD' })
 if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')

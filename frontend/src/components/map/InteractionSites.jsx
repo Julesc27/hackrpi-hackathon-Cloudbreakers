@@ -8,7 +8,7 @@ export function SiteActions({ island }) {
   const { state, dispatch } = useGame()
   return Object.entries(GATHER_SITES).filter(([, site]) => site.island === island).map(([id, site]) => {
     const reason = gatherAvailability(state, id)
-    return <button key={id} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
+    return <button key={id} data-tutorial={id === 'grove' ? 'gather-wood-btn' : undefined} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
       <span>{site.label}</span>
       <small>{Object.entries(site.reward).map(([key, value]) => `+${value} ${RESOURCES[key].label.toLowerCase()}`).join(' · ')}{site.deposit ? ` · ${state.deposits[site.deposit]} remaining` : ''}{site.cost ? ' · uses 1 seed' : ''}</small>
       {reason && <small>{reason}</small>}

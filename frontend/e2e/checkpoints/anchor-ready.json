@@ -1,12 +1,30 @@
 {
-  "version": 3,
+  "version": 5,
   "townName": "New Haven",
   "resources": {
     "wood": 18,
     "water": 31,
     "food": 15,
     "energy": 12,
-    "coins": 65
+    "coins": 65,
+    "stone": 2,
+    "seeds": 2,
+    "crystals": 0,
+    "materials": 0,
+    "fish": 0
+  },
+  "deposits": {
+    "wood": 24,
+    "stone": 18
+  },
+  "lastInteraction": {
+    "id": "i17",
+    "siteId": "grove",
+    "island": "newHaven",
+    "kind": "wood",
+    "reward": {
+      "wood": 6
+    }
   },
   "happiness": 68,
   "population": 10,
@@ -43,7 +61,7 @@
       "id": "b7",
       "type": "bridgeAnchor",
       "island": "newHaven",
-      "slot": 1,
+      "slot": -3,
       "builtLevel": 1
     }
   ],
@@ -55,8 +73,7 @@
     "newHaven",
     "verdant",
     "rain",
-    "mistral",
-    "gardens",
+    "prism",
     "mercy",
     "hearth"
   ],
@@ -93,7 +110,7 @@
       "level": 1,
       "type": "mission",
       "title": "Hold Fast",
-      "text": "Build a bridge anchor on New Haven. Reward: 30 XP · bridges unlocked."
+      "text": "Unlock bridge construction in the workshop. Reward: 30 XP · bridges unlocked."
     },
     {
       "id": "j12",
