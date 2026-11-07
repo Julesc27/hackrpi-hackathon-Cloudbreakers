@@ -38,12 +38,20 @@ export function ProgressionCard() {
   const { state } = useGame()
   const level = getLevelInfo(state.xp)
   const ui = useUI()
+  const pct = Math.round(level.progress * 100)
   return (
-    <button className="progression-card panel" onClick={() => ui.setPanel('quests')}>
-      <Star size={24} />
-      <div>
+    <button
+      className="progression-card panel"
+      onClick={() => ui.setPanel('quests')}
+      aria-label={level.next ? `Level ${level.level}: ${level.next.xp - state.xp} XP to level ${level.next.level}. Open quests` : `${level.title}. Open quests`}
+    >
+      <Star size={20} />
+      <div className="progression-text">
         <div className="progression-label">{level.next ? `Next: Level ${level.next.level}` : 'Maximum level'}</div>
         <strong>{level.next ? `${level.next.xp - state.xp} XP to level up` : level.title}</strong>
+        {level.next && (
+          <div className="progression-bar" aria-hidden="true"><span style={{ width: `${pct}%` }} /></div>
+        )}
         <div className="small muted">Build, gather & complete quests · +10 XP per action</div>
       </div>
     </button>
