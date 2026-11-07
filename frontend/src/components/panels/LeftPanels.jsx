@@ -83,7 +83,7 @@ export function QuestBook() {
                 <li
                   key={m.id}
                   className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}
-                  data-tutorial={featured || i === 0 ? 'quest-featured' : undefined}
+                  data-tutorial={featured ? 'quest-featured' : (!active.length && i === 0 ? 'quest-featured' : undefined)}
                 >
                   <div className="qnum">{i + 1}</div>
                   <div className="qbody">
@@ -154,7 +154,18 @@ export function BuildPanel() {
             if (def.happiness) fx.push(`${def.happiness > 0 ? '+' : ''}${def.happiness} happiness`)
 
             return (
-              <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`} data-tutorial={`build-card-${key}`}>
+              <div
+                key={key}
+                className={`ws-card${!unlocked ? ' is-locked' : ''}`}
+                data-tutorial={`build-card-${key}`}
+                style={{ cursor: !disabled ? 'pointer' : undefined }}
+                onClick={(e) => {
+                  if (!disabled && e.target.tagName !== 'BUTTON') {
+                    ui.setPlacing(key);
+                    ui.setPanel(null);
+                  }
+                }}
+              >
                 <div className="ws-name">{def.name}</div>
                 <img className="ws-art" src={`/art/build-${key}.webp`} alt="" />
                 <p className="ws-desc">{def.desc}</p>

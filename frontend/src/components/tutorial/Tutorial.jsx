@@ -156,7 +156,7 @@ export default function Tutorial() {
 
   // --- Step 4: Select a Shelter ---
   else if (tutorialStep === 4) {
-    targetSelector = '[data-tutorial="build-btn-shelter"]'
+    targetSelector = '[data-tutorial="build-card-shelter"]'
     title = 'Choose a Building'
     text = 'A Shelter gives your villagers a place to live. Click the + button to select it!'
     hint = 'Click the gold + button on the Shelter card'
@@ -272,6 +272,8 @@ export default function Tutorial() {
         const snap = stepSnapshot.current
         if (state.resources.wood > snap.wood) {
           const timer = setTimeout(() => {
+            ui.setPanel(null)
+            ui.setSelected(null)
             setTutorialStep(3)
           }, 350)
           return () => clearTimeout(timer)
@@ -371,6 +373,24 @@ export default function Tutorial() {
       if (currentEl) currentEl.removeAttribute('data-tutorial-active')
     }
   }, [targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
+
+  // Auto-scroll target element into view when active step changes
+  useEffect(() => {
+    if (!tutorialActive || !targetSelector) return
+    const scrollTarget = () => {
+      const el = document.querySelector(targetSelector)
+      if (el) {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      }
+    }
+    scrollTarget()
+    const t1 = setTimeout(scrollTarget, 80)
+    const t2 = setTimeout(scrollTarget, 260)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
 
   // --- Continuous Tracking of Target Element via requestAnimationFrame ---
   useLayoutEffect(() => {
@@ -508,14 +528,14 @@ export default function Tutorial() {
       placement = 'right'
       tLeft = targetRect.right + arrowDist
       tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
+    } else if (targetRect.left > viewWidth - 420) {
+      placement = 'left'
+      tLeft = targetRect.left - tooltipWidth - arrowDist
+      tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
     } else if (targetRect.bottom + tooltipHeight + margin > viewHeight) {
       placement = 'top'
       tTop = targetRect.top - tooltipHeight - arrowDist
       tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
-    } else if (targetRect.left > viewWidth - 380) {
-      placement = 'left'
-      tLeft = targetRect.left - tooltipWidth - arrowDist
-      tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
     } else {
       placement = 'bottom'
       tTop = targetRect.bottom + arrowDist

@@ -77,25 +77,6 @@ export default function IslandPanel() {
 
       {status === 'connected' && (
         <>
-          <h3 className="section">
-            Buildings <span className="muted">· {freeSlots} free plot{freeSlots === 1 ? '' : 's'}</span>
-          </h3>
-
-          {buildings.length === 0 && (
-            <p className="muted">Nothing built here yet.</p>
-          )}
-
-          <ul className="building-list">
-            {buildings.map((b) => (
-              <li key={b.id}>
-                <span>{BUILDINGS[b.type].name}</span>
-                {BUILDINGS[b.type].prod && (
-                  <YieldChips yields={BUILDINGS[b.type].prod} />
-                )}
-              </li>
-            ))}
-          </ul>
-
           <div className="action-stack">
             {id === 'newHaven' && (
               <button
@@ -142,6 +123,25 @@ export default function IslandPanel() {
               </button>
             )}
           </div>
+
+          <h3 className="section">
+            Buildings <span className="muted">· {freeSlots} free plot{freeSlots === 1 ? '' : 's'}</span>
+          </h3>
+
+          {buildings.length === 0 && (
+            <p className="muted">Nothing built here yet.</p>
+          )}
+
+          <ul className="building-list">
+            {buildings.map((b) => (
+              <li key={b.id}>
+                <span>{BUILDINGS[b.type].name}</span>
+                {BUILDINGS[b.type].prod && (
+                  <YieldChips yields={BUILDINGS[b.type].prod} />
+                )}
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
