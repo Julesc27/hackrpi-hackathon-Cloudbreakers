@@ -24,7 +24,7 @@ def _secret() -> str:
     if not secret or secret == "change-me":
         raise RuntimeError(
             "JWT_SECRET is not set (or still 'change-me'). Add a long random string "
-            "to backend/.env and to the Railway backend service variables."
+            "to backend/.env and to the backend project's Vercel environment variables."
         )
     return secret
 

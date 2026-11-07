@@ -21,7 +21,6 @@ export default function BridgeModal() {
   if (!route) return null
   const close = () => ui.setBridgeRoute(null)
   const existing = state.bridges.find((b) => b.route === route.id)
-  const noActions = state.actionsLeft < 1
 
   if (existing) {
     const t = BRIDGE_TYPES[existing.type]
@@ -29,7 +28,7 @@ export default function BridgeModal() {
     const full = bridgeCost(route, 'reinforced')
     const upCost = { wood: Math.ceil(full.wood / 2), coins: full.coins }
     return (
-      <Modal title={`${ISLANDS[route.a].name} ↔ ${ISLANDS[route.b].name}`} kicker={`${t.name} bridge · built turn ${existing.builtTurn}`} onClose={close}>
+      <Modal title={`${ISLANDS[route.a].name} ↔ ${ISLANDS[route.b].name}`} kicker={`${t.name} bridge · built at level ${existing.builtLevel}`} onClose={close}>
         <Stat label="Condition" value={existing.condition} color={st === 'good' ? 'linear-gradient(90deg,#5fb24f,#a8e08a)' : 'linear-gradient(90deg,#ff7a4b,#ffb38f)'} />
         <Stat label="Stability in storms" value={t.stability} color="linear-gradient(90deg,#7fb8ff,#cfe4ff)" />
         <Stat label="Capacity" value={t.capacity} max={8} suffix=" carts" color="linear-gradient(90deg,#e3b84f,#ffe28a)" />
@@ -37,13 +36,13 @@ export default function BridgeModal() {
           {st === 'closed' ? 'Closed — the island beyond produces nothing until repaired.' : st === 'strained' ? 'Strained — islands beyond produce at half strength.' : 'Holding steady.'}
         </p>
         <div className="row-btns">
-          <button className="btn-gold" disabled={existing.condition >= 100 || noActions || !canAfford(state.resources, REPAIR_COST)} onClick={() => { dispatch({ type: 'REPAIR_BRIDGE', routeId: route.id }); close() }}>
+          <button className="btn-gold" disabled={existing.condition >= 100 || !canAfford(state.resources, REPAIR_COST)} onClick={() => { dispatch({ type: 'REPAIR_BRIDGE', routeId: route.id }); close() }}>
             Repair <CostChips cost={REPAIR_COST} resources={state.resources} />
           </button>
           {existing.type === 'rope' && (
             <button
               className="btn-ghost"
-              disabled={!isUnlocked(state, 'reinforced') || noActions || !canAfford(state.resources, upCost)}
+              disabled={!isUnlocked(state, 'reinforced') || !canAfford(state.resources, upCost)}
               onClick={() => { dispatch({ type: 'UPGRADE_BRIDGE', routeId: route.id }); close() }}
             >
               {isUnlocked(state, 'reinforced') ? <>Reinforce <CostChips cost={upCost} resources={state.resources} /></> : <><Lock size={14} /> Reinforce at level {unlockLevel('reinforced')}</>}
@@ -68,8 +67,8 @@ export default function BridgeModal() {
           const cost = bridgeCost(route, key)
           const unlocked = isUnlocked(state, key)
           const affordable = canAfford(state.resources, cost)
-          const disabled = !anchor || !unlocked || !affordable || noActions
-          const why = !anchor ? 'Needs anchor' : !unlocked ? `Level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : noActions ? 'No actions left' : null
+          const disabled = !anchor || !unlocked || !affordable
+          const why = !anchor ? 'Needs anchor' : !unlocked ? `Level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : null
           return (
             <div key={key} className={`bridge-option card${!unlocked ? ' is-locked' : ''}`}>
               <h3>{t.name}</h3>
@@ -83,7 +82,7 @@ export default function BridgeModal() {
                 disabled={disabled}
                 onClick={() => { dispatch({ type: 'BUILD_BRIDGE', routeId: route.id, bridgeType: key }); close() }}
               >
-                {why ? <>{!unlocked && <Lock size={14} />} {why}</> : 'Build bridge · 1 action'}
+                {why ? <>{!unlocked && <Lock size={14} />} {why}</> : 'Build bridge'}
               </button>
             </div>
           )

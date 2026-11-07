@@ -84,7 +84,7 @@ export function CostChips({ cost = {}, resources }) {
   )
 }
 
-export function YieldChips({ yields = {}, sign = '+', suffix = '/turn' }) {
+export function YieldChips({ yields = {}, sign = '+', suffix = '/action' }) {
   const entries = Object.entries(yields).filter(([, v]) => v)
   if (!entries.length) return <span className="muted">—</span>
   return (

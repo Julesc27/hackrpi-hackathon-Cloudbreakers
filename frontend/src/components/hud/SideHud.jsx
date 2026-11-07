@@ -73,14 +73,14 @@ export function WeatherCard() {
       <div className="weather-head">
         {w.icon === 'sun' ? <ArtIcon name="sun" size={52} /> : <WeatherIcon kind={w.icon} size={46} />}
         <div>
-          <div className="weather-kicker">This turn</div>
+          <div className="weather-kicker">Current weather</div>
           <div className="weather-name">{w.name}</div>
         </div>
       </div>
       <p className="weather-text">{w.text}</p>
       <div className="weather-forecast">
         {canForecast ? (
-          <><WeatherIcon kind={f.icon} size={18} /> Next turn: <strong>{f.name}</strong></>
+          <><WeatherIcon kind={f.icon} size={18} /> Next level: <strong>{f.name}</strong></>
         ) : (
           <span className="muted">Forecasts need Mistral Heights</span>
         )}

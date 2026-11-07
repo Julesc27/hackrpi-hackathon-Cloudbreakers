@@ -29,6 +29,7 @@ export function QuestBook() {
   useEsc(close)
   const active = activeMissions(state)
   const activeIds = active.map((m) => m.id).join()
+
   useEffect(() => {
     ui.setSeenQuests((seen) => [...new Set([...seen, ...activeIds.split(',')])])
   }, [activeIds]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -39,6 +40,7 @@ export function QuestBook() {
     ...MISSIONS.filter((m) => !state.completed.includes(m.id) && !active.includes(m)),
     ...MISSIONS.filter((m) => state.completed.includes(m.id)),
   ]
+
   const go = (m) => {
     const id = m.id
     if (['firstSteps', 'anchor', 'keepLightsOn'].includes(id)) ui.setPanel('build')
@@ -46,6 +48,7 @@ export function QuestBook() {
     else if (id === 'beaconWakes') ui.openIsland('newHaven')
     else if (id === 'balancedTown') ui.setPanel('storage')
     else ui.setPanel(null)
+
     // If the tutorial is on the quest-book step, clicking Continue Quest should advance it
     if (ui.tutorialStep === 6) {
       ui.setPanel(null)
@@ -75,6 +78,7 @@ export function QuestBook() {
               const isActive = active.includes(m)
               const featured = isActive && m === active[0]
               const [v, g] = m.progress(state)
+
               return (
                 <li
                   key={m.id}
@@ -125,7 +129,7 @@ export function BuildPanel() {
   const ui = useUI()
   const close = () => ui.setPanel(null)
   useEsc(close)
-  const noActions = state.actionsLeft < 1
+
   return (
     <aside className="workshop" role="dialog" aria-label="Town Workshop">
       <div className="workshop-inner parchment">
@@ -133,7 +137,7 @@ export function BuildPanel() {
         <header className="ws-head">
           <h2><ArtIcon name="hammer-gold" size={38} /> Town Workshop</h2>
           <div className="ws-sub"><span className="spark">✦</span>Build something bright<span className="spark">✦</span></div>
-          <p>Every new building changes the skyline of New Haven. <strong>{state.actionsLeft}</strong> action{state.actionsLeft === 1 ? '' : 's'} left this turn.</p>
+          <p>Every new building changes the skyline of New Haven. Earn XP as you build and complete quests to unlock more.</p>
         </header>
         <div className="ws-cards">
           {BUILD_ORDER.map((key) => {
@@ -141,12 +145,14 @@ export function BuildPanel() {
             const unlocked = isUnlocked(state, key)
             const affordable = canAfford(state.resources, def.cost)
             const built = def.unique && countType(state, key) > 0
-            const disabled = !unlocked || !affordable || built || noActions
+            const disabled = !unlocked || !affordable || built
             const fx = []
+
             if (def.housing) fx.push(`Houses ${def.housing}`)
             if (def.capBonus) fx.push(`+${def.capBonus} storage`)
             if (def.energyCap) fx.push(`+${def.energyCap} energy storage`)
             if (def.happiness) fx.push(`${def.happiness > 0 ? '+' : ''}${def.happiness} happiness`)
+
             return (
               <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`} data-tutorial={`build-card-${key}`}>
                 <div className="ws-name">{def.name}</div>
@@ -164,7 +170,7 @@ export function BuildPanel() {
                   className="gold-plus"
                   disabled={disabled}
                   data-tutorial={`build-btn-${key}`}
-                  title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : noActions ? 'No actions left' : `Build ${def.name}`}
+                  title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
                   onClick={() => { ui.setPlacing(key); ui.setPanel(null) }}
                 >
                   {built ? <Check size={22} /> : unlocked ? <Plus size={26} /> : <Lock size={20} />}
@@ -187,6 +193,7 @@ export function AdvisorPanel() {
   const [n, setN] = useState(0)
   const all = getAdvice(state)
   const a = all[n % all.length]
+
   return (
     <aside className="notes" role="dialog" aria-label="Cloud's Notes">
       <img className="notes-header" src="/art/advisor-header.webp" alt="Cloud's Notes — here for a brighter tomorrow" />

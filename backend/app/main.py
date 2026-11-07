@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import auth, db
 from app.routers import auth as auth_routes
-from app.routers import players
+from app.routers import players, town
 
 
 @asynccontextmanager
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Cloudbreakers API", lifespan=lifespan)
 
 # Comma-separated list of frontend origins allowed to call the API.
-# On Railway set ALLOWED_ORIGINS=https://<your-frontend>.up.railway.app
+# On Vercel: ALLOWED_ORIGINS=https://cloudbreakers.club,https://www.cloudbreakers.club
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -34,6 +34,7 @@ app.add_middleware(
 
 app.include_router(auth_routes.router)
 app.include_router(players.router)
+app.include_router(town.router)
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { activeMissions } from '../../game/engine.js'
-import { ACTIONS_PER_TURN, BUILDINGS } from '../../game/data.js'
-import { HouseIcon, Hourglass, Star, ArtIcon } from '../icons.jsx'
+import { activeMissions, getLevelInfo } from '../../game/engine.js'
+import { BUILDINGS } from '../../game/data.js'
+import { HouseIcon, Star, ArtIcon } from '../icons.jsx'
 
 export function BottomNav() {
   const { state } = useGame()
@@ -33,30 +33,19 @@ export function BottomNav() {
   )
 }
 
-export function TurnControls() {
-  const { state, dispatch } = useGame()
+export function ProgressionCard() {
+  const { state } = useGame()
+  const level = getLevelInfo(state.xp)
+  const ui = useUI()
   return (
-    <div className="turn-controls panel">
-      <div className="turn-info">
-        <div className="turn-label">Turn</div>
-        <div className="turn-num">{state.turn}</div>
+    <button className="progression-card panel" onClick={() => ui.setPanel('quests')}>
+      <Star size={24} />
+      <div>
+        <div className="progression-label">{level.next ? `Next: Level ${level.next.level}` : 'Maximum level'}</div>
+        <strong>{level.next ? `${level.next.xp - state.xp} XP to level up` : level.title}</strong>
+        <div className="small muted">Build, gather & complete quests · +10 XP per action</div>
       </div>
-      <div className="actions-left" title={`${state.actionsLeft} of ${ACTIONS_PER_TURN} actions left this turn`}>
-        <div className="turn-label">Actions</div>
-        <div className="pips">
-          {Array.from({ length: ACTIONS_PER_TURN }, (_, i) => (
-            <span key={i} className={`pip${i < state.actionsLeft ? ' on' : ''}`} />
-          ))}
-        </div>
-      </div>
-      <button
-        className={`btn-gold end-turn${state.actionsLeft === 0 ? ' nudge' : ''}`}
-        onClick={() => dispatch({ type: 'END_TURN', roll: Math.random() })}
-        data-tutorial="end-turn-btn"
-      >
-        <Hourglass size={20} /> End Turn
-      </button>
-    </div>
+    </button>
   )
 }
 

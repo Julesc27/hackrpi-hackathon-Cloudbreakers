@@ -133,7 +133,7 @@ export default function SkyMap() {
           const S = BUILDING_SPRITES[b.type]
           return (
             <g key={b.id} transform={`translate(${x} ${y}) scale(1.15)`} className="building" filter="url(#warm)">
-              <g className={b.builtTurn === state.turn ? 'pop-in' : undefined}>{S && <S />}</g>
+              <g className={'pop-in'}>{S && <S />}</g>
             </g>
           )
         })}

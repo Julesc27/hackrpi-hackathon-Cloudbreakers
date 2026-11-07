@@ -1,0 +1,18 @@
+[Unit]
+Description=Cloudbreakers deploy hook (GitHub Actions -> redeploy)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+User=__USER__
+WorkingDirectory=__REPO__
+Environment=REPO_DIR=__REPO__
+# Only reachable through Caddy (deploy.<domain>); port 9000 is not opened in the cloud firewall.
+Environment=HOOK_HOST=0.0.0.0
+Environment=HOOK_PORT=9000
+ExecStart=__REPO__/deploy/hook/.venv/bin/python __REPO__/deploy/hook/hook.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

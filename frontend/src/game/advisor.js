@@ -5,20 +5,20 @@
 // Each tip: { situation, recommendation, reason, tradeoff, confidence, alternative, routeId?, art? }
 import { ISLANDS, BEACON_COST } from './data.js'
 import {
-  projectTurn, turnsOfSupply, hasAnchor, countType, housing, openRoutes, otherEnd,
-  bridgeCost, canAfford, activeMissions, isUnlocked, bridgeLabel,
+  projectProduction, actionsOfSupply, hasAnchor, countType, housing, openRoutes, otherEnd,
+  getLevelInfo, bridgeCost, canAfford, activeMissions, isUnlocked, bridgeLabel,
 } from './engine.js'
 
-const fmtTurns = (n) => (n === Infinity ? 'stable' : `${n} turn${n === 1 ? '' : 's'}`)
+const fmtActions = (n) => (n === Infinity ? 'stable' : `${n} action${n === 1 ? '' : 's'}`)
 const islandArt = (id) => (id === 'rain' ? '/art/advisor-rain.webp' : `/art/island-${id}.webp`)
 
 export function getAdvice(state) {
-  const proj = projectTurn(state)
-  const water = turnsOfSupply(state, 'water')
-  const food = turnsOfSupply(state, 'food')
+  const proj = projectProduction(state)
+  const water = actionsOfSupply(state, 'water')
+  const food = actionsOfSupply(state, 'food')
   const routes = openRoutes(state)
   const routeTo = (id) => routes.find((r) => otherEnd(r, state.connected) === id)
-  const situation = `Turn ${state.turn}. ${state.population} residents. Water: ${fmtTurns(water)}. Food: ${fmtTurns(food)}. Energy ${state.resources.energy}.`
+  const situation = `Level ${getLevelInfo(state.xp).level}. ${state.population} residents. Water: ${fmtActions(water)}. Food: ${fmtActions(food)}. Energy ${state.resources.energy}.`
   const out = []
   const connectTip = (id, reason, tradeoff, confidence, alternative = null) => {
     const r = routeTo(id)
@@ -35,7 +35,7 @@ export function getAdvice(state) {
       situation,
       recommendation: `Repair ${bridgeLabel(damaged[0].route)}`,
       reason: `It is at ${damaged[0].condition}% condition, so the island beyond it is producing at half strength or not at all.`,
-      tradeoff: 'Costs 6 wood and an action you could spend expanding.',
+      tradeoff: 'Costs 6 wood you could spend expanding.',
       confidence: 90,
       alternative: 'If wood is tight, wait for clear skies — but storms will only make it worse.',
       routeId: damaged[0].route,
@@ -49,7 +49,7 @@ export function getAdvice(state) {
       reason: 'Residents are sleeping under canvas. A shelter adds room for 4 more people and completes First Steps.',
       tradeoff: 'Uses 10 of your wood, which delays the bridge anchor slightly.',
       confidence: 92,
-      alternative: 'Build the Bridge Anchor first if you want to reach another island one turn sooner.',
+      alternative: 'Build the Bridge Anchor first if you want to reach another island sooner.',
       art: '/art/build-shelter.webp',
     })
   }
@@ -68,8 +68,8 @@ export function getAdvice(state) {
 
   if (water !== Infinity && water <= 3) {
     connectTip('rain',
-      `Our water will last only ${fmtTurns(water)}, and new residents will drink more. Rain Island gives a steady supply.`,
-      'It costs wood and an action, and leaves less for housing this turn.', 90,
+      `Our water will last only ${fmtActions(water)}, and new residents will drink more. Rain Island gives a steady supply.`,
+      'It costs wood, leaving less for housing.', 90,
       isUnlocked(state, 'waterCollector') ? 'A Water Collector on New Haven is a cheaper stopgap.' : null)
   }
 
@@ -77,12 +77,12 @@ export function getAdvice(state) {
     const pickRain = water !== Infinity && water <= food
     if (pickRain) {
       connectTip('rain',
-        `Rain Island has abundant fresh water. Our reserve lasts ${fmtTurns(water)}, and a bridge gives a steady supply that keeps us resilient in storms.`,
+        `Rain Island has abundant fresh water. Our reserve lasts ${fmtActions(water)}, and a bridge gives a steady supply that keeps us resilient in storms.`,
         'The water route delays Mistral Heights, which would bring energy for the beacon.', 88,
-        routeTo('verdant') ? `Verdant Reach is cheaper (${bridgeCost(routeTo('verdant'), 'rope').wood} wood) and adds wood every turn.` : null)
+        routeTo('verdant') ? `Verdant Reach is cheaper (${bridgeCost(routeTo('verdant'), 'rope').wood} wood) and adds wood after each action.` : null)
     } else {
       connectTip('verdant',
-        `Wood is our bottleneck. Verdant Reach adds wood and coins every turn and is the cheapest crossing.`,
+        `Wood is our bottleneck. Verdant Reach adds wood and coins after each action and is the cheapest crossing.`,
         'Harvesting the grove too hard will lower sustainability.', 82,
         'Rain Island first if you expect a dry spell.')
     }
@@ -92,7 +92,7 @@ export function getAdvice(state) {
         situation,
         recommendation: 'Gather wood on New Haven',
         reason: `We have ${state.resources.wood} wood and the cheapest bridge needs ${cheapest}.`,
-        tradeoff: 'Gathering spends actions you could use to build.',
+        tradeoff: 'Gathering also advances production and resident needs.',
         confidence: 80,
         alternative: null,
         art: '/art/card-verdant.webp',
@@ -102,13 +102,13 @@ export function getAdvice(state) {
 
   if (food !== Infinity && food <= 3) {
     if (routeTo('gardens')) {
-      connectTip('gardens', `Food runs out in ${fmtTurns(food)}. The Glass Gardens grow 6 food every turn.`, 'A 20-wood bridge.', 86)
+      connectTip('gardens', `Food runs out in ${fmtActions(food)}. The Glass Gardens grow 6 food after each action.`, 'A 20-wood bridge.', 86)
     } else {
       out.push({
         situation,
         recommendation: isUnlocked(state, 'garden') ? 'Build a Food Garden' : 'Find more food',
-        reason: `Food runs out in ${fmtTurns(food)}.`,
-        tradeoff: 'Gardens use 1 water per turn.',
+        reason: `Food runs out in ${fmtActions(food)}.`,
+        tradeoff: 'Gardens use 1 water per action.',
         confidence: 85,
         alternative: null,
         art: '/art/build-garden.webp',
@@ -119,14 +119,14 @@ export function getAdvice(state) {
   if (state.population >= housing(state)) {
     if (routeTo('hearth')) {
       connectTip('hearth', `All ${housing(state)} beds are taken. Hearthside has cottages for 8 more residents.`,
-        'More residents means more food and water every turn.', 72,
+        'More residents means more food and water after each action.', 72,
         'A Shelter on New Haven is cheaper but houses only 4.')
     } else {
       out.push({
         situation,
         recommendation: 'Build another Shelter',
         reason: `All ${housing(state)} beds are taken, so the population cannot grow.`,
-        tradeoff: 'More residents means more food and water every turn.',
+        tradeoff: 'More residents means more food and water after each action.',
         confidence: 70,
         alternative: 'Staying small is valid too — a quiet Skystead is a sustainable one.',
         art: '/art/build-shelter.webp',
@@ -148,7 +148,7 @@ export function getAdvice(state) {
   }
 
   if (proj.net.energy <= 0 && state.bridges.length) {
-    connectTip('mistral', 'We produce no energy yet. The turbines and panels on Mistral Heights give 6 every turn, plus forecasts.',
+    connectTip('mistral', 'We produce no energy yet. The turbines and panels on Mistral Heights give 6 after each action, plus forecasts.',
       'Solar storms halve its output.', 78)
   }
 
