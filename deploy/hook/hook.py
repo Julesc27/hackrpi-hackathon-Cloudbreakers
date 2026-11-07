@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import subprocess
 import threading
 import time
@@ -143,6 +144,13 @@ def run(cmd: str, timeout: int = 300) -> str:
     return out
 
 
+def _changed(old: str, new: str, path: str) -> bool:
+    try:
+        return bool(run(f"git diff --name-only {old} {new} -- {path}"))
+    except HookError:
+        return True
+
+
 def deploy(sha: str) -> dict:
     branch = CONFIG["branch"]
     with _deploy_lock:  # queue behind any running deploy
@@ -164,7 +172,63 @@ def deploy(sha: str) -> dict:
             "to": sha[:7],
             "seconds": round(time.time() - started, 1),
             "log_tail": output[-1500:],
+            "_hook_changed": _changed(current, sha, "deploy/hook"),
         }
+
+
+# ---- async jobs ----------------------------------------------------------------------------
+# A deploy rebuilds the Caddy container that carries the caller's connection, so we can't hold
+# the request open until it finishes. POST /hook answers 202 with a random job id right away;
+# the workflow polls GET /status/<id>. The id is unguessable and only handed to the verified
+# caller. Job state is kept in a small file so it survives the hook restarting itself.
+
+STATE_FILE = os.getenv("STATE_FILE", "/var/tmp/cloudbreakers-deploy-jobs.json")
+MAX_JOBS = 20
+_jobs_lock = threading.Lock()
+
+
+def _load_jobs() -> dict:
+    try:
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_job(job_id: str, job: dict) -> None:
+    with _jobs_lock:
+        jobs = _load_jobs()
+        jobs[job_id] = job
+        for old in sorted(jobs, key=lambda k: jobs[k].get("created", 0))[:-MAX_JOBS]:
+            del jobs[old]
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(jobs, f)
+        os.replace(tmp, STATE_FILE)
+
+
+def _run_job(job_id: str, sha: str, actor: str) -> None:
+    job = {"status": "running", "sha": sha[:7], "actor": actor, "created": time.time()}
+    restart = False
+    try:
+        _save_job(job_id, job)
+        result = deploy(sha)
+        restart = result.pop("_hook_changed", False)
+        job.update(result)
+    except HookError as e:
+        job.update(status="failed", error=str(e))
+    except subprocess.TimeoutExpired as e:
+        job.update(status="failed", error=f"timed out: {e.cmd}")
+    except Exception as e:  # never leave a job stuck in "running"
+        job.update(status="failed", error=f"{type(e).__name__}: {e}")
+    job["finished"] = time.time()
+    _save_job(job_id, job)
+    log.info("job %s: %s", job_id[:6], {k: v for k, v in job.items() if k != "log_tail"})
+    if restart:
+        # The deploy changed this hook's code: exit so systemd starts the new version.
+        log.info("hook code changed, restarting")
+        time.sleep(1)
+        os._exit(0)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -172,15 +236,23 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, status: int, body: dict):
         data = json.dumps(body, indent=2).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            log.info("client went away before the response was sent")
 
     def do_GET(self):
         if self.path == "/health":
             return self._send(200, {"status": "ok"})
+        if self.path.startswith("/status/"):
+            job = _load_jobs().get(self.path[len("/status/"):])
+            if job is None:
+                return self._send(404, {"error": "unknown job"})
+            return self._send(200, job)
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -191,15 +263,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(401, {"error": "missing bearer token"})
         try:
             claims = verify(auth[len("Bearer "):].strip())
-            log.info("deploy requested by %s for %s (run %s)", claims.get("actor"), claims["sha"][:7], claims.get("run_id"))
-            result = deploy(claims["sha"])
-            log.info("result: %s", {k: v for k, v in result.items() if k != "log_tail"})
-            self._send(200, result)
         except HookError as e:
-            log.warning("rejected/failed (%s): %s", e.status, str(e).splitlines()[0])
-            self._send(e.status, {"error": str(e)})
-        except subprocess.TimeoutExpired as e:
-            self._send(500, {"error": f"timed out: {e.cmd}"})
+            log.warning("rejected (%s): %s", e.status, str(e).splitlines()[0])
+            return self._send(e.status, {"error": str(e)})
+        job_id = secrets.token_urlsafe(24)
+        log.info("deploy %s requested by %s for %s (run %s)", job_id[:6], claims.get("actor"), claims["sha"][:7], claims.get("run_id"))
+        _save_job(job_id, {"status": "queued", "sha": claims["sha"][:7], "created": time.time()})
+        threading.Thread(target=_run_job, args=(job_id, claims["sha"], str(claims.get("actor"))), daemon=True).start()
+        self._send(202, {"status": "queued", "job": job_id, "status_url": f"/status/{job_id}"})
 
     def log_message(self, format, *args):  # noqa: A002 - must match the base class signature
         log.info("%s %s", self.address_string(), format % args)

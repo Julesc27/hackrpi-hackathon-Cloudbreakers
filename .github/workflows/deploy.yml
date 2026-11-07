@@ -44,15 +44,35 @@ jobs:
     steps:
       - name: Trigger deploy on the server
         env:
-          HOOK_URL: https://deploy.cloudbreakers.club/hook
+          HOOK: https://deploy.cloudbreakers.club
         run: |
           TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=cloudbreakers-deploy" | jq -r .value)
           echo "::add-mask::$TOKEN"
-          status=$(curl -sS -o response.json -w '%{http_code}' --max-time 1500 \
-            -X POST -H "Authorization: Bearer $TOKEN" "$HOOK_URL")
-          cat response.json; echo
-          if [ "$status" != "200" ]; then
-            echo "::error::Deploy failed (HTTP $status)"
+          if ! status=$(curl -sS -o start.json -w '%{http_code}' --max-time 60 \
+            -X POST -H "Authorization: Bearer $TOKEN" "$HOOK/hook"); then
+            echo "::error::Deploy connection closed. The old synchronous hook may have deployed this commit while Caddy restarted. Check the VM, then restart cloudbreakers-deploy-hook via systemd once to activate the new async hook. Do not rerun blindly."
             exit 1
           fi
+          cat start.json; echo
+          if [ "$status" != "202" ]; then
+            echo "::error::Server refused the deploy (HTTP $status)"
+            exit 1
+          fi
+          JOB=$(jq -r .job start.json)
+          echo "::add-mask::$JOB"
+
+          # The deploy restarts the web server we're talking through, so connection errors
+          # while polling are expected; keep trying for up to 25 minutes.
+          for _ in $(seq 1 300); do
+            sleep 5
+            curl -sS --max-time 15 -o job.json "$HOOK/status/$JOB" 2>/dev/null || continue
+            state=$(jq -r '.status // empty' job.json 2>/dev/null) || continue
+            case "$state" in
+              queued|running) echo "… $state" ;;
+              deployed|skipped) jq . job.json; exit 0 ;;
+              failed) jq . job.json; echo "::error::Deploy failed on the server"; exit 1 ;;
+            esac
+          done
+          echo "::error::Timed out waiting for the deploy to finish"
+          exit 1
