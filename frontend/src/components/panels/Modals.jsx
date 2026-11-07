@@ -105,8 +105,8 @@ export function JournalModal() {
       size="lg"
     >
       <ol className="journal">
-        {entries.map((e) => (
-          <li key={e.id} className={`jentry jentry-${e.type}`}>
+        {entries.map((e, i) => (
+          <li key={e.id} className={`jentry jentry-${e.type}`} data-tutorial={i === 0 ? 'journal-first' : undefined}>
             <span className="jturn">Level {e.level}</span>
             <div>
               <strong>{e.title}</strong>
@@ -232,7 +232,7 @@ export function MapModal() {
       }
     >
       <div className="chart-cards">
-        {ids.map((id) => {
+        {ids.map((id, idx) => {
           const d = ISLANDS[id]
           const status = state.connected.includes(id)
             ? 'connected'
@@ -243,7 +243,7 @@ export function MapModal() {
           const hidden = status === 'hidden'
 
           return (
-            <article key={id} className={`chart-card is-${status}`}>
+            <article key={id} className={`chart-card is-${status}`} data-tutorial={idx === 0 ? 'chart-first-card' : undefined}>
               <IslandBadge id={id} />
               <div className="cc-art">
                 <img src={islandCardArt(id)} alt="" />

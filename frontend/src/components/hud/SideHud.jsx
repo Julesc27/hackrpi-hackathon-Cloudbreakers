@@ -10,7 +10,7 @@ export function TitleBlock() {
       <CloudIcon size={40} className="title-cloud" />
       <h1 className="game-title"><span className="orn-l">✦</span>Cloudbreakers<span className="orn-r">✦</span></h1>
       <div className="town-ribbon"><span>{state.townName}</span></div>
-      <div className="town-stats">
+      <div className="town-stats" data-tutorial="hud-town">
         <span title="Population / housing"><People size={18} /> {state.population}<em>/{housing(state)}</em></span>
         <span title="Sustainability"><Leaf size={18} /> {state.sustainability}%</span>
       </div>
@@ -51,7 +51,7 @@ export function LevelBadge() {
   const { state } = useGame()
   const lvl = getLevelInfo(state.xp)
   return (
-    <div className="level-badge" title={lvl.next ? `${state.xp} / ${lvl.next.xp} XP` : `${state.xp} XP`}>
+    <div className="level-badge" data-tutorial="hud-level" title={lvl.next ? `${state.xp} / ${lvl.next.xp} XP` : `${state.xp} XP`}>
       <div className="level-orb"><CloudIcon size={52} /></div>
       <div className="level-card panel">
         <div className="level-row"><span className="lv">Lv.</span><span className="lv-num">{lvl.level}</span></div>

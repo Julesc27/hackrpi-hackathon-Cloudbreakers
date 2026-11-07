@@ -3,6 +3,88 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ArtIcon, CloudIcon } from '../icons.jsx'
 import './Tutorial.css'
 
+// Info-only steps: spotlight an element, explain it, press Next.
+const INFO_STEPS = {
+  9: {
+    target: 'hud-level',
+    title: 'Level & XP',
+    text: 'Every action earns XP. Level up to unlock new buildings and stronger bridges!',
+    label: 'Next \u203a',
+    next: 10,
+  },
+  10: {
+    target: 'hud-town',
+    title: 'Population & Sustainability',
+    text: 'Population shows villagers versus available housing \u2014 build Shelters to house more. Sustainability drops when you harvest forests, so keep it healthy!',
+    label: 'Next \u203a',
+    next: 11,
+  },
+  15: {
+    target: 'settings-btn',
+    title: 'Settings',
+    text: 'Log in to save your town to your account, or replay this tutorial any time from Settings \u2192 How to Play.',
+    label: 'Finish \u203a',
+    next: 16,
+  },
+}
+
+// Steps that teach an icon + the panel it opens. Each one:
+//   1) points at the icon until the player opens the panel
+//   2) highlights something inside the panel with a "Got it" button
+// Closing the panel with X / Esc also advances (see auto-advance effect below).
+const PANEL_STEPS = {
+  11: {
+    panel: 'advisor',
+    rail: 'rail-advisor',
+    inner: 'advisor-card',
+    railTitle: "Cloud's Notes",
+    railText: 'Need an idea? Your advisor Cloud can suggest what to do next. Click Cloud to hear a suggestion!',
+    railHint: 'Click the Cloud button in the left rail',
+    title: 'Advisor Suggestions',
+    text: 'Cloud recommends your next move, explains why, and warns you about trade-offs. Tap Ask again for a different idea.',
+    nextLabel: 'Got it \u203a',
+    next: 12,
+  },
+  12: {
+    panel: 'map',
+    rail: 'nav-map',
+    inner: 'chart-first-card',
+    railTitle: 'The Skyway Chart',
+    railText: 'New islands are waiting beyond the clouds. Click Map to open the Skyway Chart!',
+    railHint: 'Click the Map button in the bottom bar',
+    title: 'Discover Islands',
+    text: 'Each island produces different resources. Connect them with bridges to grow your economy \u2014 costs and yields are shown here.',
+    nextLabel: 'Got it \u203a',
+    next: 13,
+  },
+  13: {
+    panel: 'journal',
+    rail: 'nav-journal',
+    inner: 'journal-first',
+    railTitle: 'Journal',
+    railText: 'Your story is recorded as you play. Click Journal to read it!',
+    railHint: 'Click the Journal button in the bottom bar',
+    title: 'Your Journal',
+    text: 'Discoveries, completed missions, and events are logged here so you can look back on your village\u2019s journey.',
+    nextLabel: 'Got it \u203a',
+    next: 14,
+  },
+  14: {
+    panel: 'storage',
+    rail: 'nav-storage',
+    inner: 'storage-table',
+    railTitle: 'The Storehouse',
+    railText: 'Want the full picture of your supplies? Click Storage to open the Storehouse!',
+    railHint: 'Click the Storage button in the bottom bar',
+    title: 'Stock and Flow',
+    text: 'See how much of each resource you have, how much you can hold, and how it will change after your next action.',
+    nextLabel: 'Got it \u203a',
+    next: 15,
+  },
+}
+const FINAL_STEP = 16
+const TOTAL_STEPS = FINAL_STEP - 2 // steps 2..15 are numbered (welcome + finish are modals)
+
 export default function Tutorial() {
   const { state } = useGame()
   const ui = useUI()
@@ -27,6 +109,7 @@ export default function Tutorial() {
       wood: state.resources.wood,
       shelters: state.buildings.filter((b) => b.type === 'shelter').length,
       wasInQuests: false,
+      wasOpen: false,
     }
   }, [tutorialStep])
 
@@ -140,8 +223,41 @@ export default function Tutorial() {
     onNext = () => setTutorialStep(9)
   }
 
-  // --- Step 9: Tutorial Complete ---
-  else if (tutorialStep === 9) {
+  // --- Steps 11-14: Advisor, Map, Journal, Storehouse ---
+  else if (PANEL_STEPS[tutorialStep]) {
+    const cfg = PANEL_STEPS[tutorialStep]
+    if (ui.panel !== cfg.panel) {
+      targetSelector = `[data-tutorial="${cfg.rail}"]`
+      title = cfg.railTitle
+      text = cfg.railText
+      hint = cfg.railHint
+      // No continue button: player must click the icon
+    } else {
+      targetSelector = `[data-tutorial="${cfg.inner}"]`
+      title = cfg.title
+      text = cfg.text
+      showNextBtn = true
+      nextBtnLabel = cfg.nextLabel
+      onNext = () => {
+        ui.setPanel(null)
+        setTutorialStep(cfg.next)
+      }
+    }
+  }
+
+  // --- Info-only steps: Level, Town stats, Settings ---
+  else if (INFO_STEPS[tutorialStep]) {
+    const cfg = INFO_STEPS[tutorialStep]
+    targetSelector = `[data-tutorial="${cfg.target}"]`
+    title = cfg.title
+    text = cfg.text
+    showNextBtn = true
+    nextBtnLabel = cfg.label
+    onNext = () => setTutorialStep(cfg.next)
+  }
+
+  // --- Final step: Tutorial Complete ---
+  else if (tutorialStep === FINAL_STEP) {
     // Rendered as the final centered popup below.
   }
 
@@ -191,6 +307,17 @@ export default function Tutorial() {
         const timer = setTimeout(() => {
           setTutorialStep(6)
         }, 350)
+        return () => clearTimeout(timer)
+      }
+    }
+
+    // Steps 11-14: if the player opened the panel and then closed it (X / Esc), move on
+    const panelCfg = PANEL_STEPS[tutorialStep]
+    if (panelCfg) {
+      if (ui.panel === panelCfg.panel) {
+        stepSnapshot.current.wasOpen = true
+      } else if (stepSnapshot.current.wasOpen) {
+        const timer = setTimeout(() => setTutorialStep(panelCfg.next), 150)
         return () => clearTimeout(timer)
       }
     }
@@ -330,7 +457,7 @@ export default function Tutorial() {
     )
   }
 
-  if (tutorialStep === 9) {
+  if (tutorialStep === FINAL_STEP) {
     return (
       <div className="tutorial-root" role="dialog" aria-label="Tutorial - Complete" aria-live="polite">
         <div className="tutorial-backdrop-panel" style={{ top: 0, left: 0, width: '100vw', height: '100vh' }} onClick={handleBackdropClick} />
@@ -430,7 +557,7 @@ export default function Tutorial() {
           }} />
         )}
         <header className="tutorial-head">
-          <span className="tutorial-step-tag"><span>✦</span> Step {stepDisplayNumber} of 7</span>
+          <span className="tutorial-step-tag"><span>✦</span> Step {stepDisplayNumber} of {TOTAL_STEPS}</span>
           <button className="tutorial-skip-btn" onClick={() => endTutorial(true)} title="Skip the tutorial">Skip Tutorial</button>
         </header>
         <h3 className="tutorial-title">{title}</h3>

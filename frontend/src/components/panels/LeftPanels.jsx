@@ -199,7 +199,7 @@ export function AdvisorPanel() {
       <img className="notes-header" src="/art/advisor-header.webp" alt="Cloud's Notes — here for a brighter tomorrow" />
       <button className="seal-close notes-close" onClick={close} aria-label="Close"><Close size={20} /></button>
       <div className="notes-scroll">
-        <div className="notes-card">
+        <div className="notes-card" data-tutorial="advisor-card">
           <div className="notes-label">My suggestion</div>
           <button className="suggestion" onClick={() => a.routeId && ui.setBridgeRoute(a.routeId)} disabled={!a.routeId}>
             {a.art && <img src={a.art} alt="" />}
