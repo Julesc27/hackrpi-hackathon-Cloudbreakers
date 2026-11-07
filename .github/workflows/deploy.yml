@@ -1,0 +1,58 @@
+name: Deploy
+
+# Manual only: run ./deploy.sh or .\deploy.ps1 (or Actions tab -> Deploy -> Run workflow).
+# Build-checks frontend and backend at the tip of main, then tells the server to deploy it.
+# No secrets needed: the server trusts GitHub's signed OIDC token (see deploy/hook/hook.py).
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false  # queue deploys, never cut one off halfway
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check backend imports
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          python -c "from app.main import app; print('backend OK')"
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # lets this job request a GitHub-signed OIDC token
+      contents: read
+    steps:
+      - name: Trigger deploy on the server
+        env:
+          HOOK_URL: https://deploy.cloudbreakers.club/hook
+        run: |
+          TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=cloudbreakers-deploy" | jq -r .value)
+          echo "::add-mask::$TOKEN"
+          status=$(curl -sS -o response.json -w '%{http_code}' --max-time 1500 \
+            -X POST -H "Authorization: Bearer $TOKEN" "$HOOK_URL")
+          cat response.json; echo
+          if [ "$status" != "200" ]; then
+            echo "::error::Deploy failed (HTTP $status)"
+            exit 1
+          fi

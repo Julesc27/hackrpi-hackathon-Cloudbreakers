@@ -12,5 +12,6 @@ COPY . .
 
 EXPOSE 8000
 
-# Production: Railway injects $PORT. docker-compose overrides this with --reload for local dev.
+# Local dev only (docker-compose overrides this with --reload). Production runs on Vercel,
+# which finds the FastAPI `app` in app/main.py by itself.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

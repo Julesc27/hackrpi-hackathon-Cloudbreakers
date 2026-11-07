@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Cloudbreakers API", lifespan=lifespan)
 
 # Comma-separated list of frontend origins allowed to call the API.
-# On Railway set ALLOWED_ORIGINS=https://<your-frontend>.up.railway.app
+# On Vercel: ALLOWED_ORIGINS=https://cloudbreakers.club,https://www.cloudbreakers.club
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

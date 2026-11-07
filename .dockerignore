@@ -1,0 +1,7 @@
+# For builds whose context is the repo root (deploy/web.Dockerfile)
+**/node_modules
+**/dist
+**/.env
+**/.venv
+**/__pycache__
+.git

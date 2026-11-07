@@ -1,8 +1,6 @@
 services:
   frontend:
-    build:
-      context: ./frontend
-      target: dev   # Dockerfile's final stage is the production build for Railway
+    build: ./frontend
     ports:
       - "5173:5173"
     volumes:

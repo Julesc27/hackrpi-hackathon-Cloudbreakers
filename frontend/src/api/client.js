@@ -1,5 +1,5 @@
 // Talks to the FastAPI backend. Set VITE_API_URL (docker-compose does this locally;
-// on Railway it's a variable on the frontend service, read at build time).
+// on Vercel it's an environment variable on the frontend project, read at build time).
 // Without it the game still runs fully offline, saving to localStorage only.
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')

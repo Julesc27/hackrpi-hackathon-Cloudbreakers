@@ -1,0 +1,30 @@
+# Production entrypoint: Caddy terminates HTTPS (automatic Let's Encrypt certs) and serves
+# the built frontend. SITE_DOMAIN defaults to cloudbreakers.club; set SITE_DOMAIN=localhost to
+# try the whole stack locally with self-signed certs.
+
+{$SITE_DOMAIN:cloudbreakers.club} {
+	encode zstd gzip
+	root * /srv
+
+	# Vite fingerprints everything in /assets, so it can be cached forever
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+
+	try_files {path} /index.html
+	file_server
+}
+
+www.{$SITE_DOMAIN:cloudbreakers.club} {
+	redir https://{$SITE_DOMAIN:cloudbreakers.club}{uri} permanent
+}
+
+api.{$SITE_DOMAIN:cloudbreakers.club} {
+	encode zstd gzip
+	reverse_proxy backend:8000
+}
+
+# GitHub Actions calls this after the pipeline passes. The hook runs on the host (it needs
+# git + docker) and verifies GitHub's signed OIDC token itself.
+deploy.{$SITE_DOMAIN:cloudbreakers.club} {
+	reverse_proxy host.docker.internal:9000
+}
