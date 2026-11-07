@@ -1,0 +1,93 @@
+import { readFileSync } from 'node:fs'
+
+const instructions = readFileSync(new URL('./HOW_TO_PLAY.md', import.meta.url), 'utf8')
+const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
+const maxSteps = 8
+const maxTokens = 30_000
+
+export function gradeGatherWood(start, end) {
+  return Boolean(
+    end && end.resources?.wood > start.resources.wood &&
+    end.deposits?.wood < start.deposits.wood &&
+    end.xp > start.xp &&
+    end.lastInteraction?.siteId === 'grove',
+  )
+}
+
+export function parseAction(data, viewport) {
+  const candidate = data.candidates?.[0]
+  if (candidate?.finishReason !== 'STOP') throw new Error(`Model did not finish normally: ${candidate?.finishReason || 'no candidate'}`)
+  const text = candidate.content?.parts?.filter((part) => typeof part.text === 'string').map((part) => part.text).join('')
+  const action = JSON.parse(text)
+  if (!['click', 'scroll', 'done'].includes(action.action) || typeof action.message !== 'string') {
+    throw new Error('Model returned an invalid action')
+  }
+  if (action.action === 'click' && (!Number.isInteger(action.x) || !Number.isInteger(action.y) || action.x < 0 || action.y < 0 || action.x >= viewport.width || action.y >= viewport.height)) {
+    throw new Error('Model click is outside the browser viewport')
+  }
+  if (action.action === 'scroll' && (!Number.isInteger(action.deltaY) || Math.abs(action.deltaY) > 700)) {
+    throw new Error('Model scroll is invalid')
+  }
+  return action
+}
+
+async function nextAction(page, objective, previous, key) {
+  const screenshot = await page.screenshot({ type: 'jpeg', quality: 65 })
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. The screenshot is 1440 by 900 pixels. Use done only when you believe the objective is met.` }] },
+      contents: [{ role: 'user', parts: [
+        { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3))}\nChoose the next action from the screenshot.` },
+        { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
+      ] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            action: { type: 'STRING', enum: ['click', 'scroll', 'done'] },
+            x: { type: 'INTEGER' },
+            y: { type: 'INTEGER' },
+            deltaY: { type: 'INTEGER' },
+            message: { type: 'STRING' },
+          },
+          required: ['action', 'x', 'y', 'deltaY', 'message'],
+        },
+      },
+    }),
+    signal: AbortSignal.timeout(25_000),
+  })
+  if (!response.ok) throw new Error(`Gemini request failed (HTTP ${response.status}); check key, model access, and free-tier quota`)
+  return response.json()
+}
+
+export async function runAgent(page, objective, key, onStep) {
+  if (!key) throw new Error('GEMINI_API_KEY is required')
+  const transcript = []
+  let tokens = 0
+  let reason = 'step limit reached'
+  for (let step = 1; step <= maxSteps; step++) {
+    if (tokens >= maxTokens) { reason = 'token limit reached'; break }
+    const data = await nextAction(page, objective, transcript, key)
+    tokens += data.usageMetadata?.totalTokenCount || 0
+    const action = parseAction(data, page.viewportSize())
+    const entry = { step, action: action.action, message: action.message }
+    if (action.action === 'click') {
+      entry.x = action.x
+      entry.y = action.y
+      await page.mouse.click(action.x, action.y)
+    } else if (action.action === 'scroll') {
+      entry.deltaY = action.deltaY
+      await page.mouse.wheel(0, action.deltaY)
+    } else {
+      reason = 'agent finished'
+    }
+    transcript.push(entry)
+    onStep(entry)
+    if (action.action === 'done') break
+  }
+  return { model, objective, reason, tokens, transcript }
+}

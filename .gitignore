@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 frontend/test-results/
+frontend/agent-results/
 frontend/playwright-report/
 
 # Secrets — never commit credentials
