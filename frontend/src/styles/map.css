@@ -6,7 +6,7 @@
   overflow: hidden;
   touch-action: none;
   cursor: grab;
-  background: #0d164a;
+  background: #070b24;
 }
 .camera.is-dragging { cursor: grabbing; }
 .cam-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }

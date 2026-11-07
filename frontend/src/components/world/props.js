@@ -12,16 +12,19 @@ const EDGE = 'rgba(28,24,60,.30)'
 function tree(ctx, p) {
   const s = p.s || 1
   const tone = p.tone || 0
-  ellipse(ctx, p.x, p.y + 1, 7 * s, 3 * s, 'rgba(18,24,60,.22)')
-  line(ctx, p.x, p.y, p.x, p.y - 8 * s, col(PAL.woodDark), 2.2 * s, 'butt')
+  ellipse(ctx, p.x, p.y + 1, 8 * s, 3.2 * s, 'rgba(18,24,60,.22)')
+  line(ctx, p.x, p.y, p.x, p.y - 9 * s, col(PAL.woodDark), 2.4 * s, 'butt')
+  line(ctx, p.x - 0.6 * s, p.y - 2 * s, p.x - 0.6 * s, p.y - 8 * s, col('#a87445', 0.55), 0.8 * s)
   if (p.kind === 'round') {
-    const d = [PAL.leafDark, '#356b3e', '#3c6b33'][tone % 3]
-    const m = [PAL.leaf, '#4c9a5f', '#5a9a46'][tone % 3]
-    const l = [PAL.leafLight, '#6fb873', '#79b85a'][tone % 3]
-    circle(ctx, p.x, p.y - 15 * s, 9 * s, col(d))
-    circle(ctx, p.x - 2.6 * s, p.y - 17.5 * s, 6.4 * s, col(m))
-    circle(ctx, p.x + 3.4 * s, p.y - 13 * s, 4.6 * s, col(m))
-    circle(ctx, p.x - 3.6 * s, p.y - 19.5 * s, 3 * s, col(l))
+    const d = [PAL.leafDark, '#2f6b40', '#345f30'][tone % 3]
+    const m = [PAL.leaf, '#4ea862', '#5aaa48'][tone % 3]
+    const l = [PAL.leafLight, '#8ed48a', '#c6e98a'][tone % 3]
+    circle(ctx, p.x + 1.2 * s, p.y - 12 * s, 8.2 * s, col(d))
+    circle(ctx, p.x - 4.2 * s, p.y - 15 * s, 7.2 * s, col(d))
+    circle(ctx, p.x + 4.6 * s, p.y - 16 * s, 6.4 * s, col(m))
+    circle(ctx, p.x - 1.2 * s, p.y - 19 * s, 6.6 * s, col(m))
+    circle(ctx, p.x + 2.2 * s, p.y - 21 * s, 4.4 * s, col(l))
+    circle(ctx, p.x - 3.4 * s, p.y - 20 * s, 2.4 * s, col('#e8f6c8', 0.85))
   } else {
     const d = [PAL.pine, '#2c5e46', '#2e5a40'][tone % 3]
     const l = [PAL.pineLight, '#3f7f58', '#4d8a54'][tone % 3]
@@ -70,12 +73,26 @@ function house(ctx, p) {
   const a = p.a || 18, b = p.b || 14, h = p.h || 12, rh = p.rh || 9
   ellipse(ctx, p.x, p.y + 2, (a + b) * 0.62, (a + b) * 0.26, 'rgba(18,24,60,.22)')
   box(ctx, p.x, p.y, a, b, h, { left: col(PAL.wall), right: col(PAL.wallShade), edge: EDGE })
-  // timber band + door
+  // cream stone flecks and a timber door
+  const speckle = rng(((p.x * 13 + p.y * 7) | 0) || 1)
+  for (let i = 0; i < 8; i++) {
+    const c = iso(p.x, p.y, (speckle() - 0.5) * a * 0.72, b / 2 - 0.4, h * (0.18 + speckle() * 0.62))
+    circle(ctx, c[0], c[1], 0.45, col(speckle() < 0.55 ? '#fffaf0' : '#cbb892', 0.85))
+  }
   const d = iso(p.x, p.y, a / 2, b * 0.1, 0)
   poly(ctx, [[d[0], d[1] - 0.2], [d[0], d[1] - 7.5], [d[0] - 3.4, d[1] - 5.8], [d[0] - 3.4, d[1] + 1.5]], col(PAL.timber))
+  poly(ctx, [[d[0] - 0.4, d[1] - 3.2], [d[0] - 2.6, d[1] - 2.2], [d[0] - 2.6, d[1] - 4.6], [d[0] - 0.4, d[1] - 5.2]], lit() ? col(PAL.window) : col(PAL.windowOff))
   windowsOn(ctx, p.x, p.y, a, b, h, Math.max(1, Math.round(a / 9)))
-  if (p.chimney) box(ctx, ...iso(p.x, p.y, -a / 4, -b / 6, 0), 3, 3, h + rh + 3, { left: col('#b8a37c'), right: col('#9a8664'), top: col('#6b5a44') })
+  if (p.chimney) box(ctx, ...iso(p.x, p.y, -a / 4, -b / 6, 0), 3.2, 3.2, h + rh + 4, { left: col('#d8c8a4'), right: col('#b49a74'), top: col('#6b5a44') })
   gableRoof(ctx, p.x, p.y, a, b, h, rh, p.roof || 'blue', PAL.wallShade)
+  // ridge highlight so pastel roofs catch the light
+  const ridgeL = iso(p.x, p.y, -(a / 2 + 2), 0, h + rh - 0.4)
+  const ridgeR = iso(p.x, p.y, a / 2 + 2, 0, h + rh - 0.4)
+  line(ctx, ridgeL[0], ridgeL[1], ridgeR[0], ridgeR[1], col('#fff6e4', 0.55), 0.8)
+  const pot = iso(p.x, p.y, -a * 0.15, b / 2, 0.4)
+  circle(ctx, pot[0] - 1.4, pot[1] - 2, 1.3, col('#ff8eae'))
+  circle(ctx, pot[0] + 1.1, pot[1] - 2.4, 1.15, col('#ffe07a'))
+  circle(ctx, pot[0], pot[1] - 3.3, 1.2, col(PAL.leafLight))
 }
 function houseLights(p) {
   const a = p.a || 18, b = p.b || 14, h = p.h || 12
@@ -99,10 +116,12 @@ function chimneySmoke(ctx, p, t) {
 
 /* ---------------------------------------------------------------- small street furniture */
 function lamp(ctx, p) {
-  ellipse(ctx, p.x, p.y + 0.6, 2.4, 1.1, 'rgba(18,24,60,.25)')
-  line(ctx, p.x, p.y, p.x, p.y - 15, col('#3a3550'), 1.3)
-  poly(ctx, [[p.x - 2.4, p.y - 15], [p.x + 2.4, p.y - 15], [p.x + 1.6, p.y - 20], [p.x - 1.6, p.y - 20]], lit() ? col('#ffe9a8') : col('#6d7299'), col('#3a3550'), 0.6)
-  poly(ctx, [[p.x - 2.8, p.y - 20], [p.x + 2.8, p.y - 20], [p.x, p.y - 22.5]], col('#3a3550'))
+  ellipse(ctx, p.x, p.y + 0.6, 2.6, 1.2, 'rgba(18,24,60,.25)')
+  line(ctx, p.x, p.y, p.x, p.y - 16, col('#3a3228'), 1.5)
+  line(ctx, p.x - 0.4, p.y - 2, p.x - 0.4, p.y - 15, col(PAL.gold, 0.7), 0.5)
+  poly(ctx, [[p.x - 2.6, p.y - 16], [p.x + 2.6, p.y - 16], [p.x + 1.7, p.y - 21], [p.x - 1.7, p.y - 21]], lit() ? col('#fff1c2') : col('#6d7299'), col(PAL.goldDark), 0.6)
+  poly(ctx, [[p.x - 3.1, p.y - 21], [p.x + 3.1, p.y - 21], [p.x, p.y - 23.6]], col(PAL.goldDark))
+  if (lit()) circle(ctx, p.x, p.y - 18.2, 1.1, col('#fffef4'))
 }
 function bench(ctx, p) {
   box(ctx, p.x, p.y, 10, 3, 2.4, { top: col(PAL.woodLight), left: col(PAL.wood), right: col(PAL.woodDark) })
@@ -254,18 +273,24 @@ function tower(ctx, p) {
 }
 export function towerTop(p) { return [p.x, p.y - 22 - (p.h || 100) - 26] }
 function towerAnim(ctx, p, t, env) {
-  // armillary sphere: rings turn slowly; orb glows when the beacon is restored
+  // armillary sphere: rings turn slowly; the orb is always gold, and floods the plaza once restored
   const [cx, cy] = towerTop(p)
   const on = env.beacon && lit()
-  if (on) glow(ctx, cx, cy, 42 + Math.sin(t * 2) * 4, PAL.glow, 0.5)
-  circle(ctx, cx, cy, 7.5, on ? col('#fff6c8') : col('#7d86a8'))
-  if (on) circle(ctx, cx - 2, cy - 2, 3, '#ffffff')
-  ctx.lineWidth = 1.6; ctx.strokeStyle = col(PAL.gold)
-  ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.stroke()
-  ctx.lineWidth = 1.2
-  ctx.beginPath(); ctx.ellipse(cx, cy, 14, Math.abs(Math.cos(t * 0.6)) * 14 + 1, 0.35, 0, TAU); ctx.stroke()
-  ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(Math.sin(t * 0.45)) * 14 + 1, 14, -0.25, 0, TAU); ctx.stroke()
-  line(ctx, cx, cy + 14, cx, cy + 22, col(PAL.goldDark), 2)
+  const pulse = 1 + Math.sin(t * 2) * 0.08
+  glow(ctx, cx, cy, (on ? 56 : 22) * pulse, PAL.glow, on ? 0.62 : 0.28)
+  if (on) glow(ctx, cx, cy + 70, 90, '#fff1c4', 0.16)
+  circle(ctx, cx, cy, on ? 8.4 : 6.4, on ? '#fff8d4' : col('#e7c56a'))
+  circle(ctx, cx - 2.2, cy - 2.2, on ? 3.2 : 2, '#ffffff')
+  ctx.lineWidth = on ? 2 : 1.5
+  ctx.strokeStyle = col(PAL.goldLight)
+  ctx.beginPath(); ctx.arc(cx, cy, 16, 0, TAU); ctx.stroke()
+  ctx.strokeStyle = col(PAL.gold)
+  ctx.lineWidth = 1.35
+  ctx.beginPath(); ctx.ellipse(cx, cy, 16, Math.abs(Math.cos(t * 0.55)) * 15 + 1.2, 0.4, 0, TAU); ctx.stroke()
+  ctx.beginPath(); ctx.ellipse(cx, cy, Math.abs(Math.sin(t * 0.42)) * 15 + 1.2, 16, -0.3, 0, TAU); ctx.stroke()
+  ctx.beginPath(); ctx.ellipse(cx, cy, 16, 5.5, t * 0.35, 0, TAU); ctx.stroke()
+  line(ctx, cx, cy + 16, cx, cy + 24, col(PAL.goldDark), 2.2)
+  circle(ctx, cx, cy - 17.5, 1.6, col(PAL.goldLight))
 }
 
 /* ---------------------------------------------------------------- energy: turbine & solar */
@@ -295,7 +320,7 @@ function solar(ctx, p) {
       const q = (a, b, z) => iso(p.x, p.y, du + a, dv + b, z)
       line(ctx, ...q(-6, 3, 0), ...q(-6, 3, 4), col('#6b5b45'), 1)
       line(ctx, ...q(6, 3, 0), ...q(6, 3, 4), col('#6b5b45'), 1)
-      poly(ctx, [q(-8, -5, 9), q(8, -5, 9), q(8, 5, 3), q(-8, 5, 3)], col(PAL.panel), col('#d9c58f'), 0.7)
+      poly(ctx, [q(-8, -5, 9), q(8, -5, 9), q(8, 5, 3), q(-8, 5, 3)], col('#1f4ec4'), col(PAL.gold), 1)
       line(ctx, ...q(0, -5, 9), ...q(0, 5, 3), col(PAL.panelLight), 0.4)
       line(ctx, ...q(-8, 0, 6), ...q(8, 0, 6), col(PAL.panelLight), 0.4)
       poly(ctx, [q(-7, -4.5, 8.8), q(-2, -4.5, 8.8), q(-4, 0, 6), q(-7, 0, 6)], 'rgba(255,255,255,.12)')
@@ -316,10 +341,11 @@ function tank(ctx, p) {
     const ax = x + r * k, ay = y + Math.sqrt(1 - k * k) * r / 2 - 2
     poly(ctx, [[ax - 3, ay], [ax + 3, ay], [ax + 3, ay - 6], [ax, ay - 8], [ax - 3, ay - 6]], col('#3b4d8a'))
   }
-  ellipse(ctx, x, y - h, r, r / 2, col(PAL.stone), EDGE)
-  const w = ctx.createRadialGradient(x - r * 0.3, y - h - r * 0.15, 1, x, y - h, r)
-  w.addColorStop(0, col(PAL.waterLight)); w.addColorStop(1, col(PAL.water))
-  ellipse(ctx, x, y - h, r * 0.82, r * 0.38, w)
+  ellipse(ctx, x, y - h, r, r / 2, col(PAL.stone), col(PAL.gold, 0.8), 1.1)
+  const w = ctx.createRadialGradient(x - r * 0.35, y - h - r * 0.2, 1, x, y - h, r)
+  w.addColorStop(0, col('#f4fdff')); w.addColorStop(0.35, col('#7eebf4')); w.addColorStop(1, col('#1490c8'))
+  ellipse(ctx, x, y - h, r * 0.84, r * 0.4, w)
+  ellipse(ctx, x - r * 0.22, y - h - r * 0.08, r * 0.28, r * 0.1, col('#ffffff', 0.55))
 }
 function tankAnim(ctx, p, t) {
   if (!lit()) return
@@ -461,7 +487,7 @@ function crystal(ctx, p) {
 
 /* ---------------------------------------------------------------- registry */
 export const PROPS = {
-  tree: { draw: tree, size: (p) => [12 * (p.s || 1), 34 * (p.s || 1), 4] },
+  tree: { draw: tree, size: (p) => [16 * (p.s || 1), 40 * (p.s || 1), 5] },
   house: { draw: house, anim: chimneySmoke, lights: houseLights, size: (p) => [(p.a || 18) + (p.b || 14), (p.h || 12) + (p.rh || 9) + (p.b || 14) / 2 + 12, 14] },
   lamp: { draw: lamp, lights: (p) => [[p.x, p.y - 18, 18]], size: () => [6, 26, 3] },
   bench: { draw: bench, size: () => [10, 10, 5] },

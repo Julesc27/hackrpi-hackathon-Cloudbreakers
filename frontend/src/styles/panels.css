@@ -541,8 +541,22 @@ h3.section {
   .ws-head h2 { font-size: 20px; }
   .ws-sub { font-size: 18px; }
   .bridge-options, .report-grid { grid-template-columns: 1fr; }
-  .book { grid-template-columns: 1fr; height: calc(100dvh - 80px); padding: 12px; }
-  .book-left, .book-rings, .bookmark { display: none; }
+  .book { display: flex; flex-direction: column; grid-template-columns: none; height: calc(100dvh - 24px); padding: 10px; overflow: auto; }
+  .book-left { display: flex; flex: none; max-height: 240px; padding: 12px 14px; border-radius: 10px; }
+  .book-left .script { font-size: 20px; margin: 4px 0; }
+  .log-title { font-size: 32px; margin: 4px 0; }
+  .log-art { max-height: 96px; width: auto; }
+  .book-rings, .bookmark { display: none; }
+  .book-right { min-height: 320px; border-radius: 10px; }
+  .notes { top: 168px; bottom: 8px; padding-top: 68px; }
+  .notes-header { width: min(280px, 82vw); top: -46px; }
+  .notes-card { padding: 10px 12px 8px; }
+  .notes .hand { font-size: 16px; margin-bottom: 6px; }
+  .notes .suggestion strong { font-size: 18px; }
+  .notes .confidence { padding: 8px 12px; }
+  .notes .conf-num { font-size: 22px; }
+  .notes-foot { display: none; }
+  .notes-btns { margin-top: 0; }
   .p-title { font-size: 22px; }
   .modal-body { padding: 10px 16px 16px; }
 }

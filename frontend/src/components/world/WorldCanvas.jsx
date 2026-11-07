@@ -4,6 +4,7 @@ import { ISLANDS } from '../../game/data.js'
 import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
 import { WORLD_ISLANDS, FAR_ISLETS } from './layout.js'
+import { ART_SCALE, ISLAND_ART, PAINTED_BEACON, artReady, islandImage } from './artLayout.js'
 import { PROPS, towerTop } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudPuff, cloudBank } from './island.js'
 import { Crowd, buildGraph, drawPerson, personLight, bridgeCurve } from './people.js'
@@ -96,15 +97,16 @@ function drawIslet(ctx, x, y, s, seed) {
   ctx.lineTo(x + rx, y); ctx.closePath(); ctx.fillStyle = g; ctx.fill()
   ellipse(ctx, x, y + 3, rx, ry, col(PAL.grassEdge)); ellipse(ctx, x, y, rx, ry, col(PAL.grass))
   for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; cloudPuff(ctx, x + Math.cos(a) * rx, y + Math.sin(a) * ry + 4, (6 + r() * 6) * s, 1) }
-  // a tiny temple
+  // a tiny hazy shrine, warm enough to read as a distant town
   const tx = x + (r() - 0.5) * rx * 0.5, ty = y - 2
-  ctx.fillStyle = col('#e8dcc4'); ctx.fillRect(tx - 9 * s, ty - 10 * s, 18 * s, 10 * s)
-  poly(ctx, [[tx - 12 * s, ty - 10 * s], [tx + 12 * s, ty - 10 * s], [tx, ty - 20 * s]], col(PAL.roofBlue))
-  for (let i = 0; i < 3; i++) { const px = x + (r() - 0.5) * rx * 1.4, py = y + (r() - 0.5) * ry; circle(ctx, px, py - 6 * s, 4 * s, col(PAL.leaf)) }
+  ctx.fillStyle = col('#f4ead4'); ctx.fillRect(tx - 9 * s, ty - 10 * s, 18 * s, 10 * s)
+  poly(ctx, [[tx - 12 * s, ty - 10 * s], [tx + 12 * s, ty - 10 * s], [tx, ty - 22 * s]], col(PAL.roofBlue))
+  circle(ctx, tx, ty - 16 * s, 2.2 * s, col(PAL.goldLight))
+  for (let i = 0; i < 4; i++) { const px = x + (r() - 0.5) * rx * 1.4, py = y + (r() - 0.5) * ry; circle(ctx, px, py - 7 * s, 4.2 * s, col(PAL.leaf)) }
 }
 
 /* ---------------- bridges ---------------- */
-function drawBridge(ctx, b, t, ghost = false) {
+function drawBridge(ctx, b, t, ghost = false, lights = null) {
   const pts = bridgeCurve(b.route, 14)
   if (pts.length < 2) return
   const reinforced = b.type === 'reinforced'
@@ -148,17 +150,26 @@ function drawBridge(ctx, b, t, ghost = false) {
         col(reinforced ? (k % 2 ? '#e3dbcd' : '#d4cbbb') : (k % 2 ? PAL.woodLight : '#b8834b')))
     }
   }
-  // posts + rails on both sides
+  // posts, rope rails and a lantern every few spans
   for (const side of [-1, 1]) {
     const rail = []
     pts.forEach(([x, y], i) => {
       const [nx, ny] = norm(i)
       const px = x + nx * W * side, py = y + ny * W * side
-      if (i % 2 === 0) line(ctx, px, py, px, py - 7, col(reinforced ? '#cfc6b4' : PAL.woodDark), reinforced ? 1.8 : 1.4, 'butt')
+      if (i % 2 === 0) {
+        line(ctx, px, py, px, py - 8, col(reinforced ? '#efe6d2' : PAL.woodDark), reinforced ? 1.8 : 1.5, 'butt')
+        circle(ctx, px, py - 8, 1.1, col(PAL.gold))
+      }
+      if (side === 1 && i % 4 === 2) {
+        poly(ctx, [[px - 1.5, py - 9], [px + 1.5, py - 9], [px + 1.1, py - 12], [px - 1.1, py - 12]], col('#fff1c2'), col(PAL.goldDark), 0.4)
+        if (lights) lights.push([px, py - 10, 16])
+      }
       rail.push([px, py - 6.5])
     })
     ctx.beginPath(); rail.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
-    ctx.strokeStyle = col(reinforced ? PAL.gold : '#8a5a2e'); ctx.lineWidth = 1; ctx.stroke()
+    ctx.strokeStyle = col(reinforced ? PAL.gold : '#a86a32'); ctx.lineWidth = 1.15; ctx.stroke()
+    ctx.beginPath(); rail.forEach(([x, y], i) => (i ? ctx.lineTo(x, y + 2.4) : ctx.moveTo(x, y + 2.4)))
+    ctx.strokeStyle = col(reinforced ? '#d9c49a' : '#6b3e22'); ctx.lineWidth = 0.7; ctx.stroke()
   }
 }
 
@@ -201,18 +212,21 @@ export default function WorldCanvas({ hoverRef }) {
 
     const backClouds = (() => {
       const r = rng(42), out = []
-      for (let i = 0; i < 24; i++) {
+      for (let i = 0; i < 28; i++) {
         const edge = i % 4
         let x, y
-        if (edge === 0) { x = WORLD.x + r() * WORLD.w; y = WORLD.y + 60 + r() * 240 }
-        else if (edge === 1) { x = WORLD.x + 60 + r() * 360; y = WORLD.y + r() * WORLD.h }
-        else if (edge === 2) { x = 1660 + r() * 400; y = WORLD.y + r() * WORLD.h }
-        else { x = WORLD.x + r() * WORLD.w; y = 960 + r() * 100 }
-        out.push({ x, y, w: 180 + r() * 240, seed: i + 3, sp: 0.02 + r() * 0.03, ph: r() * 6 })
+        if (edge === 0) { x = WORLD.x + r() * WORLD.w; y = WORLD.y + 40 + r() * 280 }
+        else if (edge === 1) { x = WORLD.x + 40 + r() * 420; y = WORLD.y + r() * WORLD.h }
+        else if (edge === 2) { x = 1600 + r() * 460; y = WORLD.y + r() * WORLD.h }
+        else { x = WORLD.x + r() * WORLD.w; y = 880 + r() * 180 }
+        out.push({ x, y, w: 220 + r() * 280, seed: i + 3, sp: 0.015 + r() * 0.025, ph: r() * 6, a: 0.45 + r() * 0.28 })
       }
+      // soft banks tucked between the islands so the town sits in a cloud sea, not empty navy
+      const gaps = [[520, 560, 340], [980, 580, 360], [250, 620, 300], [1360, 600, 320], [760, 820, 420], [1100, 360, 260], [430, 360, 240]]
+      gaps.forEach(([x, y, w], i) => out.push({ x, y, w, seed: 40 + i, sp: 0.02, ph: i, a: 0.72, mid: true }))
       return out
     })()
-    const seaClouds = Array.from({ length: 16 }, (_, i) => ({ x: WORLD.x + (i / 15) * WORLD.w, y: 905 + (i % 3) * 16, w: 260 + (i % 4) * 40, seed: 100 + i }))
+    const seaClouds = Array.from({ length: 18 }, (_, i) => ({ x: WORLD.x + (i / 17) * WORLD.w, y: 860 + (i % 4) * 22, w: 300 + (i % 5) * 48, seed: 100 + i }))
     const fireflies = (() => {
       const r = rng(5), out = []
       for (const [id, isl] of Object.entries(WORLD_ISLANDS)) {
@@ -259,35 +273,68 @@ export default function WorldCanvas({ hoverRef }) {
         if (alpha !== 1) ctx.globalAlpha = 1
       }
 
-      // 1. far sky: drifting cloud banks + distant islets
+      // 1. far sky: drifting cloud banks + distant hazy islets
       for (const c of backClouds) {
-        const b = { x: c.x - c.w * 0.6, y: c.y - c.w * 0.45, w: c.w * 1.2, h: c.w * 0.65 }
+        if (c.mid) continue
+        const b = { x: c.x - c.w * 0.6, y: c.y - c.w * 0.5, w: c.w * 1.2, h: c.w * 0.75 }
         const sp = cache.current.get(`bank${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, true))
-        blit(sp, Math.sin(t * c.sp + c.ph) * 40, 0, 0.6)
+        blit(sp, Math.sin(t * c.sp + c.ph) * 36, 0, c.a)
       }
       FAR_ISLETS.forEach(([x, y, s], i) => {
-        const b = { x: x - 60 * s, y: y - 30 * s, w: 120 * s, h: 110 * s }
+        const b = { x: x - 70 * s, y: y - 36 * s, w: 140 * s, h: 120 * s }
         const sp = cache.current.get(`islet${i}`, b, 'locked', (cx) => drawIslet(cx, x, y, s, i + 1))
-        blit(sp, 0, Math.sin(t * 0.6 + i) * 3, i < 5 ? 0.9 : 0.6)
+        blit(sp, 0, Math.sin(t * 0.55 + i) * 3.5, i < 5 ? 0.72 : 0.42)
       })
+      for (const c of backClouds) {
+        if (!c.mid) continue
+        const b = { x: c.x - c.w * 0.6, y: c.y - c.w * 0.5, w: c.w * 1.2, h: c.w * 0.75 }
+        const sp = cache.current.get(`mid${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, false))
+        blit(sp, Math.sin(t * c.sp + c.ph) * 18, Math.sin(t * 0.4 + c.ph) * 2, c.a)
+      }
 
-      // 2. island bodies, back to front
+      // 2. island bodies, back to front. Painted crops of the concept art when they
+      // have loaded; the procedural island remains the fallback for the first frames.
       const order = Object.values(WORLD_ISLANDS).sort((a, b) => a.ground[0][1] - b.ground[0][1])
+      const painted = {}
       for (const isl of order) {
         const mode = islandMode(isl.id, st, access)
         const bob = Math.sin(t * 0.7 + isl.seed) * 1.2
         isl._bob = bob
-        const sp = cache.current.get(`isle:${isl.id}`, islandBounds(isl), mode, (cx) => drawIslandBase(cx, isl))
-        blit(sp, 0, bob)
-        if (mode === 'lit') { ctx.save(); ctx.translate(0, bob); animIslandBase(ctx, isl, t); ctx.restore() }
-        if (hoverRef?.current === isl.id && mode !== 'hidden') {
-          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.07
-          ctx.drawImage(sp.cv, sp.b.x, sp.b.y + bob, sp.b.w, sp.b.h); ctx.restore()
+        const img = islandImage(isl.id)
+        if (artReady(isl.id)) {
+          painted[isl.id] = true
+          const [ox, oy] = ISLAND_ART[isl.id]
+          ctx.save()
+          ctx.translate(0, bob)
+          if (mode === 'hidden') ctx.filter = 'saturate(0.15) brightness(0.48) hue-rotate(8deg)'
+          else if (mode === 'locked') ctx.filter = 'saturate(0.8) brightness(0.9) hue-rotate(6deg)'
+          else if (hoverRef?.current === isl.id) ctx.filter = 'brightness(1.07) saturate(1.06)'
+          ctx.drawImage(img, ox, oy, img.naturalWidth * ART_SCALE, img.naturalHeight * ART_SCALE)
+          ctx.filter = 'none'
+          if (isl.id === 'newHaven' && !st.beaconRestored && mode === 'lit') {
+            const [bx, by] = PAINTED_BEACON
+            const g = ctx.createRadialGradient(bx, by, 2, bx, by, 34)
+            g.addColorStop(0, 'rgba(16,20,52,0.62)')
+            g.addColorStop(1, 'rgba(16,20,52,0)')
+            ctx.fillStyle = g
+            ctx.beginPath(); ctx.arc(bx, by, 34, 0, TAU); ctx.fill()
+          }
+          if (mode === 'lit') animIslandBase(ctx, isl, t)
+          ctx.restore()
+        } else {
+          const sp = cache.current.get(`isle:${isl.id}`, islandBounds(isl), mode, (cx) => drawIslandBase(cx, isl))
+          blit(sp, 0, bob)
+          if (mode === 'lit') { ctx.save(); ctx.translate(0, bob); animIslandBase(ctx, isl, t); ctx.restore() }
+          if (hoverRef?.current === isl.id && mode !== 'hidden') {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.07
+            ctx.drawImage(sp.cv, sp.b.x, sp.b.y + bob, sp.b.w, sp.b.h); ctx.restore()
+          }
         }
       }
 
       // 3. bridges (built ones + blueprints of the ones you could build)
-      for (const b of st.bridges) { setMode(b.condition <= 0 ? 'locked' : 'lit'); drawBridge(ctx, b, t) }
+      const bridgeLights = []
+      for (const b of st.bridges) { setMode(b.condition <= 0 ? 'locked' : 'lit'); drawBridge(ctx, b, t, false, bridgeLights) }
       setMode('lit')
       if (!uiRef.current.placing) for (const r of openRoutes(st)) drawBridge(ctx, { route: r.id }, t, true)
 
@@ -295,7 +342,7 @@ export default function WorldCanvas({ hoverRef }) {
       const items = []
       for (const isl of order) {
         const mode = islandMode(isl.id, st, access)
-        for (const p of isl.props) items.push({ y: p.pts ? Math.max(p.pts[0][1], p.pts[1][1]) : p.y, p, mode, bob: isl._bob })
+        for (const p of isl.props) items.push({ y: p.pts ? Math.max(p.pts[0][1], p.pts[1][1]) : p.y, p, mode, bob: isl._bob, painted: painted[isl.id] })
       }
       for (const b of st.buildings) {
         if (b.slot < 0 || !st.connected.includes(b.island)) continue
@@ -318,10 +365,14 @@ export default function WorldCanvas({ hoverRef }) {
         }
         const p = it.p, def = PROPS[p.type]
         if (!def) continue
+        // The painting already contains the scenic buildings. Keep only the parts
+        // that move: blades, flags, chimney smoke, reservoir ripples, lamplight.
+        const liveOnPaint = it.painted && ['turbine', 'banner', 'bunting', 'tank', 'house'].includes(p.type)
+        if (it.painted && !liveOnPaint && !def.lights) continue
         const b = propBounds(p)
         if (!visible({ ...b, y: b.y + it.bob })) continue
-        if (b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
-        if (def.anim && it.mode !== 'hidden') {
+        if (!it.painted && b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
+        if (def.anim && it.mode !== 'hidden' && (!it.painted || liveOnPaint)) {
           setMode(it.mode)
           ctx.save(); ctx.translate(0, it.bob); def.anim(ctx, p, t, { beacon: st.beaconRestored }); ctx.restore()
           setMode('lit')
@@ -329,16 +380,18 @@ export default function WorldCanvas({ hoverRef }) {
         if (it.mode === 'lit' && def.lights) for (const l of def.lights(p)) lights.push([l[0], l[1] + it.bob, l[2]])
       }
 
-      // 5. warm light pass
+      // 5. warm cream/gold light: windows, lamps, the beacon, bridge lanterns
       ctx.save(); ctx.globalCompositeOperation = 'lighter'
+      for (const l of bridgeLights) lights.push(l)
       for (const [x, y, r] of lights) {
         if (x < vx0 - r || x > vx1 + r || y < vy0 - r || y > vy1 + r) continue
         const f = 0.85 + Math.sin(t * 7 + x * 0.3) * 0.05 + Math.sin(t * 13 + y) * 0.04
         glow(ctx, x, y, r * f, PAL.glow, 0.32)
       }
       if (st.beaconRestored) {
-        const [cx, cy] = towerTop({ x: 765, y: 447, h: 100 })
+        const [cx, cy] = artReady('newHaven') ? PAINTED_BEACON : towerTop({ x: 765, y: 447, h: 100 })
         ctx.translate(0, WORLD_ISLANDS.newHaven._bob)
+        glow(ctx, cx, cy + 78, 120, '#fff3c4', 0.22)
         for (const s of [0, Math.PI]) {
           const a = t * 0.35 + s
           const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 900)
@@ -377,11 +430,17 @@ export default function WorldCanvas({ hoverRef }) {
         PROPS.airship.anim(ctx, { x, y: y, base: y + 70 }, t)
       }
 
-      // 7. cloud sea in front of the island roots
+      // 7. cloud sea in front of the island roots, then a soft navy vignette in screen space
       for (const c of seaClouds) {
-        const b = { x: c.x - c.w * 0.6, y: c.y - c.w * 0.45, w: c.w * 1.2, h: c.w * 0.65 }
-        blit(cache.current.get(`sea${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, false)), Math.sin(t * 0.05 + c.seed) * 20, 0)
+        const b = { x: c.x - c.w * 0.6, y: c.y - c.w * 0.5, w: c.w * 1.2, h: c.w * 0.78 }
+        blit(cache.current.get(`sea${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, false)), Math.sin(t * 0.05 + c.seed) * 22, 0)
       }
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      const vg = ctx.createRadialGradient(cv.width / 2, cv.height * 0.42, Math.min(cv.width, cv.height) * 0.28, cv.width / 2, cv.height * 0.48, Math.max(cv.width, cv.height) * 0.72)
+      vg.addColorStop(0, 'rgba(5,8,28,0)')
+      vg.addColorStop(1, 'rgba(4,7,24,0.28)')
+      ctx.fillStyle = vg
+      ctx.fillRect(0, 0, cv.width, cv.height)
     }
     raf = requestAnimationFrame(frame)
     return () => { cancelAnimationFrame(raf); ro.disconnect() }
