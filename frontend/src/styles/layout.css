@@ -1,0 +1,205 @@
+/* =====================================================================
+   Layout fixes. Loaded last, after storybook.css.
+   Each block fixes a specific overlap or overflow found at
+   1600, 1366, 1280, 1024, 768 and 390px widths.
+   ===================================================================== */
+
+/* ---------- Progression card ----------
+   It was a 190x150 box with mostly empty space, placed 219px from the left
+   to make room for a minimap that is no longer rendered. Now it's a compact
+   card in the corner with an XP bar. */
+.progression-card {
+  left: 18px;
+  bottom: 23px;
+  width: auto;
+  max-width: 250px;
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  padding: 10px 16px 11px 13px;
+  text-align: left;
+  border-radius: 18px;
+}
+.progression-card > svg { flex: none; color: #f3d98f; }
+.progression-text { min-width: 0; }
+.progression-card .progression-label { margin: 0 0 2px; font-size: 9px; }
+.progression-card strong { font-size: 13px; margin: 0; white-space: nowrap; }
+.progression-bar { height: 5px; margin-top: 6px; border-radius: 99px; background: rgba(5, 12, 40, 0.75); overflow: hidden; }
+.progression-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #e3b84f, #ffe28a); transition: width 0.5s ease; }
+.progression-card .small { display: none; }
+
+/* ---------- Bottom nav ----------
+   It sat at 55% to avoid the old wide card. Centre it now. */
+.bottom-nav { left: 50%; transform: translateX(-50%); }
+@media (max-width: 1150px) and (min-width: 801px) {
+  /* Between tablet and phone, centring would run into the progression card */
+  .bottom-nav { left: auto; right: 80px; transform: none; }
+}
+
+/* ---------- Left rail ----------
+   Two-line labels ("Quest Book") ran into the next icon, and the active
+   outline cut through the label text. */
+.rail-btn { height: auto; min-height: 72px; padding: 8px 4px 7px; gap: 5px; line-height: 1.15; }
+.rail-item + .rail-item { margin-top: 4px; }
+
+/* ---------- AI advisor dock ---------- */
+.advisor-kicker > .advisor-kicker-text { margin: 0; color: inherit; font-size: inherit; }
+.advisor-fold {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid #7fa6c4aa;
+  background: #0d2240aa;
+  color: #e9dcaa;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+}
+.advisor-fold:hover { border-color: #d9e9f5; color: #fff; }
+
+/* Folded: just the smiling cloud and an unfold button */
+.cloud-advisor { transition: opacity 0.2s ease, transform 0.2s ease, width 0.2s ease; }
+.cloud-advisor.is-collapsed { width: 112px; padding: 10px 10px 8px; border-radius: 24px; }
+.cloud-advisor.is-collapsed .advisor-kicker-text,
+.cloud-advisor.is-collapsed .advisor-kicker > svg,
+.cloud-advisor.is-collapsed .cloud-speech,
+.cloud-advisor.is-collapsed .advisor-link,
+.cloud-advisor.is-collapsed .advisor-weather,
+.cloud-advisor.is-collapsed .cloud-orbit,
+.cloud-advisor.is-collapsed .cloud-twinkle { display: none; }
+.cloud-advisor.is-collapsed .cloud-portrait { height: 62px; }
+.cloud-advisor.is-collapsed .advisor-cloud { inset: 0; width: 100%; height: 62px; }
+
+/* Any panel or modal open: get the dock out of the way. It used to peek out
+   above the island drawer, Cloud's Notes and the Town Workshop. */
+.game.has-panel .cloud-advisor { opacity: 0; transform: translateX(14px); pointer-events: none; }
+
+/* ---------- Modals: let the body scroll instead of pushing the footer off ---------- */
+.modal-body { flex: 1 1 auto; min-height: 0; }
+
+/* ---------- Horizontal card rows: show that they scroll ---------- */
+.ws-cards, .chart-cards {
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 36px), transparent);
+  padding-right: 30px;
+  scroll-padding-left: 4px;
+}
+
+/* ---------- Town Workshop: never taller than the screen ----------
+   The cards scroll vertically inside the panel if the screen is short, so the
+   + buttons are always reachable. */
+.workshop { max-height: calc(100dvh - 112px); display: flex; flex-direction: column; }
+.workshop-inner { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.ws-head { flex: none; }
+.ws-cards { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-items: start; }
+.ws-card .gold-plus { margin-top: 10px; }
+
+/* ---------- Narrower desktops / tablets ---------- */
+@media (max-width: 1150px) {
+  .progression-card { padding: 9px 13px 10px 11px; max-width: 210px; }
+  .progression-card strong { font-size: 12px; }
+}
+
+/* ---------- Phones and small tablets ---------- */
+@media (max-width: 800px) {
+  /* Progression card: a slim pill above the nav, not a 190x150 block over the map */
+  .progression-card { left: 12px; right: auto; bottom: 80px; max-width: 200px; padding: 7px 12px 8px 10px; gap: 8px; border-radius: 14px; }
+  .progression-card > svg { width: 15px; height: 15px; }
+  .progression-card .progression-label { font-size: 8px; }
+  .progression-card strong { font-size: 11px; }
+  .progression-bar { height: 4px; margin-top: 4px; }
+
+  .bottom-nav { left: 12px; right: auto; transform: none; }
+
+  /* The left rail sat on top of Verdant Reach's label and bridge button; keep it slim */
+  .rail-btn { min-height: 54px; padding: 6px 2px 5px; }
+  .rail-item + .rail-item { margin-top: 2px; }
+
+  /* Advisor dock (folded by default here) */
+  .cloud-advisor { top: 172px; }
+  .cloud-advisor.is-collapsed { width: 84px; padding: 8px 8px 6px; border-radius: 20px; }
+  .cloud-advisor.is-collapsed .cloud-portrait,
+  .cloud-advisor.is-collapsed .advisor-cloud { height: 46px; }
+  .advisor-fold { width: 20px; height: 20px; font-size: 13px; }
+
+  /* Camera buttons move up so they clear the progression pill and nav */
+  .cam-controls { bottom: 130px; }
+
+  /* Titles with ruled lines on either side wrapped onto several lines */
+  .p-sub { letter-spacing: 0.14em; font-size: 11px; }
+  .p-sub::before, .p-sub::after { display: none; }
+  .p-head { padding-left: 44px; padding-right: 44px; }
+
+  /* Town Workshop: fits between the HUD and the nav, scrolls inside */
+  .workshop { top: 128px; bottom: 76px; left: 8px; right: 8px; width: auto; max-height: none; padding: 8px; }
+  .workshop-inner { padding: 12px 12px 14px; height: 100%; }
+  .ws-head h2 { font-size: 19px; gap: 8px; }
+  .ws-head h2 .art-icon { width: 26px; height: 26px; }
+  .ws-sub { font-size: 16px; text-underline-offset: 4px; }
+  .ws-head p { font-size: 12px; margin: 4px 0 0; }
+  .ws-cards { grid-auto-columns: minmax(170px, 62vw); gap: 10px; padding-top: 10px; }
+  .ws-card { padding: 10px 10px 12px; }
+  .ws-art, .ws-art.vignette, .painted-building-preview { height: 86px; }
+  .painted-building-preview > div { width: 86px; height: 86px; left: calc(50% - 43px); }
+  .ws-desc { font-size: 14px; min-height: 0; }
+  .gold-plus { width: 46px; height: 46px; }
+  .workshop::before, .workshop::after { display: none; }
+
+  /* Skyway Chart cards */
+  .chart-cards { grid-auto-columns: minmax(210px, 72vw); gap: 14px; }
+  .cc-art, .cc-art .painted-island-preview { height: 120px; }
+  .cc-desc { min-height: 0; font-size: 15px; }
+
+  /* Journal: the level column took a quarter of the width */
+  .jentry { grid-template-columns: 58px 1fr; gap: 8px; }
+
+  /* Storehouse table: keep it inside the card */
+  .table { font-size: 13px; }
+  .table th, .table td { padding: 6px 4px; }
+}
+
+@media (max-width: 640px) {
+  /* Captain's Log: the cover page pushed the quests below the fold; show only the quests */
+  .book { height: calc(100dvh - 24px); }
+  .book-left { display: none; }
+  .book-right { min-height: 0; flex: 1; padding: 16px 12px 12px; }
+  /* Quest cards: picture on its own row so the text gets the full width */
+  .qcard, .qcard.is-featured { padding: 10px 12px 12px 10px; gap: 8px; }
+  .qnum { width: 28px; height: 28px; font-size: 14px; }
+  .qtitle { font-size: 14px; letter-spacing: 0.05em; }
+  .qrow { flex-wrap: wrap; gap: 8px; }
+  .qart, .qart.vignette { width: 64px; height: 46px; }
+  .qcard.is-featured .qart, .qcard.is-featured .qart.vignette { width: 100%; height: 96px; }
+  .qtext { flex: 1 1 140px; }
+  .qtext p { font-size: 15px; }
+  .rewards { flex-wrap: wrap; gap: 8px 16px; font-size: 13px; }
+
+  /* Island / Cloud drawers sit between the HUD and the nav */
+  .drawer, .drawer-left, .drawer-right { top: 128px; bottom: 76px; }
+}
+
+/* ---------- Short screens (landscape phones, small laptops) ---------- */
+@media (max-height: 700px) and (min-width: 801px) {
+  .cloud-advisor:not(.is-collapsed) .cloud-portrait { height: 90px; }
+  .cloud-advisor:not(.is-collapsed) .advisor-cloud { height: 86px; }
+  .cloud-advisor:not(.is-collapsed) .cloud-speech p { display: none; }
+  .workshop { top: 96px; bottom: 88px; max-height: none; }
+  .ws-head h2 { font-size: 24px; }
+  .ws-sub { font-size: 20px; }
+  .ws-head p { font-size: 13px; margin: 2px 0; }
+  .ws-art, .ws-art.vignette, .painted-building-preview { height: 84px; }
+  .painted-building-preview > div { width: 84px; height: 84px; left: calc(50% - 42px); }
+  .ws-desc { font-size: 14px; min-height: 0; }
+  .gold-plus { width: 48px; height: 48px; }
+}
+
+@media (max-width: 640px) {
+  /* Intro: the quote filled the screen and hid the steps */
+  .intro-quote { font-size: 16px; padding: 10px 12px; margin-bottom: 12px; }
+  .steps { font-size: 14px; }
+}

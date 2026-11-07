@@ -7,6 +7,7 @@ import './styles/panels.css'
 import './styles/map.css'
 import './styles/auth.css'
 import './styles/storybook.css'
+import './styles/layout.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

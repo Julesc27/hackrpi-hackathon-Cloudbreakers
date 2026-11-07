@@ -97,6 +97,8 @@ export default function Tutorial() {
 
   const [targetRect, setTargetRect] = useState(null)
   const [isShaking, setIsShaking] = useState(false)
+  const tooltipRef = useRef(null)
+  const [tooltipSize, setTooltipSize] = useState({ w: 340, h: 190 })
   const [viewWidth, setViewWidth] = useState(window.innerWidth)
   const [viewHeight, setViewHeight] = useState(window.innerHeight)
 
@@ -426,6 +428,38 @@ export default function Tutorial() {
     }
   }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
 
+  // Measure the real tooltip so placement never guesses its size
+  useLayoutEffect(() => {
+    const el = tooltipRef.current
+    if (!el) return
+    // offsetHeight ignores the entry/shake animations (getBoundingClientRect would not)
+    const h = el.offsetHeight
+    if (h && Math.abs(h - tooltipSize.h) > 1) setTooltipSize((s) => ({ ...s, h }))
+  })
+
+  // If the target sits below the fold of a scrolling panel (e.g. "Gather wood" in the island drawer),
+  // scroll that panel so the target is visible. The map camera is not a scroll container, so it is unaffected.
+  useEffect(() => {
+    if (!tutorialActive || !targetSelector) return
+    const t = setTimeout(() => {
+      const el = document.querySelector(targetSelector)
+      if (!el) return
+      let box = el.parentElement
+      while (box && box !== document.body) {
+        const cs = getComputedStyle(box)
+        if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (box.scrollHeight > box.clientHeight || box.scrollWidth > box.clientWidth)) break
+        box = box.parentElement
+      }
+      if (!box || box === document.body) return
+      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect()
+      if (er.bottom > br.bottom) box.scrollTop += er.bottom - br.bottom + 12
+      else if (er.top < br.top) box.scrollTop -= br.top - er.top + 12
+      if (er.right > br.right) box.scrollLeft += er.right - br.right + 12
+      else if (er.left < br.left) box.scrollLeft -= br.left - er.left + 12
+    }, 260)
+    return () => clearTimeout(t)
+  }, [tutorialActive, targetSelector, tutorialStep, ui.panel])
+
   if (!tutorialActive) return null
 
   const handleBackdropClick = (e) => {
@@ -488,9 +522,9 @@ export default function Tutorial() {
     hole = { left: hx, top: hy, width: hw, height: hh, right: hx + hw, bottom: hy + hh }
   }
 
-  const tooltipWidth = Math.min(340, viewWidth - 32)
-  const tooltipHeight = 190
-  const margin = 16
+  const margin = viewWidth < 600 ? 12 : 16
+  const tooltipWidth = Math.min(340, viewWidth - margin * 2)
+  const tooltipHeight = tooltipSize.h || 190
   const arrowDist = 14
 
   let placement = 'bottom'
@@ -499,39 +533,44 @@ export default function Tutorial() {
   let arrowOffset = 50
 
   if (targetRect) {
-    if (tutorialStep === 7) {
-      // Resource Management always appears beneath the highlighted top resources.
-      placement = 'bottom'
-      tTop = targetRect.bottom + arrowDist
-      tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
-    } else if (targetRect.left < 200 && targetRect.top > 80 && targetRect.bottom < viewHeight - 120) {
-      placement = 'right'
-      tLeft = targetRect.right + arrowDist
-      tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
-    } else if (targetRect.bottom + tooltipHeight + margin > viewHeight) {
-      placement = 'top'
-      tTop = targetRect.top - tooltipHeight - arrowDist
-      tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
-    } else if (targetRect.left > viewWidth - 380) {
-      placement = 'left'
-      tLeft = targetRect.left - tooltipWidth - arrowDist
-      tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
-    } else {
-      placement = 'bottom'
-      tTop = targetRect.bottom + arrowDist
-      tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
+    const cx = targetRect.left + targetRect.width / 2
+    const cy = targetRect.top + targetRect.height / 2
+    const spots = {
+      bottom: { top: targetRect.bottom + arrowDist, left: cx - tooltipWidth / 2 },
+      top: { top: targetRect.top - tooltipHeight - arrowDist, left: cx - tooltipWidth / 2 },
+      right: { top: cy - tooltipHeight / 2, left: targetRect.right + arrowDist },
+      left: { top: cy - tooltipHeight / 2, left: targetRect.left - tooltipWidth - arrowDist },
     }
+    const fits = (p) => {
+      const s = spots[p]
+      if (p === 'bottom' || p === 'top') return s.top >= margin && s.top + tooltipHeight <= viewHeight - margin
+      return s.left >= margin && s.left + tooltipWidth <= viewWidth - margin
+    }
+    // On phones there is no room beside things, so only go above or below.
+    let order = viewWidth < 640 ? ['bottom', 'top'] : ['bottom', 'top', 'right', 'left']
+    if (tutorialStep === 7) order = ['bottom']
+    else if (viewWidth >= 640 && targetRect.left > viewWidth * 0.6) order = ['left', 'bottom', 'top', 'right']
+    else if (viewWidth >= 640 && targetRect.right < viewWidth * 0.25) order = ['right', 'bottom', 'top', 'left']
+    placement = order.find(fits)
+    if (!placement) {
+      // Nothing fits cleanly: use whichever side has the most room
+      const room = { bottom: viewHeight - targetRect.bottom, top: targetRect.top, right: viewWidth - targetRect.right, left: targetRect.left }
+      placement = order.reduce((best, p) => (room[p] > room[best] ? p : best), order[0])
+    }
+    tTop = spots[placement].top
+    tLeft = spots[placement].left
 
     tLeft = Math.max(margin, Math.min(viewWidth - tooltipWidth - margin, tLeft))
     tTop = Math.max(margin, Math.min(viewHeight - tooltipHeight - margin, tTop))
 
     if (placement === 'bottom' || placement === 'top') {
-      const targetCenter = targetRect.left + targetRect.width / 2
-      arrowOffset = Math.max(24, Math.min(tooltipWidth - 24, targetCenter - tLeft))
+      arrowOffset = Math.max(24, Math.min(tooltipWidth - 24, cx - tLeft))
     } else {
-      const targetCenter = targetRect.top + targetRect.height / 2
-      arrowOffset = Math.max(24, Math.min(tooltipHeight - 24, targetCenter - tTop))
+      arrowOffset = Math.max(24, Math.min(tooltipHeight - 24, cy - tTop))
     }
+  } else {
+    tLeft = Math.max(margin, tLeft)
+    tTop = Math.max(margin, tTop)
   }
 
   const stepDisplayNumber = tutorialStep - 1
@@ -550,7 +589,7 @@ export default function Tutorial() {
         <div className="tutorial-backdrop-panel" style={{ top: 0, left: 0, width: '100vw', height: '100vh' }} onClick={handleBackdropClick} />
       )}
 
-      <aside className={`tutorial-tooltip${isShaking ? ' shake' : ''}`} style={{ top: `${tTop}px`, left: `${tLeft}px` }}>
+      <aside ref={tooltipRef} className={`tutorial-tooltip${isShaking ? ' shake' : ''}`} style={{ top: `${tTop}px`, left: `${tLeft}px`, width: `${tooltipWidth}px` }}>
         {targetRect && (
           <div className={`tutorial-arrow tutorial-arrow-${placement}`} style={{
             [placement === 'bottom' || placement === 'top' ? 'left' : 'top']: `${arrowOffset}px`,
