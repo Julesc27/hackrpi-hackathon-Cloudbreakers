@@ -5,12 +5,13 @@ Generated using the built-in image generation tool, then integrated as transpare
 
 ## Atlas layout
 
-- `islands-civic.png`: original reference atlas, 2 columns by 2 rows. New Haven, Mistral Heights, Rain Island, Mercy Rise.
-- `islands-civic-layered.png`: same grid with Mistral rotor blades removed. The active Rain Island and Mercy Rise sprites use this sheet in both the map and cards.
-- `islands-settlement.png`: 2 columns by 2 rows. Hearthside, Verdant Reach, Glass Gardens, Skyport.
-- `buildings.png`: 4 columns by 3 rows. Shelter, bridge anchor, garden, water collector; storage house, solar farm, market, clinic; community hall, wind turbine, battery, greenhouse.
+Shipped sprites are WebP (quality 88, lossless-quality alpha) to keep the download small. Keep the PNG masters outside `public/` if you need to edit them.
 
-Rows are ordered left to right. The map measures the alpha bounds of each cell once at load. Art positions are in `components/world/paintedArt.js`; gameplay hit areas and plots remain in `game/data.js`.
+- `islands-civic-layered.webp`: 2 columns by 2 rows (New Haven, Mistral Heights, Rain Island, Mercy Rise), with Mistral rotor blades removed. (The original `islands-civic.png` was unused and has been removed.) The active Rain Island and Mercy Rise sprites use this sheet in both the map and cards.
+- `islands-settlement.webp`: 2 columns by 2 rows. Hearthside, Verdant Reach, Glass Gardens, Skyport.
+- `buildings.webp`: 4 columns by 3 rows. Shelter, bridge anchor, garden, water collector; storage house, solar farm, market, clinic; community hall, wind turbine, battery, greenhouse.
+
+Rows are ordered left to right. Each cell's alpha bounds are precomputed and stored in `paintedArt.js` (`cells`), so the map never scans pixels at load. If you replace an atlas, regenerate those bounds. Art positions are in `components/world/paintedArt.js`; gameplay hit areas and plots remain in `game/data.js`.
 
 `PAINTED_ATLASES` is the shared source registry for the world and every preview. `PaintedSprite.jsx` fits each alpha-bounded sprite into its card and clips neighboring cells. The quest book, journal cover, advisor, island drawers, chart, workshop and bridge routes reuse the current island/building images. The workshop upgrade uses a hammer badge rather than the retired decorative anchor model.
 
@@ -39,7 +40,7 @@ Each island has independent floating motion and selection state. Water spray, en
 
 ## Expanded starter island
 
-`starter-island-expanded.png` replaces the main-island sprite. Its reference is `concept/command-center-expanded-starter-island.png`. It is a separate transparent sprite, with the original civic atlas retained for the other islands.
+`starter-island-expanded.webp` replaces the main-island sprite. Its reference is `concept/command-center-expanded-starter-island.png`. It is a separate transparent sprite, with the original civic atlas retained for the other islands.
 
 Built-in image generation brief: isolate only the central expanded starter island from the reference, preserving the beacon, terraces, pine grove, blue-roof cottage, cistern, farm, dock, cliffs and waterfalls. Keep the three large residential pads and upper clearing empty. Remove hammer signposts, dotted pad outlines, surrounding islands, sky, UI and people. Preserve the reference's painted style and supply a complete island with true transparency.
 
@@ -50,7 +51,7 @@ Eight stable gameplay slots occupy four clear terraces, with two shelters per te
 
 The built-in image generation tool produced two independent transparent sprites, referencing `concept/command-center-expanded-starter-island.png`:
 
-- `verdant-forest.png`: isolate a forest/farming island matching the reference's upper-left island; dense pine and golden trees, lumber shed, log piles, vegetable and seed beds, clear front terrace, cream paths, right-hand bridge dock, lavender hanging cliffs and cyan waterfalls. Preserve the painted perspective and palette; no people, sky, UI, words or connecting bridges.
-- `prism-shelf.png`: isolate the reference's lower-right crystal island; tiered pale stone shelves, luminous blue energy crystals, gold/brass pylons, component workshop, four clear building pads and upper-left bridge landing. Preserve the reference style and palette; no people, sky, UI, words or off-island bridges.
+- `verdant-forest.webp`: isolate a forest/farming island matching the reference's upper-left island; dense pine and golden trees, lumber shed, log piles, vegetable and seed beds, clear front terrace, cream paths, right-hand bridge dock, lavender hanging cliffs and cyan waterfalls. Preserve the painted perspective and palette; no people, sky, UI, words or connecting bridges.
+- `prism-shelf.webp`: isolate the reference's lower-right crystal island; tiered pale stone shelves, luminous blue energy crystals, gold/brass pylons, component workshop, four clear building pads and upper-left bridge landing. Preserve the reference style and palette; no people, sky, UI, words or off-island bridges.
 
 Both are game sprites with true alpha transparency. The resource loop uses the expanded starter island, forest, water island and crystal shelf. The hospital (Mercy Rise) and village (Hearthside) are also active destinations, restored from the original civic and settlement atlases. Older atlas assets remain available as reference material.

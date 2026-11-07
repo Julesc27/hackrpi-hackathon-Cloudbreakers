@@ -16,8 +16,12 @@
 .camera.is-moving .cam-world, .camera.is-moving .cam-near, .camera.is-moving .cam-far { will-change: transform; }
 .skymap, .near-clouds { display: block; overflow: visible; }
 .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
-.star { animation: twinkle 4s ease-in-out infinite; }
-@keyframes twinkle { 50% { opacity: 0.25; } }
+/* Star layers fade as whole elements (GPU-composited opacity, no repaint) */
+.star-layer { animation: twinkle 4.6s ease-in-out infinite; will-change: opacity; }
+.star-layer-1 { animation-duration: 5.3s; animation-delay: -1.7s; }
+.star-layer-2 { animation-duration: 3.9s; animation-delay: -2.9s; }
+.star-layer-3 { animation-duration: 6.1s; animation-delay: -0.8s; }
+@keyframes twinkle { 50% { opacity: 0.45; } }
 
 /* ---------- islands ---------- */
 .isle-bob { animation: bob 8s ease-in-out infinite; }
@@ -51,7 +55,7 @@
 @keyframes drift { from { transform: translateX(-40px); } to { transform: translateX(60px); } }
 .sway { animation: sway 50s ease-in-out infinite alternate; }
 @keyframes sway { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
-.near-clouds { opacity: 0.9; }
+.near-cloud { position: absolute; display: block; overflow: visible; will-change: transform; }
 
 .flap { animation: flap 0.55s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes flap { 50% { transform: scaleY(0.55); } }
@@ -93,7 +97,6 @@
 .route-btn { transition: transform 0.15s; transform-box: fill-box; transform-origin: 50% 35%; transform: scale(var(--ui-k, 1)); }
 .ghost-route:hover .route-btn { transform: scale(calc(var(--ui-k, 1) * 1.1)); }
 .ui-scale { transform: scale(var(--ui-k, 1)); transform-box: fill-box; transform-origin: center; }
-.route-pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2s ease-out infinite; }
 @keyframes pulse { from { transform: scale(0.85); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 .route-cost { font-family: var(--font-body); font-weight: 800; font-size: 13px; fill: #f3e6c4; }
 .ghost-route.is-locked .route-cost { fill: #a9b4dd; }

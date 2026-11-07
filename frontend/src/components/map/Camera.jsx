@@ -25,14 +25,21 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
   const worldEl = useRef(null)
   const farEl = useRef(null)
   const nearEl = useRef(null)
-  const cam = useRef({ x: 0, y: 0, s: 1 }) // screen = (world - WORLD.xy) * s + cam.xy
+  const cam = useRef({ x: 0, y: 0, s: 1 })
+  const farOffset = useRef({ x: 0, y: 0 }) // how far the sky layer has shifted (for twinkling stars) // screen = (world - WORLD.xy) * s + cam.xy
   const limits = useRef({ min: 0.4, max: 2, fit: 1 })
   const anim = useRef(null)
   const moving = useRef(0)
 
+  // Viewport size, cached: reading it with getBoundingClientRect on every camera move forced
+  // the browser to recalculate layout mid-frame. A ResizeObserver keeps it up to date.
+  const sizeCache = useRef(null)
   const size = () => {
-    const r = viewport.current.getBoundingClientRect()
-    return { w: r.width, h: r.height }
+    if (!sizeCache.current) {
+      const r = viewport.current.getBoundingClientRect()
+      sizeCache.current = { w: r.width, h: r.height }
+    }
+    return sizeCache.current
   }
 
   const clampCam = useCallback((c) => {
@@ -52,6 +59,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     // parallax relative to the centred home view
     const cx = x + (HOME.x - WORLD.x) * s - w / 2
     const cy = y + (HOME.y - WORLD.y) * s - h / 2
+    farOffset.current = { x: cx * 0.18, y: cy * 0.18 }
     if (farEl.current) farEl.current.style.transform = `translate3d(${cx * 0.18}px, ${cy * 0.18}px, 0) scale(${1 + (s - limits.current.fit) * 0.08})`
     if (nearEl.current) nearEl.current.style.transform = `translate3d(${x - cx * 0.25}px, ${y - cy * 0.25}px, 0) scale(${s})`
     onMove?.(cam.current)
@@ -130,6 +138,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     zoomIn: () => { const { w, h } = size(); zoomAt(1.35, w / 2, h / 2) },
     zoomOut: () => { const { w, h } = size(); zoomAt(1 / 1.35, w / 2, h / 2) },
     view: () => cam.current,
+    farOffset: () => farOffset.current,
     get scale() { return cam.current.s },
     get fitScale() { return limits.current.fit },
   }), [flyTo, home, focusIsland, zoomAt])
@@ -144,9 +153,11 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     apply()
     // a small intro "swoop" into the town
     const t = setTimeout(() => home(1300), 80)
-    const onResize = () => { fit(); set(cam.current) }
+    const onResize = () => { sizeCache.current = null; fit(); set(cam.current) }
     window.addEventListener('resize', onResize)
-    return () => { clearTimeout(t); window.removeEventListener('resize', onResize) }
+    const ro = new ResizeObserver(() => { const before = sizeCache.current; sizeCache.current = null; const now = size(); if (!before || before.w !== now.w || before.h !== now.h) { fit(); set(cam.current) } })
+    ro.observe(viewport.current)
+    return () => { clearTimeout(t); window.removeEventListener('resize', onResize); ro.disconnect() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- pointer input -------------------------------------------------------

@@ -67,7 +67,7 @@
 .cam-btn { width: 36px; height: 36px; font-size: 21px; }
 .cam-hint { bottom: 96px; font-size: 11px; padding: 7px 13px; border-color: #82a8c355; }
 .cam-hint .hand-icon { display: none; }
-.near-clouds { opacity: .26; }
+.near-cloud { opacity: .26; }
 .isle-label { opacity: .86; transition: opacity .2s; }
 .isle-hit:hover .isle-label { opacity: 1; }
 .isle-label-text { font-family: var(--font-body); font-size: 13px; letter-spacing: .07em; }
