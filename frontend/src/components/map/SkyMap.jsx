@@ -10,6 +10,8 @@ import { CloudDefs, Cloud } from './Life.jsx'
 import { FxLayer, useWorldEvents } from './Fx.jsx'
 import WorldCanvas from '../world/WorldCanvas.jsx'
 import { BUILDING_CELLS } from '../world/paintedArt.js'
+import { buildingLayout } from '../world/buildingLayout.js'
+import { usePaintedAtlas } from '../PaintedSprite.jsx'
 import { bridgeCurve } from '../world/people.js'
 import { bridgeMid } from '../world/layout.js'
 
@@ -22,6 +24,8 @@ export default function SkyMap() {
   const routes = openRoutes(state)
   const anchor = hasAnchor(state)
   const placingDef = ui.placing ? BUILDINGS[ui.placing] : null
+  const buildingsAtlas = usePaintedAtlas('buildings')
+  const footprint = (type, island, slot) => buildingLayout(type, island, slot, buildingsAtlas?.cells[BUILDING_CELLS[type]])
   const [hover, setHover] = useState(null)
   const hoverRef = useRef(null)
   hoverRef.current = hover
@@ -147,6 +151,7 @@ export default function SkyMap() {
           if (b.slot < 0 || BUILDINGS[b.type].infrastructure) return null
           const plot = ISLANDS[b.island]?.plots?.[b.slot]
           if (!plot) return null
+          const shape = footprint(b.type, b.island, b.slot)
           return (
             <g key={b.id} className="building-hit" role="button" tabIndex="0"
               aria-label={`Inspect ${BUILDINGS[b.type].name}`}
@@ -154,7 +159,7 @@ export default function SkyMap() {
               onClick={(e) => { e.stopPropagation(); if (!ui.placing) ui.openIsland(b.island) }}
               onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ui.openIsland(b.island) } }}>
               <title>{BUILDINGS[b.type].name}</title>
-              <rect x="-38" y="-66" width="76" height="82" rx="7" fill="transparent" />
+              <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx="7" fill="transparent" />
 
             </g>
           )
@@ -168,15 +173,18 @@ export default function SkyMap() {
           const firstFreePlot = ISLANDS[id].plots.findIndex((_, slot) => !occupied(slot))
           return ISLANDS[id].plots.map(([x, y], i) => {
             if (occupied(i)) return null
+            const shape = footprint(ui.placing, id, i)
             return (
               <g key={`${id}-${i}`} transform={`translate(${x} ${y})`} className="slot" data-tutorial={id === 'newHaven' && i === firstFreePlot ? 'plot-newHaven' : undefined} role="button" tabIndex="0" aria-label={`Place ${placingDef.name} on ${ISLANDS[id].name} plot ${i + 1}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); place(id, i) } }} onClick={() => place(id, i)}>
-                <rect x="-35" y="-65" width="70" height="80" fill="transparent" />
-                <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x="-35" y="-66" width="70" height="70" viewBox={`${(BUILDING_CELLS[ui.placing] % 4) * 362} ${Math.floor(BUILDING_CELLS[ui.placing] / 4) * 362} 362 362`}>
-                  <image href="/art/buildings.png" width="1448" height="1086" />
-                </pattern></defs>
-                <rect className="plot-preview" x="-35" y="-66" width="70" height="70" fill={`url(#preview-${id}-${i})`} pointerEvents="none" />
-                <polygon points="0,-12 24,0 0,12 -24,0" fill="rgba(243,217,143,.35)" stroke="#fff1c4" strokeWidth="1.8" />
-                <path d="M-6 0h12M0 -6v12" stroke="#fff6d6" strokeWidth="2.2" strokeLinecap="round" transform="translate(0 -22)" />
+                <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill="transparent" />
+                <polygon points={`0,${-shape.groundDepth} ${shape.groundWidth},0 0,${shape.groundDepth} ${-shape.groundWidth},0`} fill="rgba(243,217,143,.28)" stroke="#fff1c4" strokeWidth="1.5" />
+                {buildingsAtlas?.cells[BUILDING_CELLS[ui.placing]] && <>
+                  <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x={shape.x} y={shape.y} width={shape.width} height={shape.height} viewBox={buildingsAtlas.cells[BUILDING_CELLS[ui.placing]].join(' ')}>
+                    <image href="/art/buildings.png" width={buildingsAtlas.image.naturalWidth} height={buildingsAtlas.image.naturalHeight} />
+                  </pattern></defs>
+                  <rect className="plot-preview" x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={`url(#preview-${id}-${i})`} pointerEvents="none" />
+                </>}
+                <path d="M-6 0h12M0 -6v12" stroke="#fff6d6" strokeWidth="2.2" strokeLinecap="round" transform={`translate(0 ${-shape.groundDepth - 10})`} pointerEvents="none" />
               </g>
             )
           })

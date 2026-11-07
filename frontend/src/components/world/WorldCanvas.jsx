@@ -5,10 +5,11 @@ import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
 import { WORLD_ISLANDS, FAR_ISLETS } from './layout.js'
-import { PAINTED_ISLANDS, BUILDING_CELLS, PaintedAtlas } from './paintedArt.js'
+import { PAINTED_ISLANDS, BUILDING_CELLS, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudPuff, cloudBank } from './island.js'
 import { bridgeCurve } from './people.js'
+import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
 /* ---------------- player buildings → prop specs ---------------- */
@@ -196,8 +197,8 @@ export default function WorldCanvas({ hoverRef }) {
   useEffect(() => {
     const cv = canvasRef.current
     const ctx = cv.getContext('2d')
-    const atlases = { forest: new PaintedAtlas('/art/verdant-forest.png', 1, 1), prism: new PaintedAtlas('/art/prism-shelf.png', 1, 1), starter: new PaintedAtlas('/art/starter-island-expanded.png', 1, 1), civic: new PaintedAtlas('/art/islands-civic-layered.png', 2, 2), settlement: new PaintedAtlas('/art/islands-settlement.png', 2, 2) }
-    const buildingsAtlas = new PaintedAtlas('/art/buildings.png', 4, 3)
+    const atlases = Object.fromEntries(Object.keys(PAINTED_ATLASES).map((sheet) => [sheet, getPaintedAtlas(sheet)]))
+    const buildingsAtlas = atlases.buildings
     const appeared = new Map()
     const bridgeAppeared = new Map(stateRef.current.bridges.map((b) => [b.route, -1000]))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -357,7 +358,7 @@ export default function WorldCanvas({ hoverRef }) {
       for (const b of st.buildings) {
         if (b.slot < 0 || BUILDINGS[b.type].infrastructure || !st.connected.includes(b.island)) continue
         const p = buildingProp(b)
-        if (p) items.push({ y: p.y, p, mode: access[b.island] ? 'lit' : 'locked', bob: WORLD_ISLANDS[b.island]._bob, fresh: b.id, buildingType: b.type, island: b.island })
+        if (p) items.push({ y: p.y, p, mode: access[b.island] ? 'lit' : 'locked', bob: WORLD_ISLANDS[b.island]._bob, fresh: b.id, buildingType: b.type, island: b.island, slot: b.slot })
       }
       items.sort((a, b) => a.y - b.y)
       const lights = []
@@ -370,10 +371,14 @@ export default function WorldCanvas({ hoverRef }) {
           if (!appeared.has(it.fresh)) appeared.set(it.fresh, originalBuildings.current.has(it.fresh) ? now - 1000 : now)
           const progress = reducedMotion.matches ? 1 : Math.min(1, (now - appeared.get(it.fresh)) / 650)
           const scale = 1 - (1 - progress) ** 3
-          const width = (it.buildingType === 'communityHall' ? 90 : 68) * (it.island === 'newHaven' ? 1 : .8)
-          const height = (it.buildingType === 'windTurbine' ? 100 : 64) * (it.island === 'newHaven' ? 1 : .8)
+          const cell = BUILDING_CELLS[it.buildingType]
+          const footprint = buildingLayout(it.buildingType, it.island, it.slot, buildingsAtlas.cells[cell])
           ctx.save(); ctx.translate(p.x, p.y + it.bob); ctx.scale(scale, scale)
-          buildingsAtlas.draw(ctx, BUILDING_CELLS[it.buildingType], -width / 2, -height + 7, width, height)
+          ctx.save()
+          ctx.filter = 'blur(2px)'
+          ellipse(ctx, 0, 1, footprint.groundWidth, footprint.groundDepth, 'rgba(48,39,27,.22)')
+          ctx.restore()
+          buildingsAtlas.draw(ctx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
           ctx.restore()
         } else if (b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
         if (def.anim && it.mode !== 'hidden' && !(it.buildingType && buildingsAtlas.ready)) {
