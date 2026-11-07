@@ -1,7 +1,6 @@
 // Static game content: islands, routes, buildings, levels, missions, weather.
 // Everything here is plain data so the backend can later serve the same shapes.
 
-export const ACTIONS_PER_TURN = 3
 export const BASE_HOUSING = 6
 export const BASE_CAP = 100
 export const GATHER_AMOUNT = 6
@@ -139,7 +138,7 @@ export const REPAIR_COST = { wood: 6 }
 export const BEACON_COST = { wood: 20, energy: 10 }
 export const HARVEST = { wood: 10, sustainability: 3 }
 
-// prod / upkeep are per turn. happiness is a per-turn nudge.
+// prod / upkeep are per action. happiness is an adjustment after each action.
 export const BUILDINGS = {
   shelter: {
     name: 'Shelter', category: 'Survival', cost: { wood: 10 }, housing: 4,
@@ -221,7 +220,7 @@ export const MISSIONS = [
   },
   {
     id: 'placeForWater', name: 'A Place for Water', chapter: 1,
-    objective: 'End 3 turns in a row with at least 3 turns of water stored.',
+    objective: 'Maintain three actions of water reserves for 3 consecutive actions.',
     reward: { xp: 60, blueprint: 'waterCollector' }, rewardText: '60 XP · Water Collector blueprint',
     progress: (s) => [Math.min(s.counters.waterStreak, 3), 3],
   },
@@ -233,7 +232,7 @@ export const MISSIONS = [
   },
   {
     id: 'gardenInSky', name: 'A Garden in the Sky', chapter: 2,
-    objective: 'End a turn with a food surplus.',
+    objective: 'Achieve a food surplus after an action.',
     reward: { xp: 75, flag: 'gardenUpgrade' }, rewardText: '75 XP · Starter Garden upgrade (+2 food)',
     progress: (s) => [s.counters.foodSurplus ? 1 : 0, 1],
   },
@@ -245,7 +244,7 @@ export const MISSIONS = [
   },
   {
     id: 'keepLightsOn', name: 'Keep the Lights On', chapter: 2, requires: ['firstBridge'],
-    objective: 'Keep energy positive for 5 turns in a row.',
+    objective: 'Keep energy positive for 5 consecutive actions.',
     reward: { xp: 100, blueprint: 'battery' }, rewardText: '100 XP · Crystal Battery blueprint',
     progress: (s) => [Math.min(s.counters.energyStreak, 5), 5],
   },

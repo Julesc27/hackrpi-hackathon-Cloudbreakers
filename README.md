@@ -2,7 +2,7 @@
 
 *Small choices. Higher tomorrows.*
 
-A turn-based sky-settlement game. You start on **New Haven** with nothing but a dormant beacon, build a shelter and a bridge anchor, then spend wood to bridge out to the islands around you.
+A level-based sky-settlement game. You start on **New Haven** with nothing but a dormant beacon, build a shelter and a bridge anchor, then spend wood to bridge out to the islands around you.
 
 ```
 .
@@ -35,7 +35,7 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 1. **Build** (left rail) → pick *Shelter* or *Bridge Anchor* → click a glowing plot on New Haven.
 2. Click **New Haven** to *gather wood* (or restore the beacon later).
 3. Click a glowing **+** between islands to plan a bridge. Rope bridges are cheap but storms damage them; reinforced stone unlocks at level 3.
-4. You get **3 actions per turn**. **End Turn** applies production, consumption and weather, then shows a report.
+4. Gather and build freely: each successful action earns **10 XP** and updates production and consumption automatically. Complete quests for bonus XP and **level up** to unlock buildings and bridges. Weather changes with your level.
 5. **Cloud** (left rail) is the advisor: situation → recommendation → reason → trade-off → confidence.
 6. Final goal (*Higher Tomorrows*): 3+ islands connected, water/food/energy/happiness ≥ 50 and sustainability ≥ 60.
 
@@ -47,7 +47,7 @@ Progress saves to the browser's localStorage, and to your account when logged in
 frontend/src/
 ├── game/                 ← all rules live here (no React)
 │   ├── data.js           islands, routes, buildings, levels, missions, weather — tune balance here
-│   ├── engine.js         pure reducer + helpers (END_TURN simulation, missions, XP)
+│   ├── engine.js         pure reducer + helpers (automatic production, missions, XP)
 │   ├── advisor.js        rule-based "Cloud" advice (swap for an AI call later)
 │   ├── CloudSync.jsx     uploads the save to the backend while logged in
 │   └── GameContext.jsx   React state + localStorage save, UI state (open panels, placement)
@@ -55,7 +55,7 @@ frontend/src/
 ├── api/client.js         backend calls (login, register, load/save town)
 ├── components/
 │   ├── map/              sky map: painted islands/bridges from the concept art + building sprites
-│   ├── hud/              top resource bar, title, level badge, weather, rails, turn controls
+│   ├── hud/              top resource bar, title, level badge, weather, rails, XP progress
 │   └── panels/           drawers and modals: quests, build, advisor, island, bridge, journal…
 ├── artPaths.js           (in components/) helpers for painted card art and badges
 ├── index.css             design tokens + shared UI pieces
@@ -64,7 +64,7 @@ frontend/src/
 
 **Art:** `frontend/public/art/` holds pieces cut from the concept art: each island, each bridge, the background islets/moon (`decor.webp`), HUD icons and card art. `src/game/artLayout.json` says where each piece sits in the 1600×900 map. Swap a `.webp` for a new painting at the same position and the game picks it up. `tools/art/` has the scripts that made the cut-outs.
 
-**Backend:** the save is the `createInitialState()` object in `engine.js`; the server validates its shape in `backend/app/models/town.py` (update that if you add fields with constraints). If you change the save format, bump `version` in `createInitialState()`. The reducer is deterministic (randomness comes in as `roll` on `END_TURN`), so the server could replay or validate turns later.
+**Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`; the server validates its shape in `backend/app/models/town.py` (update that if you add fields with constraints). If you change the save format, bump `version` in `createInitialState()`. Existing version 2 saves migrate automatically with their XP and town progress preserved. The reducer is deterministic, so the server can replay or validate actions; randomness is supplied as `roll` on `END_TURN`.
 
 ## Secrets
 
@@ -87,7 +87,7 @@ Send the token as `Authorization: Bearer <access_token>`. Tokens last 7 days.
 Backend needs `JWT_SECRET` in `backend/.env` (and in the backend's Vercel environment variables).
 
 The frontend saves to localStorage on every change and, when logged in, uploads to
-`PUT /town` every 30s, after each turn, and when the tab closes (`frontend/src/game/CloudSync.jsx`).
+`PUT /town` every 30s, after each successful gameplay action, and when the tab closes (`frontend/src/game/CloudSync.jsx`).
 It needs `VITE_API_URL` (set in docker-compose; on Vercel set it on the frontend project).
 
 ## Deploy (Vercel)

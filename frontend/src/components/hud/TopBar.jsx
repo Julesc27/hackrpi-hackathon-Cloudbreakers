@@ -1,5 +1,5 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { caps, projectTurn } from '../../game/engine.js'
+import { caps, projectProduction } from '../../game/engine.js'
 import { RES_ICON } from '../icons.jsx'
 
 function Delta({ v }) {
@@ -12,7 +12,7 @@ function Meter({ k, label, value, max, net, color }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100))
   const low = pct < 20
   return (
-    <div className={`res res-meter${low ? ' is-low' : ''}`} title={`${label}: ${value}/${max}${net != null ? ` (${net >= 0 ? '+' : ''}${net} next turn)` : ''}`}>
+    <div className={`res res-meter${low ? ' is-low' : ''}`} title={`${label}: ${value}/${max}${net != null ? ` (${net >= 0 ? '+' : ''}${net} next action)` : ''}`}>
       <Icon size={30} className="res-icon" />
       <div className="res-body">
         <div className="res-label">{label}{net != null && <Delta v={net} />}</div>
@@ -40,7 +40,7 @@ export default function TopBar() {
   const { state } = useGame()
   const ui = useUI()
   const cap = caps(state)
-  const { net } = projectTurn(state)
+  const { net } = projectProduction(state)
   const r = state.resources
   return (
     <div className="topbar panel" onClick={() => ui.setPanel('storage')} role="button" tabIndex={0} aria-label="Resources — open storage">

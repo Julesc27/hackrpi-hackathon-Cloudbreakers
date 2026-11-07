@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { ISLANDS, MISSIONS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../../game/data.js'
-import { caps, projectTurn, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
+import { ISLANDS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../../game/data.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
 import { islandCardArt, ISLAND_BADGE } from '../artPaths.js'
 import { Modal, YieldChips, Progress, CostChips } from './Panel.jsx'
-import { RES_ICON, WeatherIcon, People, Leaf, Smile, Check, Star, ArtIcon } from '../icons.jsx'
+import { RES_ICON, People, Leaf, Smile, Check, Star, ArtIcon } from '../icons.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { useSync } from '../../game/CloudSync.jsx'
 
@@ -57,7 +57,7 @@ export function JournalModal() {
       <ol className="journal">
         {entries.map((e) => (
           <li key={e.id} className={`jentry jentry-${e.type}`}>
-            <span className="jturn">Turn {e.turn}</span>
+            <span className="jturn">Level {e.level}</span>
             <div>
               <strong>{e.title}</strong>
               {e.text && <p>{e.text}</p>}
@@ -73,10 +73,10 @@ export function StorageModal() {
   const { state } = useGame()
   const ui = useUI()
   const cap = caps(state)
-  const { gain, use, net } = projectTurn(state)
+  const { gain, use, net } = projectProduction(state)
   const rows = ['wood', 'water', 'food', 'energy', 'coins']
   return (
-    <Modal title="Storehouse" kicker="Stock and flow next turn" onClose={() => ui.setPanel(null)}>
+    <Modal title="Storehouse" kicker="Stock and flow next action" onClose={() => ui.setPanel(null)}>
       <table className="table">
         <thead><tr><th>Resource</th><th>Stock</th><th>In</th><th>Out</th><th>Net</th></tr></thead>
         <tbody>
@@ -99,7 +99,7 @@ export function StorageModal() {
         <div><Smile size={20} /> Happiness <strong>{state.happiness}</strong></div>
         <div><Leaf size={20} /> Sustainability <strong>{state.sustainability}%</strong></div>
       </div>
-      <p className="muted small">Each resident eats ½ food and drinks ½ water per turn. Projection uses this turn's weather ({WEATHER[state.weather].name}).</p>
+      <p className="muted small">Each resident eats ½ food and drinks ½ water per action. Projection uses current weather ({WEATHER[state.weather].name}).</p>
     </Modal>
   )
 }
@@ -198,70 +198,6 @@ export function SettingsModal() {
   )
 }
 
-export function TurnReport() {
-  const { state, dispatch } = useGame()
-  const r = state.report
-  if (!state.showReport || !r) return null
-  const close = () => dispatch({ type: 'CLOSE_REPORT' })
-  const w = WEATHER[r.weather]
-  const nw = WEATHER[r.nextWeather]
-  const keys = ['wood', 'water', 'food', 'energy', 'coins'].filter((k) => r.gained[k] || r.consumed[k])
-  const dh = r.happiness.to - r.happiness.from
-  const ds = r.sustainability.to - r.sustainability.from
-  const dp = r.population.to - r.population.from
-  return (
-    <Modal
-      title={`End of turn ${r.turn}`}
-      kicker={`${w.name} — ${w.text}`}
-      onClose={close}
-      size="lg"
-      footer={<button className="btn-gold" onClick={close} autoFocus>Begin turn {r.turn + 1}</button>}
-    >
-      {r.shortages.length > 0 && <div className="alert">Shortage: {r.shortages.join(', ')}. Happiness fell and residents may leave.</div>}
-      <div className="report-grid">
-        <section>
-          <h3 className="section">Resources</h3>
-          <table className="table compact">
-            <thead><tr><th></th><th>Gained</th><th>Used</th><th>Net</th></tr></thead>
-            <tbody>
-              {keys.map((k) => {
-                const Icon = RES_ICON[k]
-                return (
-                  <tr key={k}>
-                    <td><Icon size={16} /> {RESOURCES[k].label}</td>
-                    <td className="up">+{r.gained[k]}</td>
-                    <td className="down">−{r.consumed[k]}</td>
-                    <td className={r.net[k] > 0 ? 'up' : r.net[k] < 0 ? 'down' : ''}>{sign(r.net[k])}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </section>
-        <section>
-          <h3 className="section">Town</h3>
-          <div className="delta-row"><Smile size={18} /> Happiness <strong>{r.happiness.to}</strong> <span className={dh >= 0 ? 'up' : 'down'}>{sign(dh)}</span></div>
-          <ul className="reasons">{r.happiness.reasons.map(([t, v]) => <li key={t}>{t} <span className={v >= 0 ? 'up' : 'down'}>{sign(v)}</span></li>)}</ul>
-          <div className="delta-row"><People size={18} /> Population <strong>{r.population.to}</strong> <span className={dp >= 0 ? 'up' : 'down'}>{sign(dp)}</span> <span className="muted small">/{r.population.housing} beds</span></div>
-          <div className="delta-row"><Leaf size={18} /> Sustainability <strong>{r.sustainability.to}%</strong> <span className={ds >= 0 ? 'up' : 'down'}>{sign(ds)}</span></div>
-          {r.bridges.length > 0 && (
-            <>
-              <h3 className="section">Bridges</h3>
-              <ul className="reasons">{r.bridges.map((b) => <li key={b.route}>{bridgeLabel(b.route)} <span className="down">{b.from}% → {b.to}%</span></li>)}</ul>
-            </>
-          )}
-        </section>
-      </div>
-      <div className="report-foot">
-        <div className="forecast-pill"><WeatherIcon kind={nw.icon} size={22} /> Next: <strong>{nw.name}</strong></div>
-        {r.missionsCompleted.map((id) => (
-          <div key={id} className="mission-pill"><Check size={16} /> {MISSIONS.find((m) => m.id === id).name}</div>
-        ))}
-      </div>
-    </Modal>
-  )
-}
-
 export function IntroModal() {
   const { state, dispatch } = useGame()
   if (state.seenIntro) return null
@@ -274,7 +210,7 @@ export function IntroModal() {
         <li>Build a <strong>Shelter</strong> and a <strong>Bridge Anchor</strong> from the Build menu.</li>
         <li>Click New Haven to <strong>gather wood</strong>.</li>
         <li>Click a glowing <strong>+</strong> between islands to build your first bridge.</li>
-        <li>You get <strong>3 actions</strong> per turn. Press <strong>End Turn</strong> to see what happens.</li>
+        <li>Earn <strong>10 XP per action</strong> and bonus XP from quests. <strong>Level up</strong> to unlock buildings and bridges. Resources update automatically after each action.</li>
       </ol>
     </Modal>
   )

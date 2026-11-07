@@ -3,7 +3,7 @@
 // localStorage is still written on every change (GameContext). On top of that, while
 // logged in we upload the save to PUT /town:
 //   - every SYNC_MS if anything changed,
-//   - right after each END_TURN,
+//   - right after each successful gameplay action,
 //   - when the tab is hidden/closed (keepalive request).
 // On login we reconcile the device's save with the account's save (see reconcile()).
 
@@ -11,12 +11,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import * as api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useGame } from './GameContext.jsx'
-import { createInitialState } from './engine.js'
+import { getLevelInfo, migrateSave } from './engine.js'
 
 const SYNC_MS = 30_000
-// Saves from an older engine version can't be loaded (same rule as GameContext's loadSave);
-// if the account only has an outdated save, this device's town replaces it.
-const SAVE_VERSION = createInitialState().version
 const OWNER_KEY = 'cloudbreakers-save-owner' // username the local save belongs to (absent = guest save)
 const DIRTY_KEY = 'cloudbreakers-save-dirty' // local changes not yet on the server
 
@@ -25,7 +22,7 @@ const ls = {
   set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch { /* ignore */ } },
 }
 const toSave = ({ toasts, ...rest }) => rest // toasts are UI-only
-const isFresh = (s) => s.turn <= 1 && s.xp === 0 && s.completed.length === 0
+const isFresh = (s) => s.xp === 0 && s.completed.length === 0
 
 const SyncCtx = createContext(null)
 
@@ -86,7 +83,7 @@ export function SyncProvider({ children }) {
     setSync({ status: 'loading', savedAt: null, error: null })
     try {
       const res = await api.loadTown()
-      const town = res.town?.version === SAVE_VERSION ? res.town : null // outdated = no save
+      const town = [2, 3].includes(res.town?.version) ? migrateSave(res.town) : null
       const saved_at = res.saved_at
       const local = stateRef.current
       const owner = ls.get(OWNER_KEY)
@@ -103,9 +100,9 @@ export function SyncProvider({ children }) {
         action = 'load'
       } else {
         action = window.confirm(
-          `Your account already has a saved town: "${town.townName}" (turn ${town.turn}).\n\n` +
+          `Your account already has a saved town: "${town.townName}" (level ${getLevelInfo(town.xp).level}).\n\n` +
           `OK: load your account's town.\n` +
-          `Cancel: replace it with this device's guest town "${local.townName}" (turn ${local.turn}).`,
+          `Cancel: replace it with this device's guest town "${local.townName}" (level ${getLevelInfo(local.xp).level}).`,
         ) ? 'load' : 'upload'
       }
 
@@ -144,7 +141,7 @@ export function SyncProvider({ children }) {
     }
   }, [username, reconcile])
 
-  // Track local changes; upload right away after a turn ends.
+  // Track local changes; upload right away after a successful gameplay action.
   useEffect(() => {
     const prev = prevState.current
     prevState.current = state
@@ -153,7 +150,7 @@ export function SyncProvider({ children }) {
       return
     }
     setDirty(true)
-    if (pushAfterRender.current || prev.turn !== state.turn) {
+    if (pushAfterRender.current || prev.xp !== state.xp) {
       pushAfterRender.current = false
       push()
     }

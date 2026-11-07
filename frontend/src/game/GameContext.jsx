@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useReducer, useState } from 'react'
-import { createInitialState, gameReducer } from './engine.js'
+import { createInitialState, gameReducer, migrateSave } from './engine.js'
 
 const SAVE_KEY = 'cloudbreakers-save-v1'
 
@@ -8,7 +8,7 @@ function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const s = JSON.parse(raw)
-      if (s?.version === 2) return { ...s, toasts: [] }
+      if ([2, 3].includes(s?.version)) return migrateSave(s)
     }
   } catch { /* storage unavailable — start fresh */ }
   return createInitialState()
@@ -20,7 +20,7 @@ const UICtx = createContext(null)
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, undefined, loadSave)
 
-  // Local save for now. Swap for api/client.js saveTown() once the backend exists.
+  // Local backup on every change; CloudSync also saves logged-in towns to the server.
   useEffect(() => {
     try {
       const { toasts, ...rest } = state
