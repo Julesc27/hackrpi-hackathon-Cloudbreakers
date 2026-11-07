@@ -230,3 +230,22 @@ test('the gods take nothing without a poem or the full price', () => {
   assert.equal(refused.journal.length, poor.journal.length)
   assert.equal(gameReducer(poor, { type: 'CONSULT_GODS', poem: '   ' }), poor)
 })
+
+test('Friendly Cloud points to the Store and notices when the gods disagree', async () => {
+  const { getAdvice, godsWord, GODS_FRESH_XP } = await import('./advisor.js')
+  const start = { ...createInitialState(), resources: { ...createInitialState().resources, energy: 30, coins: 60 } }
+  const tip = getAdvice(start)[0]
+  assert.equal(tip.focus, 'shelter')
+  assert.equal(godsWord(start, tip).kind, 'nudge')
+  assert.match(godsWord(start, tip).link, /Store/)
+
+  const differ = gameReducer(start, { type: 'CONSULT_GODS', poem: 'riddle', focus: 'verdant' })
+  assert.deepEqual(differ.oracle, { focus: 'verdant', xp: start.xp })
+  assert.equal(godsWord(differ, tip).kind, 'differ')
+  assert.match(godsWord(differ, tip).link, /Store/)
+
+  const agree = gameReducer(start, { type: 'CONSULT_GODS', poem: 'riddle', focus: 'shelter' })
+  assert.equal(godsWord(agree, tip).kind, 'agree')
+  assert.equal(godsWord({ ...agree, xp: agree.xp + GODS_FRESH_XP }, tip).kind, 'nudge') // stale
+  assert.ok(getAdvice(start).every((t) => t.focus))
+})

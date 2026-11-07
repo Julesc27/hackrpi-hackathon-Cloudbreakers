@@ -346,15 +346,30 @@ const STORE_ITEMS = [
     name: 'Consult the Gods',
     icon: 'ancestors',
     desc: 'Light a lantern and ask the founders who came before.',
+    promise: 'The gods have read the laws beneath the sky. Their counsel is always right, and never plain.',
     cost: CONSULT_COST,
   },
 ]
+
+// The poem with its clue word glowing (the first whole-word match; the backend checks it is in the poem).
+function PoemWithClue({ poem, clue }) {
+  const m = clue ? new RegExp(`\\b${clue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).exec(poem) : null
+  if (!m) return <blockquote className="oracle-poem">{poem}</blockquote>
+  return (
+    <blockquote className="oracle-poem">
+      {poem.slice(0, m.index)}
+      <span className="oracle-clue" title="The gods hid something here">{m[0]}</span>
+      {poem.slice(m.index + m[0].length)}
+    </blockquote>
+  )
+}
 
 function ConsultGodsCard({ item }) {
   const { state, dispatch } = useGame()
   const auth = useAuth()
   const [phase, setPhase] = useState('idle') // idle | asking | spoken | silent
   const [poem, setPoem] = useState('')
+  const [clue, setClue] = useState(null)
   const [error, setError] = useState('')
   const affordable = canAfford(state.resources, item.cost)
   const loggedIn = auth.backend && auth.status === 'authed'
@@ -365,8 +380,9 @@ function ConsultGodsCard({ item }) {
     try {
       const res = await consultGods(state)
       setPoem(res.poem)
+      setClue(res.key || null)
       setPhase('spoken')
-      dispatch({ type: 'CONSULT_GODS', poem: res.poem }) // charged only once a poem arrives
+      dispatch({ type: 'CONSULT_GODS', poem: res.poem, focus: res.focus }) // charged only once a poem arrives
     } catch (e) {
       setError(e.status === 429 ? 'The gods grow weary of questions. Return later.' : 'The gods are silent. Nothing was spent.')
       setPhase('silent')
@@ -382,6 +398,7 @@ function ConsultGodsCard({ item }) {
       <div className="store-body">
         <h3 className="store-name">{item.name}</h3>
         <p className="store-desc">{item.desc}</p>
+        <p className="store-promise">{item.promise}</p>
         <CostChips cost={item.cost} resources={state.resources} />
       </div>
       <button
@@ -392,7 +409,15 @@ function ConsultGodsCard({ item }) {
       >
         {label}
       </button>
-      {phase === 'spoken' && <blockquote className="oracle-poem">{poem}</blockquote>}
+      {phase === 'spoken' && (
+        <>
+          <PoemWithClue poem={poem} clue={clue} />
+          <p className="oracle-cloud">
+            <ArtIcon name="cloud" size={22} />
+            <span><strong>Friendly Cloud:</strong> Oh, that’s far beyond me. But the gods have never once been wrong.</span>
+          </p>
+        </>
+      )}
       {phase === 'silent' && <p className="oracle-silent">{error}</p>}
     </div>
   )

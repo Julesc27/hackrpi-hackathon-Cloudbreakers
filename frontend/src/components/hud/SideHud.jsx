@@ -4,6 +4,7 @@ import { getLevelInfo, housing, activeMissions } from '../../game/engine.js'
 import { getAdvice } from '../../game/advisor.js'
 import { WEATHER } from '../../game/data.js'
 import { CloudIcon, WeatherIcon, People, Leaf, ArtIcon } from '../icons.jsx'
+import GodsLine from '../GodsLine.jsx'
 
 export function TitleBlock() {
   const { state } = useGame()
@@ -89,9 +90,9 @@ export function WeatherCard() {
     try { localStorage.setItem('cb-advisor-collapsed', collapsed ? '1' : '0') } catch { /* ignore */ }
   }, [collapsed])
   return (
-    <aside className={`cloud-advisor panel${collapsed ? ' is-collapsed' : ''}`} aria-label="Cloud, your AI advisor">
+    <aside className={`cloud-advisor panel${collapsed ? ' is-collapsed' : ''}`} aria-label="Cloud, your friendly advisor">
       <div className="advisor-kicker">
-        <CloudIcon size={23} /> <span className="advisor-kicker-text">AI advisor</span>
+        <CloudIcon size={23} /> <span className="advisor-kicker-text">Friendly Cloud</span>
         <button
           className="advisor-fold"
           onClick={() => setCollapsed((c) => !c)}
@@ -117,6 +118,7 @@ export function WeatherCard() {
       <div className="cloud-speech">
         <strong>{advice?.recommendation || 'A little higher, together.'}</strong>
         <p>{advice?.reason || 'Your sky settlement is growing. Choose an island and plan your next step.'}</p>
+        <GodsLine tip={advice} />
       </div>
       <button className="advisor-link" onClick={() => ui.setPanel('advisor')}>Cloud’s notes <span>↗</span></button>
       <div className="advisor-weather" data-tutorial="hud-weather"><WeatherIcon kind={w.icon} size={19} /><span>{w.name}</span></div>

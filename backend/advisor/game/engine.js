@@ -490,7 +490,7 @@ export function gameReducer(state, action) {
       const poem = typeof action.poem === 'string' ? action.poem.trim() : ''
       if (!poem) return state
       if (!canAfford(state.resources, CONSULT_COST)) return toast(state, 'warn', 'The gods ask 25 energy and 50 coins.')
-      let s = { ...state, resources: pay(state.resources, CONSULT_COST) }
+      let s = { ...state, resources: pay(state.resources, CONSULT_COST), oracle: { focus: action.focus || null, xp: state.xp } }
       s = toast(s, 'story', 'Their words are written in your journal.', 'The gods have spoken')
       return journal(s, 'oracle', 'Word from the gods', poem)
     }

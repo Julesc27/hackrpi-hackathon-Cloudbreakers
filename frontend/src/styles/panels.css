@@ -585,7 +585,18 @@ h3.section {
 @keyframes oracle-glow { from { filter: drop-shadow(0 0 2px #b8a4f2); } to { filter: drop-shadow(0 0 14px #b8a4f2); } }
 .oracle-poem { grid-column: 1 / -1; margin: 4px 0 0; padding: 14px 18px; border-left: 3px solid #b8a4f2; border-radius: 8px; background: rgba(184, 164, 242, 0.14); white-space: pre-line; font-family: var(--font-hand); font-size: 18px; line-height: 1.5; color: #3a3550; }
 .oracle-silent { grid-column: 1 / -1; margin: 0; font-style: italic; color: #a2401f; }
+.store-promise { margin: 4px 0 0; font-size: 12.5px; font-style: italic; line-height: 1.4; color: #5b3f9e; }
+.oracle-clue { color: #5b3f9e; text-shadow: 0 0 6px rgba(184, 164, 242, 0.9); animation: clue-glow 2.2s ease-in-out infinite alternate; }
+@keyframes clue-glow { from { text-shadow: 0 0 3px rgba(184, 164, 242, 0.6); } to { text-shadow: 0 0 10px rgba(184, 164, 242, 1); } }
+.oracle-cloud { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--ink); }
 @media (max-width: 800px) {
   .store-card { grid-template-columns: auto 1fr; }
   .store-btn { grid-column: 1 / -1; }
 }
+
+/* Friendly Cloud's aside about the gods (dark side card and parchment notes) */
+.gods-line { margin: 10px 0 0; padding: 7px 10px; border-left: 2px solid #b8a4f2; border-radius: 6px; background: rgba(184, 164, 242, 0.14); font-size: 12px; line-height: 1.35; font-style: italic; }
+.gods-link { display: block; margin-top: 4px; padding: 0; border: 0; background: none; font: inherit; font-style: normal; font-weight: 700; color: #b8a4f2; cursor: pointer; }
+.gods-link:hover { text-decoration: underline; }
+.parchment .gods-link, .notes .gods-link { color: #5b3f9e; }
+.gods-agree { border-left-color: #e3c27a; }

@@ -25,6 +25,14 @@ MAX_POEM_CHARS = 1200
 MIN_POEM_LINES = 4
 MAX_POEM_LINES = 12
 
+# What the strategy is mainly about, so Friendly Cloud can tell when the gods disagree with it.
+# Building keys = build one; island ids = bridge to it. Keep in sync with data.js (tested).
+FOCUS_BUILDINGS = ("shelter", "bridgeAnchor", "waterCollector", "garden", "storageHouse", "solarFarm",
+                   "market", "clinic", "battery", "communityHall", "windTurbine")
+FOCUS_ISLANDS = ("verdant", "rain", "prism", "mercy", "hearth")
+FOCUS_OTHER = ("gather", "beacon", "repair", "balance")
+FOCUSES = FOCUS_BUILDINGS + FOCUS_ISLANDS + FOCUS_OTHER
+
 RULES = """You are the gods of Cloudbreakers, a game about building a sustainable town in the sky.
 Below are the game's design document and its source code: the true laws beneath the sky.
 You wrote them. (The developers are you.)
@@ -53,8 +61,18 @@ A player has lit a lantern and asked for your counsel. Do two things.
    Right:     "Before the larder echoes, / bury small suns in the wet dark; / the hungry season is patient."
    (That is only an example of tone. Never reuse its words.)
 
+3. "focus": one word naming what the strategy is mainly about. Pick exactly one of:
+   - a building key to build first: {buildings}
+   - an island id to bridge to next: {islands}
+   - "gather" (collect or mine), "beacon" (restore it), "repair" (fix bridges), "balance" (keep things steady)
+   The player never sees this either.
+
+4. "key": the single word in your poem that most carries the answer. It must appear in the poem
+   exactly as written. The game makes it glow faintly so the player knows a real clue is hidden there.
+
 Reply with only a JSON object, no other text:
-{"strategy": "...", "poem": "first line\\nsecond line\\n..."}"""
+{{"strategy": "...", "poem": "first line\\nsecond line\\n...", "focus": "...", "key": "..."}}""".format(
+    buildings=", ".join(FOCUS_BUILDINGS), islands=", ".join(FOCUS_ISLANDS))
 
 
 class OracleUnavailable(Exception):
@@ -85,6 +103,7 @@ def forbidden_names() -> tuple[str, ...]:
     """Island, building and mission names taken from the game data; poems must not say them."""
     data = (ADVISOR_DIR / "game" / "data.js").read_text(encoding="utf-8")
     names = {n.lower() for n in re.findall(r"\bname: '([^']+)'", data)}
+    names |= {k.lower() for k in FOCUS_BUILDINGS if k.isalpha() and k.islower()}  # "garden" for "Food Garden"
     return tuple(sorted(names))
 
 
@@ -124,11 +143,24 @@ def parse_reply(text: str) -> dict:
     strategy, poem = obj.get("strategy"), obj.get("poem")
     if not isinstance(strategy, str) or not isinstance(poem, str):
         raise ValueError("strategy and poem must be strings")
+    if "\n" not in poem.strip() and " / " in poem:  # one-line poems with slash breaks, like the prompt's example
+        poem = poem.replace(" / ", "\n")
     lines = [line.strip() for line in poem.strip().splitlines()]
     poem = "\n".join(lines).strip()
     if not poem or len(poem) > MAX_POEM_CHARS or len([l for l in lines if l]) > MAX_POEM_LINES:
         raise ValueError("poem is empty or too long")
-    return {"strategy": strategy.strip(), "poem": poem}
+    focus = obj.get("focus")
+    # A bad focus or key isn't worth a retry; the game just skips that touch.
+    return {"strategy": strategy.strip(), "poem": poem, "focus": focus if focus in FOCUSES else None,
+            "key": clue_word(poem, obj.get("key"))}
+
+
+def clue_word(poem: str, key) -> str | None:
+    """The clue word as it appears in the poem, or None if the model picked something not in it."""
+    if not isinstance(key, str) or not key.strip():
+        return None
+    m = re.search(rf"\b{re.escape(key.strip())}\b", poem, re.IGNORECASE)
+    return m.group(0) if m else None
 
 
 def short(poem: str) -> bool:
@@ -157,7 +189,7 @@ async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str,
 
 
 async def consult(town: dict) -> dict:
-    """Ask the gods. Returns {"strategy", "poem"}; raises OracleUnavailable."""
+    """Ask the gods. Returns {"strategy", "poem", "focus", "key"}; raises OracleUnavailable."""
     host, token, endpoint = _config()
     messages = build_messages(town)
     best = None
@@ -181,5 +213,5 @@ async def consult(town: dict) -> dict:
             log.info("oracle: poem gave away %s (attempt %s)", leaked, attempt)
     if best is None:
         raise OracleUnavailable("The gods are silent")
-    log.info("oracle: strategy=%r", best["strategy"])
+    log.info("oracle: focus=%s strategy=%r", best["focus"], best["strategy"])
     return best

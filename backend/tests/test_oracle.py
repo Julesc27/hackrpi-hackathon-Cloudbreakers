@@ -77,6 +77,18 @@ def test_forbidden_names_come_from_game_data():
     assert "verdant reach" in names and "shelter" in names
 
 
+def test_focus_words_exist_in_game_data():
+    data = (ROOT / "backend" / "advisor" / "game" / "data.js").read_text(encoding="utf-8")
+    for key in oracle.FOCUS_BUILDINGS + oracle.FOCUS_ISLANDS:
+        assert f"\n  {key}: {{" in data.replace("\r\n", "\n"), key
+
+
+def test_parse_reply_keeps_valid_focus_only():
+    reply = lambda focus: json.dumps({"strategy": "s", "poem": GOOD_POEM, "focus": focus})
+    assert oracle.parse_reply(reply("verdant"))["focus"] == "verdant"
+    assert oracle.parse_reply(reply("dragons"))["focus"] is None
+
+
 # ---------- parsing ----------
 
 @pytest.mark.parametrize("data", [
@@ -91,7 +103,20 @@ def test_extract_text_handles_endpoint_shapes(data):
 
 def test_parse_reply_accepts_fenced_json():
     text = "```json\n" + json.dumps({"strategy": "Bridge to the forest.", "poem": "  a\n b \nc\nd  "}) + "\n```"
-    assert oracle.parse_reply(text) == {"strategy": "Bridge to the forest.", "poem": "a\nb\nc\nd"}
+    assert oracle.parse_reply(text) == {"strategy": "Bridge to the forest.", "poem": "a\nb\nc\nd", "focus": None, "key": None}
+
+
+def test_parse_reply_keeps_key_only_if_in_poem():
+    reply = lambda key: json.dumps({"strategy": "s", "poem": GOOD_POEM, "key": key})
+    assert oracle.parse_reply(reply("green"))["key"] == "green"
+    assert oracle.parse_reply(reply("HOLLOW"))["key"] == "hollow"  # as written in the poem
+    assert oracle.parse_reply(reply("dragon"))["key"] is None
+    assert oracle.parse_reply(reply("gre"))["key"] is None  # whole words only
+
+
+def test_parse_reply_splits_slash_lines():
+    text = json.dumps({"strategy": "s", "poem": "When dry winds blow, / gather mist / and sow anew."})
+    assert oracle.parse_reply(text)["poem"] == "When dry winds blow,\ngather mist\nand sow anew."
 
 
 @pytest.mark.parametrize("text", ["no json here", '{"strategy": "x"}', '{"strategy": "x", "poem": ""}', '{"strategy": 1, "poem": "a"}'])
@@ -102,6 +127,7 @@ def test_parse_reply_rejects_bad_replies(text):
 
 def test_leaks_catch_names_and_numbers():
     assert oracle.leaks("Cross to Verdant Reach") == ["verdant reach"]
+    assert oracle.leaks("the garden's thirst is deep") == ["garden"]
     assert oracle.leaks("Gather 10 of them") == ["digits"]
     assert oracle.leaks(GOOD_POEM) == []
 
@@ -109,9 +135,9 @@ def test_leaks_catch_names_and_numbers():
 # ---------- consult ----------
 
 async def test_consult_sends_prompt_and_returns_reply(databricks):
-    databricks.replies.append(chat_reply(json.dumps({"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM})))
+    databricks.replies.append(chat_reply(json.dumps({"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant", "key": "green"})))
     reply = await oracle.consult(TOWN)
-    assert reply == {"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM}
+    assert reply == {"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant", "key": "green"}
     req = databricks.requests[0]
     assert str(req.url) == "https://dbc-test.cloud.databricks.com/serving-endpoints/databricks-test/invocations"
     assert req.headers["authorization"] == "Bearer test-token"
@@ -160,10 +186,10 @@ def client():
     ratelimit.reset()
 
 
-def test_route_returns_only_the_poem(client, databricks):
-    databricks.replies.append(chat_reply(json.dumps({"strategy": "secret plan", "poem": GOOD_POEM})))
+def test_route_returns_poem_and_focus_but_not_strategy(client, databricks):
+    databricks.replies.append(chat_reply(json.dumps({"strategy": "secret plan", "poem": GOOD_POEM, "focus": "rain", "key": "thread"})))
     res = client.post("/advisor", json=TOWN)
-    assert res.status_code == 200 and res.json() == {"poem": GOOD_POEM}
+    assert res.status_code == 200 and res.json() == {"poem": GOOD_POEM, "focus": "rain", "key": "thread"}
     sent = json.loads(databricks.requests[0].content)["messages"][1]["content"]
     assert "Secret diary" not in sent  # journal is stripped
 
