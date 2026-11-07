@@ -12,6 +12,17 @@ function ResIcon({ res, size = 26 }) {
   return Icon ? <g transform={`translate(${-size / 2} ${-size / 2})`}><Icon size={size} /></g> : null
 }
 
+/** Converts a world-space point to screen pixels using the live camera transform. */
+function worldToScreen(wx, wy, cam) {
+  const camEl = document.querySelector('.camera')
+  const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
+  const { x: camX, y: camY, s } = cam?.view?.() || { x: 0, y: 0, s: 1 }
+  return {
+    x: cr.left + (wx - WORLD.x) * s + camX,
+    y: cr.top + (wy - WORLD.y) * s + camY,
+  }
+}
+
 /** Renders floating numbers, sparkle bursts and tap-to-collect bubbles (world coordinates). */
 export function FxLayer() {
   const ui = useUI()
@@ -56,6 +67,13 @@ export function FxLayer() {
           const collect = () => {
             ui.clearFx(f.id)
             ui.emitFx({ kind: 'float', x: f.x, y: f.y - 10, text: `+${f.amount}`, res: f.res, ttl: 1400 })
+
+            // Fire flying tokens from the bubble's screen position to the correct target
+            const cam = ui.camera?.current
+            const { x: screenX, y: screenY } = worldToScreen(f.x, f.y, cam)
+            window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
+              detail: { res: f.res, amount: f.amount, startX: screenX, startY: screenY },
+            }))
           }
           return (
             <g key={f.id} transform={`translate(${f.x} ${f.y})`} onClick={collect}>
@@ -118,7 +136,7 @@ export function useWorldEvents() {
       }
     }
 
-    // Direct interaction receipts use the validated reward, so rejected clicks never animate gains.
+    // Direct interaction receipts — rejected clicks never animate gains.
     const interaction = state.lastInteraction
     if (interaction && interaction.id !== p.lastInteraction?.id) {
       const point = INTERACTION_POINTS[interaction.siteId]
@@ -127,13 +145,8 @@ export function useWorldEvents() {
         Object.entries(interaction.reward).filter(([, value]) => value > 0).forEach(([res, amount], i) => {
           out.push({ kind: 'float', x: point[0] + i * 26, y: point[1] - 35 - i * 26, res, text: `+${amount}`, ttl: 1450 })
 
-          // Convert world coordinates to screen coordinates and fire flying tokens
-          const camEl = document.querySelector('.camera')
-          const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
-          const camState = cam?.view?.() || { x: 0, y: 0, s: 1 }
-          const { x: camX, y: camY, s } = camState
-          const screenX = cr.left + (point[0] - WORLD.x) * s + camX
-          const screenY = cr.top + (point[1] - WORLD.y) * s + camY
+          // Convert world → screen and fire the flying token
+          const { x: screenX, y: screenY } = worldToScreen(point[0], point[1], cam)
           window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
             detail: { res, amount, startX: screenX, startY: screenY, delayOffset: i * 120 },
           }))
@@ -147,8 +160,7 @@ export function useWorldEvents() {
       cam?.flyTo(STARTER_BEACON[0], STARTER_BEACON[1] + 80, cam.fitScale * 1.4, { duration: 900 })
     }
 
-    // every action moves the settlement forward (the engine awards XP and applies production):
-    // show what each island produced as resource bubbles you can tap
+    // Every action progresses the settlement — show island production as tappable bubbles
     if (state.xp > p.xp) {
       const access = islandAccess(p)
       for (const id of Object.keys(access)) {
