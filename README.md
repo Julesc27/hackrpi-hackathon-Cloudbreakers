@@ -41,6 +41,8 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 
 Progress saves to the browser's localStorage. Settings (gear) → *New game* resets it.
 
+**Moving around:** drag the sky to pan (it glides), scroll or pinch to zoom, double-click to zoom in, and press `0` or the target button to fly back to New Haven. Arrow keys / WASD and `+`/`−` work too. Tapping an island flies the camera to it. After each turn, tap the bubbles over your islands to collect what they produced.
+
 ## Frontend layout
 
 ```

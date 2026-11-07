@@ -1,25 +1,36 @@
+/* ---------- camera ---------- */
+.camera {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  background: #0d164a;
+}
+.camera.is-dragging { cursor: grabbing; }
+.cam-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.cam-far { inset: -18%; width: 136%; height: 136%; transform-origin: 50% 50%; }
+.cam-near { pointer-events: none; }
+.camera.is-moving .cam-world, .camera.is-moving .cam-near, .camera.is-moving .cam-far { will-change: transform; }
+.skymap, .near-clouds { display: block; overflow: visible; }
 .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
 .star { animation: twinkle 4s ease-in-out infinite; }
 @keyframes twinkle { 50% { opacity: 0.25; } }
 
-.map-scroll { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
-.skymap { display: block; width: 100%; height: 100%; }
-@media (max-width: 900px) and (orientation: portrait) {
-  .map-scroll { top: 170px; bottom: 150px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .map-scroll::-webkit-scrollbar { display: none; }
-  .skymap { width: auto; height: 100%; aspect-ratio: 16 / 9; }
-}
-
-/* gentle float, like the islands are breathing */
+/* ---------- islands ---------- */
 .isle-bob { animation: bob 8s ease-in-out infinite; }
 @keyframes bob { 50% { transform: translateY(-3px); } }
-.decor { animation: drift 30s ease-in-out infinite; }
-@keyframes drift { 50% { transform: translateX(-6px); } }
+.isle > .isle-bob > image { transition: filter 0.25s ease; }
+.isle-connected.is-hover > .isle-bob > image:last-child { filter: brightness(1.08) saturate(1.05) drop-shadow(0 0 10px rgba(255, 220, 140, 0.35)); }
+.isle-discovered.is-hover > .isle-bob { animation-play-state: paused; }
+.isle-discovered.is-hover > .isle-bob > image { filter: url(#locked) brightness(1.35); }
 
 .beacon-lit { opacity: 0; transition: opacity 1.6s ease; }
 .beacon-lit.on { opacity: 1; }
 
 .isle-hit ellipse { cursor: pointer; }
+.camera.is-dragging .isle-hit ellipse, .camera.is-dragging .ghost-route, .camera.is-dragging .bridge { cursor: grabbing; }
 .isle-label { cursor: pointer; }
 .isle-label-text {
   font-family: var(--font-display);
@@ -32,7 +43,42 @@
 .select-ring { animation: dash 1.2s linear infinite; }
 @keyframes dash { to { stroke-dashoffset: -32; } }
 
-/* bridges */
+/* ---------- sky life ---------- */
+.islet-bob { animation: bob 8s ease-in-out infinite; }
+.drift { animation: drift 90s ease-in-out infinite alternate; }
+.drift.slow { animation-duration: 140s; }
+@keyframes drift { from { transform: translateX(-40px); } to { transform: translateX(60px); } }
+.sway { animation: sway 50s ease-in-out infinite alternate; }
+@keyframes sway { from { transform: translateX(-18px); } to { transform: translateX(22px); } }
+.near-clouds { opacity: 0.9; }
+
+.flap { animation: flap 0.55s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes flap { 50% { transform: scaleY(0.55); } }
+.airship-bob { animation: bob 5s ease-in-out infinite; }
+.prop { animation: spinProp 0.4s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes spinProp { 50% { transform: scaleY(0.2); } }
+
+.falls { mix-blend-mode: screen; }
+.fall-streak { animation: fall 1.1s linear infinite; opacity: 0.65; }
+@keyframes fall { to { stroke-dashoffset: -60; } }
+.mist { animation: mist 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes mist { 50% { transform: scale(1.25); opacity: 0.6; } }
+
+.firefly { animation: firefly 6s ease-in-out infinite; mix-blend-mode: screen; }
+@keyframes firefly {
+  0% { opacity: 0; transform: translate(0, 6px); }
+  30% { opacity: 1; }
+  70% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(6px, -22px); }
+}
+
+.beacon-light { mix-blend-mode: screen; }
+.beams { animation: beams 16s linear infinite; }
+@keyframes beams { to { transform: rotate(360deg); } }
+.orb-pulse { animation: orb 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes orb { 50% { transform: scale(1.25); opacity: 0.7; } }
+
+/* ---------- bridges ---------- */
 .bridge { cursor: pointer; }
 .bridge-art { animation: bridgeIn 1.4s ease-out; }
 @keyframes bridgeIn { from { opacity: 0; } }
@@ -43,18 +89,50 @@
 .ghost-route { cursor: pointer; }
 .ghost-art { animation: ghost 2.6s ease-in-out infinite; }
 @keyframes ghost { 50% { opacity: 0.55; } }
-.route-btn { transition: transform 0.15s; transform-box: fill-box; }
-.ghost-route:hover .route-btn { transform: scale(1.08); }
+.route-btn { transition: transform 0.15s; transform-box: fill-box; transform-origin: center; }
+.ghost-route:hover .route-btn { transform: scale(1.1); }
 .route-pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2s ease-out infinite; }
 @keyframes pulse { from { transform: scale(0.85); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 .route-cost { font-family: var(--font-body); font-weight: 800; font-size: 13px; fill: #f3e6c4; }
 .ghost-route.is-locked .route-cost { fill: #a9b4dd; }
 
+/* ---------- buildings / placing ---------- */
 .pop-in { transform-box: fill-box; transform-origin: 50% 100%; animation: popIn 0.6s cubic-bezier(.2,1.6,.4,1); }
 @keyframes popIn { from { transform: scale(0); opacity: 0; } }
 .building { pointer-events: none; }
-
 .slot { cursor: pointer; animation: slotGlow 1.2s ease-in-out infinite; }
 .slot:hover polygon { fill: rgba(243, 217, 143, 0.7); }
 @keyframes slotGlow { 50% { opacity: 0.6; } }
 .skymap.is-placing .isle-hit ellipse { cursor: default; }
+
+/* ---------- effects ---------- */
+.fx-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  fill: #fff6d6;
+  stroke: #1f2a5a;
+  stroke-width: 4px;
+  paint-order: stroke;
+  letter-spacing: 0.03em;
+}
+.fx-float { animation: floatUp 1.5s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes floatUp {
+  0% { opacity: 0; transform: translateY(10px) scale(0.7); }
+  15% { opacity: 1; transform: translateY(0) scale(1.08); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px) scale(1); }
+}
+.burst-ring { fill: none; stroke: #fff3c2; stroke-width: 3; animation: ring 0.8s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes ring { from { transform: scale(0.3); opacity: 1; } to { transform: scale(5); opacity: 0; } }
+.burst-spark { animation: spark 0.8s ease-out forwards; }
+@keyframes spark { from { transform: translateY(0) scale(1.4); opacity: 1; } to { transform: translateY(-46px) scale(0.4); opacity: 0; } }
+
+.fx-bubble { cursor: pointer; animation: bubbleIn 0.5s cubic-bezier(.2,1.6,.4,1) both; }
+.fx-bubble:hover .bubble-bob { filter: brightness(1.1) drop-shadow(0 0 8px rgba(255, 220, 140, 0.8)); }
+@keyframes bubbleIn { from { opacity: 0; transform: scale(0.2); } }
+.fx-bubble { transform-box: fill-box; transform-origin: 50% 100%; }
+.fx-bubble:active { transform: scale(0.9); }
+.bubble-bob { animation: bubbleBob 1.8s ease-in-out infinite; filter: drop-shadow(0 4px 6px rgba(10, 16, 50, 0.35)); }
+@keyframes bubbleBob { 50% { transform: translateY(-6px); } }
+.bubble-num { font-family: var(--font-body); font-weight: 900; font-size: 13px; fill: #fff6d6; }
