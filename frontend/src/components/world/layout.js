@@ -232,8 +232,8 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
   for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
-  e_mistral: [580, 365], e_rain: [930, 360], e_mercy: [470, 520],
-  e_hearth: [1090, 535], e_verdant: [580, 365], e_prism: [1065, 650], e_gardens: [1005, 695],
+  e_mistral: [566, 363], e_rain: [930, 360], e_mercy: [470, 520],
+  e_hearth: [1086, 523], e_verdant: [566, 363], e_prism: [1038, 634], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
 
@@ -246,8 +246,11 @@ export const BRIDGE_ENDS = {
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
 }
 WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [550, 235]
-WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1080, 245]
-WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1170, 878]
+// Match the painted landing surfaces, rather than the older procedural island layout.
+WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1184, 258]
+WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1188, 880]
+WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [321, 534]
+WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1290, 493]
 
 export function bridgePoints(routeId) {
   const e = BRIDGE_ENDS[routeId]
