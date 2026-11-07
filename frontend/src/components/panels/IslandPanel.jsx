@@ -25,7 +25,6 @@ export default function IslandPanel() {
   const buildings = state.buildings.filter((b) => b.island === id)
   const freeSlots = def.plots.length - buildings.length
   const route = openRoutes(state).find((r) => otherEnd(r, state.connected) === id)
-  const noActions = state.actionsLeft < 1
   const statusText =
     status === 'discovered' ? 'Not connected' : access[id] === 1 ? 'Connected' : access[id] ? 'Bridge strained — half output' : 'Cut off — repair the bridge'
 
@@ -58,23 +57,23 @@ export default function IslandPanel() {
           </ul>
           <div className="action-stack">
             {id === 'newHaven' && (
-              <button className="btn-action" disabled={noActions} onClick={() => dispatch({ type: 'GATHER_WOOD' })}>
-                <span>Gather wood</span><small>1 action · +{GATHER_AMOUNT} wood</small>
+              <button className="btn-action" onClick={() => dispatch({ type: 'GATHER_WOOD' })}>
+                <span>Gather wood</span><small>+{GATHER_AMOUNT} wood</small>
               </button>
             )}
             {id === 'verdant' && (
-              <button className="btn-action" disabled={noActions || !access.verdant} onClick={() => dispatch({ type: 'HARVEST_FOREST' })}>
-                <span>Harvest the grove</span><small>1 action · +{HARVEST.wood} wood · lowers sustainability</small>
+              <button className="btn-action" disabled={!access.verdant} onClick={() => dispatch({ type: 'HARVEST_FOREST' })}>
+                <span>Harvest the grove</span><small>+{HARVEST.wood} wood · lowers sustainability</small>
               </button>
             )}
             {id === 'newHaven' && !state.beaconRestored && (
               <button
                 className="btn-action"
-                disabled={noActions || !canAfford(state.resources, BEACON_COST)}
+                disabled={!canAfford(state.resources, BEACON_COST)}
                 onClick={() => dispatch({ type: 'RESTORE_BEACON' })}
               >
                 <span>Restore the beacon</span>
-                <small>1 action · <CostChips cost={BEACON_COST} resources={state.resources} /></small>
+                <small><CostChips cost={BEACON_COST} resources={state.resources} /></small>
               </button>
             )}
             {freeSlots > 0 && (

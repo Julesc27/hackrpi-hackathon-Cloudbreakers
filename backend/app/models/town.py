@@ -29,19 +29,22 @@ class Building(_Loose):
     type: str
     island: str
     slot: int  # starter buildings use negative slots (fixed spots, not build plots)
-    builtTurn: NonNegInt
+    builtLevel: int = Field(default=1, ge=1)
+    builtTurn: NonNegInt | None = None  # compatibility with version 2 saves
 
 
 class Bridge(_Loose):
     route: str
     type: str
     condition: int = Field(ge=0, le=100)
-    builtTurn: NonNegInt
+    builtLevel: int = Field(default=1, ge=1)
+    builtTurn: NonNegInt | None = None  # compatibility with version 2 saves
 
 
 class JournalEntry(_Loose):
     id: str
-    turn: NonNegInt
+    level: int = Field(default=1, ge=1)
+    turn: NonNegInt | None = None  # compatibility with version 2 journal entries
     type: str
     title: str
     text: str = ""
@@ -50,8 +53,8 @@ class JournalEntry(_Loose):
 class TownSave(_Loose):
     version: int = Field(ge=1)
     townName: str = Field(max_length=60)
-    turn: int = Field(ge=1)
-    actionsLeft: NonNegInt
+    turn: int | None = Field(default=None, ge=1)  # legacy saves only
+    actionsLeft: NonNegInt | None = None
     resources: Resources
     happiness: int = Field(ge=0, le=100)
     population: NonNegInt

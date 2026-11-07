@@ -7,11 +7,11 @@ import Backdrop from './components/map/Backdrop.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import { BottomNav, TurnControls, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
+import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
-import { JournalModal, StorageModal, MapModal, SettingsModal, TurnReport, IntroModal, Toasts } from './components/panels/Modals.jsx'
+import { JournalModal, StorageModal, MapModal, SettingsModal, IntroModal, Toasts } from './components/panels/Modals.jsx'
 
 function GameScreen() {
   const { state } = useGame()
@@ -42,7 +42,7 @@ function GameScreen() {
         <ObjectiveRibbon />
         <WeatherCard />
         <LeftRail />
-        <TurnControls />
+        <ProgressionCard />
         <BottomNav />
         <SettingsButton />
         <PlacingHint />
@@ -57,7 +57,6 @@ function GameScreen() {
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
       {ui.bridgeRoute && <BridgeModal />}
-      <TurnReport />
       {auth.loginOpen && <AuthModal />}
       {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && <IntroModal />}
       <Toasts />

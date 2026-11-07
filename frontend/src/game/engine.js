@@ -1,7 +1,6 @@
-// Deterministic game rules. Pure functions only — randomness is passed in
-// (e.g. END_TURN carries a `roll`) so the backend can reproduce turns later.
+// Deterministic, action-driven game rules with XP and level unlocks.
 import {
-  ACTIONS_PER_TURN, BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS,
+  BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS,
   GATHER_AMOUNT, HARVEST, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
 
@@ -11,10 +10,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 export function createInitialState() {
   return {
-    version: 2,
+    version: 3,
     townName: 'New Haven',
-    turn: 1,
-    actionsLeft: ACTIONS_PER_TURN,
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40 },
     happiness: 62,
     population: 6,
@@ -24,8 +21,8 @@ export function createInitialState() {
     blueprints: [],
     flags: {},
     buildings: [
-      { id: 'b1', type: 'starterGarden', island: 'newHaven', slot: -1, builtTurn: 0 },
-      { id: 'b2', type: 'rainBarrel', island: 'newHaven', slot: -2, builtTurn: 0 },
+      { id: 'b1', type: 'starterGarden', island: 'newHaven', slot: -1, builtLevel: 1 },
+      { id: 'b2', type: 'rainBarrel', island: 'newHaven', slot: -2, builtLevel: 1 },
     ],
     beaconRestored: false,
     connected: ['newHaven'],
@@ -36,12 +33,10 @@ export function createInitialState() {
     completed: [],
     counters: { waterStreak: 0, energyStreak: 0, foodSurplus: 0 },
     journal: [
-      { id: 'j0', turn: 1, type: 'story', title: 'Chapter 1 — A Place to Begin', text: 'The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight.' },
+      { id: 'j0', level: 1, type: 'story', title: 'Chapter 1 — A Place to Begin', text: 'The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight.' },
     ],
     journalUnread: 1,
     toasts: [],
-    report: null,
-    showReport: false,
     seenIntro: false,
     nextId: 3,
   }
@@ -138,8 +133,8 @@ export function openRoutes(state) {
 }
 export const otherEnd = (route, connected) => (connected.includes(route.a) ? route.b : route.a)
 
-// Projected production / consumption for the coming end of turn.
-export function projectTurn(state, weatherKey = state.weather) {
+// Production and consumption applied after each successful game action.
+export function projectProduction(state, weatherKey = state.weather) {
   const w = WEATHER[weatherKey]
   const access = islandAccess(state)
   const gain = Object.fromEntries(ALL_RES.map((k) => [k, 0]))
@@ -173,22 +168,10 @@ export function projectTurn(state, weatherKey = state.weather) {
   return { gain, use, net, sources }
 }
 
-export function turnsOfSupply(state, key) {
-  const { net } = projectTurn(state)
+export function actionsOfSupply(state, key) {
+  const { net } = projectProduction(state)
   if (net[key] >= 0) return Infinity
   return Math.floor(state.resources[key] / -net[key])
-}
-
-export function pickWeather(roll, turn) {
-  if (turn <= 3) return 'clear'
-  const entries = Object.entries(WEATHER)
-  const total = entries.reduce((s, [, w]) => s + w.weight, 0)
-  let r = roll * total
-  for (const [k, w] of entries) {
-    r -= w.weight
-    if (r <= 0) return k
-  }
-  return 'clear'
 }
 
 /* ---------- reducer helpers ---------- */
@@ -202,12 +185,9 @@ function journal(state, type, title, text) {
   return {
     ...state,
     nextId: state.nextId + 1,
-    journal: [...state.journal, { id, turn: state.turn, type, title, text }],
+    journal: [...state.journal, { id, level: getLevelInfo(state.xp).level, type, title, text }],
     journalUnread: state.journalUnread + 1,
   }
-}
-function needAction(state) {
-  return state.actionsLeft < 1 ? toast(state, 'warn', 'No actions left this turn — end the turn to continue.') : null
 }
 
 function discoverFrom(state, islandId) {
@@ -222,12 +202,22 @@ function levelUnlockNames(level) {
   return (l?.unlocks || []).map((k) => BUILDINGS[k]?.name || BRIDGE_TYPES[k]?.name + ' bridges').join(', ')
 }
 
-function completeMission(state, m) {
+function awardXP(state, amount) {
   const before = getLevelInfo(state.xp).level
+  let s = { ...state, xp: state.xp + amount }
+  const after = getLevelInfo(s.xp)
+  if (after.level > before) {
+    const names = LEVELS.filter((l) => l.level > before && l.level <= after.level).map((l) => levelUnlockNames(l.level)).filter(Boolean).join(', ')
+    s = toast(s, 'level', names ? `Unlocked: ${names}` : 'A new title for a sky steward.', `Level ${after.level} — ${after.title}`)
+    s = journal(s, 'level', `Reached level ${after.level}: ${after.title}`, names ? `Unlocked ${names}.` : '')
+  }
+  return s
+}
+
+function completeMission(state, m) {
   let s = {
     ...state,
     completed: [...state.completed, m.id],
-    xp: state.xp + (m.reward.xp || 0),
     resources: { ...state.resources, coins: state.resources.coins + (m.reward.coins || 0) },
   }
   if (m.reward.blueprint && !s.blueprints.includes(m.reward.blueprint)) s.blueprints = [...s.blueprints, m.reward.blueprint]
@@ -235,12 +225,7 @@ function completeMission(state, m) {
   if (m.reward.reveal) s.discovered = Object.keys(ISLANDS)
   s = toast(s, 'mission', m.rewardText, `Mission complete — ${m.name}`)
   s = journal(s, 'mission', m.name, `${m.objective} Reward: ${m.rewardText}.`)
-  const after = getLevelInfo(s.xp)
-  if (after.level > before) {
-    const names = levelUnlockNames(after.level)
-    s = toast(s, 'level', names ? `Unlocked: ${names}` : 'A new title for a sky steward.', `Level ${after.level} — ${after.title}`)
-    s = journal(s, 'level', `Reached level ${after.level}: ${after.title}`, names ? `Unlocked ${names}.` : '')
-  }
+  s = awardXP(s, m.reward.xp || 0)
   if (m.final) {
     s = journal(s, 'story', 'A Skystead is founded', 'Water, food, energy and spirits are all holding. The sky network glows from end to end. Higher tomorrows.')
   }
@@ -266,11 +251,11 @@ export function checkMissions(state) {
   return s
 }
 
-/* ---------- end of turn ---------- */
+/* ---------- automatic settlement updates ---------- */
 
-function endTurn(state, roll) {
+function progressSettlement(state, xp) {
   const w = WEATHER[state.weather]
-  const proj = projectTurn(state)
+  const proj = projectProduction(state)
   const cap = caps(state)
   const res = { ...state.resources }
   const shortages = []
@@ -340,13 +325,8 @@ function endTurn(state, roll) {
     foodSurplus: proj.net.food > 0 ? 1 : 0,
   }
 
-  const nextWeather = state.forecast
-  const forecast = pickWeather(roll, state.turn + 2)
-
   let s = {
     ...state,
-    turn: state.turn + 1,
-    actionsLeft: ACTIONS_PER_TURN,
     resources: res,
     happiness,
     population,
@@ -354,36 +334,22 @@ function endTurn(state, roll) {
     sustainPenalty,
     bridges,
     counters,
-    weather: nextWeather,
-    forecast,
   }
 
   if (shortages.length) s = journal(s, 'event', 'Shortage', `New Haven ran out of ${shortages.join(' and ')}. Residents are worried.`)
-  if (nextWeather !== 'clear') s = journal(s, 'event', WEATHER[nextWeather].name, WEATHER[nextWeather].text)
   for (const n of bridgeNotes) {
     if (n.to === 0 && n.from > 0) s = journal(s, 'event', 'A bridge has closed', `${bridgeLabel(n.route)} is closed until repaired.`)
   }
 
-  const beforeDone = s.completed.length
-  s = checkMissions(s)
-  const missionsCompleted = s.completed.slice(beforeDone)
+  s = checkMissions(awardXP(s, xp))
+  // Weather changes with level progression, without a separate turn cycle.
+  const weatherKeys = Object.keys(WEATHER)
+  const level = getLevelInfo(s.xp).level
+  const weather = weatherKeys[(level - 1) % weatherKeys.length]
+  const forecast = weatherKeys[level % weatherKeys.length]
+  if (weather !== state.weather) s = journal(s, 'event', WEATHER[weather].name, WEATHER[weather].text)
+  return { ...s, weather, forecast }
 
-  s.report = {
-    turn: state.turn,
-    weather: state.weather,
-    nextWeather,
-    gained: proj.gain,
-    consumed: proj.use,
-    net: proj.net,
-    shortages,
-    happiness: { from: state.happiness, to: happiness, reasons },
-    sustainability: { from: state.sustainability, to: sustainability },
-    population: { from: state.population, to: population, housing: house },
-    bridges: bridgeNotes,
-    missionsCompleted,
-  }
-  s.showReport = true
-  return s
 }
 
 export const bridgeLabel = (routeId) => {
@@ -396,33 +362,26 @@ export const bridgeLabel = (routeId) => {
 export function gameReducer(state, action) {
   switch (action.type) {
     case 'GATHER_WOOD': {
-      const blocked = needAction(state)
-      if (blocked) return blocked
-      let s = { ...state, actionsLeft: state.actionsLeft - 1, resources: { ...state.resources, wood: state.resources.wood + GATHER_AMOUNT } }
+      let s = { ...state, resources: { ...state.resources, wood: state.resources.wood + GATHER_AMOUNT } }
       s = toast(s, 'gain', `+${GATHER_AMOUNT} wood gathered on New Haven`)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'HARVEST_FOREST': {  // Verdant Reach
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!islandAccess(state).verdant) return toast(state, 'warn', 'Verdant Reach is not reachable.')
       let s = {
         ...state,
-        actionsLeft: state.actionsLeft - 1,
         resources: { ...state.resources, wood: state.resources.wood + HARVEST.wood },
         sustainPenalty: state.sustainPenalty + HARVEST.sustainability,
       }
       s = toast(s, 'gain', `+${HARVEST.wood} wood from Verdant Reach — the forest will need time to recover`)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'BUILD': {
       const { buildingType, island, slot } = action
       const def = BUILDINGS[buildingType]
       if (!def || def.buildable === false) return state
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!isUnlocked(state, buildingType)) return toast(state, 'warn', `${def.name} unlocks at level ${unlockLevel(buildingType)}.`)
       if (def.unique && countType(state, buildingType)) return toast(state, 'warn', `You already have a ${def.name}.`)
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
@@ -431,21 +390,18 @@ export function gameReducer(state, action) {
       if (state.buildings.some((b) => b.island === island && b.slot === slot)) return state
       let s = {
         ...state,
-        actionsLeft: state.actionsLeft - 1,
         resources: pay(state.resources, def.cost),
-        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot, builtTurn: state.turn }],
+        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot, builtLevel: getLevelInfo(state.xp).level }],
         nextId: state.nextId + 1,
       }
       s = toast(s, 'build', `${def.name} built on ${ISLANDS[island].name}`)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'BUILD_BRIDGE': {
       const { routeId, bridgeType } = action
       const route = ROUTE_MAP[routeId]
       if (!openRoutes(state).some((r) => r.id === routeId)) return state
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!hasAnchor(state)) return toast(state, 'warn', 'Build a Bridge Anchor on New Haven first.')
       if (!isUnlocked(state, bridgeType)) return toast(state, 'warn', `${BRIDGE_TYPES[bridgeType].name} bridges unlock at level ${unlockLevel(bridgeType)}.`)
       const cost = bridgeCost(route, bridgeType)
@@ -453,68 +409,54 @@ export function gameReducer(state, action) {
       const dest = otherEnd(route, state.connected)
       let s = {
         ...state,
-        actionsLeft: state.actionsLeft - 1,
         resources: pay(state.resources, cost),
-        bridges: [...state.bridges, { route: routeId, type: bridgeType, condition: 100, builtTurn: state.turn }],
+        bridges: [...state.bridges, { route: routeId, type: bridgeType, condition: 100, builtLevel: getLevelInfo(state.xp).level }],
         connected: [...state.connected, dest],
       }
       s = discoverFrom(s, dest)
       s = toast(s, 'bridge', `${ISLANDS[dest].name} is connected!`, 'Bridge complete')
       s = journal(s, 'discovery', `Reached ${ISLANDS[dest].name}`, ISLANDS[dest].desc)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'UPGRADE_BRIDGE': {
       const b = state.bridges.find((x) => x.route === action.routeId)
       if (!b || b.type === 'reinforced') return state
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!isUnlocked(state, 'reinforced')) return toast(state, 'warn', `Reinforced bridges unlock at level ${unlockLevel('reinforced')}.`)
       const full = bridgeCost(ROUTE_MAP[b.route], 'reinforced')
       const cost = { wood: Math.ceil(full.wood / 2), coins: full.coins }
       if (!canAfford(state.resources, cost)) return toast(state, 'warn', 'Not enough resources to reinforce.')
       let s = {
         ...state,
-        actionsLeft: state.actionsLeft - 1,
         resources: pay(state.resources, cost),
         bridges: state.bridges.map((x) => (x === b ? { ...x, type: 'reinforced', condition: 100 } : x)),
       }
       s = toast(s, 'build', `${bridgeLabel(b.route)} reinforced`)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'REPAIR_BRIDGE': {
       const b = state.bridges.find((x) => x.route === action.routeId)
       if (!b || b.condition >= 100) return state
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!canAfford(state.resources, REPAIR_COST)) return toast(state, 'warn', 'Not enough wood to repair.')
       let s = {
         ...state,
-        actionsLeft: state.actionsLeft - 1,
         resources: pay(state.resources, REPAIR_COST),
         bridges: state.bridges.map((x) => (x === b ? { ...x, condition: 100 } : x)),
       }
       s = toast(s, 'build', `${bridgeLabel(b.route)} repaired`)
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
     case 'RESTORE_BEACON': {
       if (state.beaconRestored) return state
-      const blocked = needAction(state)
-      if (blocked) return blocked
       if (!canAfford(state.resources, BEACON_COST)) return toast(state, 'warn', 'The beacon needs 20 wood and 10 energy.')
-      let s = { ...state, actionsLeft: state.actionsLeft - 1, resources: pay(state.resources, BEACON_COST), beaconRestored: true }
+      let s = { ...state, resources: pay(state.resources, BEACON_COST), beaconRestored: true }
       s = toast(s, 'bridge', 'The navigation beacon hums back to life.', 'Beacon restored')
       s = journal(s, 'story', 'The Beacon Wakes', 'Cloud, the old planning assistant, blinks awake inside the beacon: "Oh! Visitors. Wonderful. I have notes."')
-      return checkMissions(s)
+      return progressSettlement(s, 10)
     }
 
-    case 'END_TURN':
-      return endTurn(state, action.roll ?? Math.random())
-
-    case 'CLOSE_REPORT':
-      return { ...state, showReport: false }
     case 'DISMISS_TOAST':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
     case 'SEEN_INTRO':
@@ -524,8 +466,20 @@ export function gameReducer(state, action) {
     case 'NEW_GAME':
       return createInitialState()
     case 'LOAD':
-      return action.state
+      return migrateSave(action.state)
     default:
       return state
+  }
+}
+
+// Keep towns from the turn-based version, including their existing XP and unlocks.
+export function migrateSave(saved) {
+  if (!saved || ![2, 3].includes(saved.version)) return createInitialState()
+  const { turn, actionsLeft, report, showReport, ...rest } = saved
+  return {
+    ...createInitialState(), ...rest, version: 3, toasts: [],
+    buildings: saved.buildings.map(({ builtTurn, ...b }) => ({ builtLevel: 1, ...b })),
+    bridges: saved.bridges.map(({ builtTurn, ...b }) => ({ builtLevel: 1, ...b })),
+    journal: saved.journal.map(({ turn, ...entry }) => ({ level: 1, ...entry })),
   }
 }

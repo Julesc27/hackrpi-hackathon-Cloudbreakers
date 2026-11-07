@@ -116,7 +116,6 @@ export function BuildPanel() {
   const ui = useUI()
   const close = () => ui.setPanel(null)
   useEsc(close)
-  const noActions = state.actionsLeft < 1
   return (
     <aside className="workshop" role="dialog" aria-label="Town Workshop">
       <div className="workshop-inner parchment">
@@ -124,7 +123,7 @@ export function BuildPanel() {
         <header className="ws-head">
           <h2><ArtIcon name="hammer-gold" size={38} /> Town Workshop</h2>
           <div className="ws-sub"><span className="spark">✦</span>Build something bright<span className="spark">✦</span></div>
-          <p>Every new building changes the skyline of New Haven. <strong>{state.actionsLeft}</strong> action{state.actionsLeft === 1 ? '' : 's'} left this turn.</p>
+          <p>Every new building changes the skyline of New Haven. Earn XP as you build and complete quests to unlock more.</p>
         </header>
         <div className="ws-cards">
           {BUILD_ORDER.map((key) => {
@@ -132,7 +131,7 @@ export function BuildPanel() {
             const unlocked = isUnlocked(state, key)
             const affordable = canAfford(state.resources, def.cost)
             const built = def.unique && countType(state, key) > 0
-            const disabled = !unlocked || !affordable || built || noActions
+            const disabled = !unlocked || !affordable || built
             const fx = []
             if (def.housing) fx.push(`Houses ${def.housing}`)
             if (def.capBonus) fx.push(`+${def.capBonus} storage`)
@@ -154,7 +153,7 @@ export function BuildPanel() {
                 <button
                   className="gold-plus"
                   disabled={disabled}
-                  title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : noActions ? 'No actions left' : `Build ${def.name}`}
+                  title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
                   onClick={() => { ui.setPlacing(key); ui.setPanel(null) }}
                 >
                   {built ? <Check size={22} /> : unlocked ? <Plus size={26} /> : <Lock size={20} />}

@@ -35,7 +35,7 @@ class Player(Document):
         self.coins = town.resources.coins
         self.food = town.resources.food
         self.completion = {mission_id: True for mission_id in town.completed}
-        self.turn = town.turn
+        self.turn = town.turn or 0  # retained for legacy profile consumers
         self.town_name = town.townName
 
 
