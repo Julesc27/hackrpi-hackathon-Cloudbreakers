@@ -3,7 +3,7 @@ import { ISLANDS, ROUTE_MAP, BRIDGE_TYPES, REPAIR_COST } from '../../game/data.j
 import { bridgeCost, canAfford, hasAnchor, isUnlocked, otherEnd, unlockLevel, bridgeStatus } from '../../game/engine.js'
 import { Modal, CostChips, YieldChips, Progress } from './Panel.jsx'
 import { Lock } from '../icons.jsx'
-import Vignette from '../vignettes.jsx'
+import IslandArt from '../IslandArt.jsx'
 
 function Stat({ label, value, max = 100, suffix = '%', color }) {
   return (
@@ -26,7 +26,7 @@ export default function BridgeModal() {
     const t = BRIDGE_TYPES[existing.type]
     const st = bridgeStatus(existing)
     const full = bridgeCost(route, 'reinforced')
-    const upCost = { wood: Math.ceil(full.wood / 2), coins: full.coins }
+    const upCost = { wood: Math.ceil(full.wood / 2), coins: full.coins, stone: full.stone }
     return (
       <Modal title={`${ISLANDS[route.a].name} ↔ ${ISLANDS[route.b].name}`} kicker={`${t.name} bridge · built at level ${existing.builtLevel}`} onClose={close}>
         <Stat label="Condition" value={existing.condition} color={st === 'good' ? 'linear-gradient(90deg,#5fb24f,#a8e08a)' : 'linear-gradient(90deg,#ff7a4b,#ffb38f)'} />
@@ -59,7 +59,7 @@ export default function BridgeModal() {
 
   return (
     <Modal title={`Bridge to ${ISLANDS[dest].name}`} kicker={`From ${ISLANDS[from].name}`} onClose={close} size="lg" crest={false}>
-      <div className="bridge-hero"><Vignette kind={dest} /></div>
+      <div className="bridge-hero"><IslandArt id={dest} /></div>
       <p className="lead">{route.note} <span className="muted">{ISLANDS[dest].kind} — produces</span> <YieldChips yields={ISLANDS[dest].yields} />{ISLANDS[dest].special === 'forecast' && <span className="muted"> + forecasts</span>}</p>
       {!anchor && <p className="warn-text">You need a Bridge Anchor on New Haven before any bridge can be built. Open Build to place one.</p>}
       <div className="bridge-options">

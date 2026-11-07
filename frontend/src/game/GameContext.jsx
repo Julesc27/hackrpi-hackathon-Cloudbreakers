@@ -8,7 +8,7 @@ function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const s = JSON.parse(raw)
-      if ([2, 3].includes(s?.version)) return migrateSave(s)
+      if ([2, 3, 4, 5].includes(s?.version)) return migrateSave(s)
     }
   } catch { /* storage unavailable — start fresh */ }
   return createInitialState()

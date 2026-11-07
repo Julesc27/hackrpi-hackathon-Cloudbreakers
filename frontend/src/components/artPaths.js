@@ -1,5 +1,6 @@
 // Round badge shown on island cards. Drawn icons only — no picture files.
 export const ISLAND_BADGE = {
+  prism: { icon: 'energy', ring: '#2b6a92' },
   rain: { icon: 'water', ring: '#1f6fb3' },
   gardens: { icon: 'wood', ring: '#2f6a3c' },
   verdant: { icon: 'wood', ring: '#2f6a3c' },

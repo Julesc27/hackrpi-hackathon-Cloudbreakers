@@ -37,9 +37,9 @@ export default function Backdrop() {
     <svg className="backdrop" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <radialGradient id="sky" cx="48%" cy="38%" r="85%">
-          <stop offset="0%" stopColor="#24357a" />
-          <stop offset="38%" stopColor="#141c52" />
-          <stop offset="100%" stopColor="#070b24" />
+          <stop offset="0%" stopColor="#173453" />
+          <stop offset="38%" stopColor="#0d2341" />
+          <stop offset="100%" stopColor="#07132b" />
         </radialGradient>
         <linearGradient id="horizon" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#7d74c8" stopOpacity="0" />

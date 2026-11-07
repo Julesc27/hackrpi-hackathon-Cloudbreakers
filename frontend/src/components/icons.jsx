@@ -118,4 +118,9 @@ export const HappyArt = art('happiness')
 export const WoodArt = art('wood')
 export const CoinArt = art('coins')
 
-export const RES_ICON = { energy: EnergyArt, water: WaterArt, food: Wheat, wood: WoodArt, coins: CoinArt, happiness: HappyArt }
+export const StoneIcon = (p) => <I {...p}><path d="M3 17 6 7l8-3 7 9-3 7H7Z" fill="#b5c6d9" stroke="#5c7693" /><path d="m6 7 5 7 10-1M11 14l-4 6M11 14l3-10" fill="none" stroke="#dde8f1" /></I>
+export const SeedIcon = (p) => <I {...p}><path d="M8 20C2 12 8 4 19 3c1 11-2 18-11 17Z" fill="#c6d87b" stroke="#587f48" /><path d="m8 19 7-10" stroke="#587f48" fill="none" /></I>
+export const CrystalIcon = (p) => <I {...p}><path d="m12 2 7 7-2 10-5 3-5-3L5 9Z" fill="#7ee6ff" stroke="#3f8cc3" /><path d="m12 2-2 8 2 12 3-12Z" fill="#d8f8ff" /><path d="m5 9 5 1 5 0 4-1" fill="none" stroke="#4aaed4" /></I>
+export const MaterialIcon = (p) => <I {...p}><path d="m3 8 9-5 9 5v11l-9 3-9-3Z" fill="#c49b67" stroke="#77573b" /><path d="m3 8 9 4 9-4M12 12v10M7 6l10 4" fill="none" stroke="#f3d8a6" /></I>
+export const FishIcon = (p) => <I {...p}><path d="M4 12c4-8 10-8 15-2l3-4v12l-3-4C14 20 8 20 4 12Z" fill="#87cfe1" stroke="#3e849e" /><circle cx="9" cy="11" r="1.2" fill="#17354c" /></I>
+export const RES_ICON = { energy: EnergyArt, water: WaterArt, food: Wheat, wood: WoodArt, coins: CoinArt, happiness: HappyArt, stone: StoneIcon, seeds: SeedIcon, crystals: CrystalIcon, materials: MaterialIcon, fish: FishIcon }

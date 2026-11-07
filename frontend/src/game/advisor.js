@@ -1,168 +1,27 @@
-// Cloud, the advisor. For now this is a local rule-based stand-in.
-// Later, the backend can return the same shape from an AI model via
-// api/client.js -> getAdvice(). The advisor never changes game state.
-//
-// Each tip: { situation, recommendation, reason, tradeoff, confidence, alternative, routeId?, art? }
-import { ISLANDS, BEACON_COST } from './data.js'
-import {
-  projectProduction, actionsOfSupply, hasAnchor, countType, housing, openRoutes, otherEnd,
-  getLevelInfo, bridgeCost, canAfford, activeMissions, isUnlocked, bridgeLabel,
-} from './engine.js'
-
-const fmtActions = (n) => (n === Infinity ? 'stable' : `${n} action${n === 1 ? '' : 's'}`)
-const islandArt = (id) => id
+// Cloud's advice follows the four-island resource loop and never mutates game state.
+import { ISLANDS, BUILDINGS, BEACON_COST } from './data.js'
+import { projectProduction, actionsOfSupply, hasAnchor, countType, openRoutes, otherEnd, bridgeCost, canAfford, getLevelInfo } from './engine.js'
 
 export function getAdvice(state) {
-  const proj = projectProduction(state)
-  const water = actionsOfSupply(state, 'water')
-  const food = actionsOfSupply(state, 'food')
-  const routes = openRoutes(state)
-  const routeTo = (id) => routes.find((r) => otherEnd(r, state.connected) === id)
-  const situation = `Level ${getLevelInfo(state.xp).level}. ${state.population} residents. Water: ${fmtActions(water)}. Food: ${fmtActions(food)}. Energy ${state.resources.energy}.`
-  const out = []
-  const connectTip = (id, reason, tradeoff, confidence, alternative = null) => {
-    const r = routeTo(id)
-    if (!r) return
-    out.push({
-      situation, recommendation: `Connect to ${ISLANDS[id].name}`, reason, tradeoff, confidence, alternative,
-      routeId: r.id, art: islandArt(id),
-    })
+  const projection = projectProduction(state)
+  const situation = `Level ${getLevelInfo(state.xp).level}. ${state.population} residents. Starter timber: ${state.deposits.wood}. Stone deposits: ${state.deposits.stone}.`
+  const tips = []
+  const add = (recommendation, reason, tradeoff, confidence = 88, extra = {}) => tips.push({ situation, recommendation, reason, tradeoff, confidence, alternative: null, ...extra })
+  const connect = (id, reason, confidence) => {
+    const route = openRoutes(state).find((r) => otherEnd(r, state.connected) === id)
+    if (!route) return
+    const cost = bridgeCost(route, 'rope')
+    add(`Connect to ${ISLANDS[id].name}`, reason, `The bridge costs ${cost.wood} wood.`, confidence, { routeId: route.id, art: id })
   }
-
-  const damaged = state.bridges.filter((b) => b.condition < 40)
-  if (damaged.length) {
-    out.push({
-      situation,
-      recommendation: `Repair ${bridgeLabel(damaged[0].route)}`,
-      reason: `It is at ${damaged[0].condition}% condition, so the island beyond it is producing at half strength or not at all.`,
-      tradeoff: 'Costs 6 wood you could spend expanding.',
-      confidence: 90,
-      alternative: 'If wood is tight, wait for clear skies — but storms will only make it worse.',
-      routeId: damaged[0].route,
-    })
-  }
-
-  if (!countType(state, 'shelter')) {
-    out.push({
-      situation,
-      recommendation: 'Build a Shelter',
-      reason: 'Residents are sleeping under canvas. A shelter adds room for 4 more people and completes First Steps.',
-      tradeoff: 'Uses 10 of your wood, which delays the bridge anchor slightly.',
-      confidence: 92,
-      alternative: 'Build the Bridge Anchor first if you want to reach another island sooner.',
-      art: 'shelter',
-    })
-  }
-
-  if (!hasAnchor(state)) {
-    out.push({
-      situation,
-      recommendation: 'Build a Bridge Anchor',
-      reason: 'Every bridge starts from it. Without one, the nearby islands stay out of reach.',
-      tradeoff: '8 wood now means one more round of gathering before the first bridge.',
-      confidence: 88,
-      alternative: 'Gather wood first so you can build the anchor and a bridge back-to-back.',
-      art: 'bridgeAnchor',
-    })
-  }
-
-  if (water !== Infinity && water <= 3) {
-    connectTip('rain',
-      `Our water will last only ${fmtActions(water)}, and new residents will drink more. Rain Island gives a steady supply.`,
-      'It costs wood, leaving less for housing.', 90,
-      isUnlocked(state, 'waterCollector') ? 'A Water Collector on New Haven is a cheaper stopgap.' : null)
-  }
-
-  if (hasAnchor(state) && state.bridges.length === 0) {
-    const pickRain = water !== Infinity && water <= food
-    if (pickRain) {
-      connectTip('rain',
-        `Rain Island has abundant fresh water. Our reserve lasts ${fmtActions(water)}, and a bridge gives a steady supply that keeps us resilient in storms.`,
-        'The water route delays Mistral Heights, which would bring energy for the beacon.', 88,
-        routeTo('verdant') ? `Verdant Reach is cheaper (${bridgeCost(routeTo('verdant'), 'rope').wood} wood) and adds wood after each action.` : null)
-    } else {
-      connectTip('verdant',
-        `Wood is our bottleneck. Verdant Reach adds wood and coins after each action and is the cheapest crossing.`,
-        'Harvesting the grove too hard will lower sustainability.', 82,
-        'Rain Island first if you expect a dry spell.')
-    }
-    const cheapest = routes.reduce((m, r) => Math.min(m, bridgeCost(r, 'rope').wood), Infinity)
-    if (state.resources.wood < cheapest) {
-      out.push({
-        situation,
-        recommendation: 'Gather wood on New Haven',
-        reason: `We have ${state.resources.wood} wood and the cheapest bridge needs ${cheapest}.`,
-        tradeoff: 'Gathering also advances production and resident needs.',
-        confidence: 80,
-        alternative: null,
-        art: 'verdant',
-      })
-    }
-  }
-
-  if (food !== Infinity && food <= 3) {
-    if (routeTo('gardens')) {
-      connectTip('gardens', `Food runs out in ${fmtActions(food)}. The Glass Gardens grow 6 food after each action.`, 'A 20-wood bridge.', 86)
-    } else {
-      out.push({
-        situation,
-        recommendation: isUnlocked(state, 'garden') ? 'Build a Food Garden' : 'Find more food',
-        reason: `Food runs out in ${fmtActions(food)}.`,
-        tradeoff: 'Gardens use 1 water per action.',
-        confidence: 85,
-        alternative: null,
-        art: 'garden',
-      })
-    }
-  }
-
-  if (state.population >= housing(state)) {
-    if (routeTo('hearth')) {
-      connectTip('hearth', `All ${housing(state)} beds are taken. Hearthside has cottages for 8 more residents.`,
-        'More residents means more food and water after each action.', 72,
-        'A Shelter on New Haven is cheaper but houses only 4.')
-    } else {
-      out.push({
-        situation,
-        recommendation: 'Build another Shelter',
-        reason: `All ${housing(state)} beds are taken, so the population cannot grow.`,
-        tradeoff: 'More residents means more food and water after each action.',
-        confidence: 70,
-        alternative: 'Staying small is valid too — a quiet Skystead is a sustainable one.',
-        art: 'shelter',
-      })
-    }
-  }
-
-  if (state.bridges.length && !state.beaconRestored) {
-    const ok = canAfford(state.resources, BEACON_COST)
-    out.push({
-      situation,
-      recommendation: 'Restore the navigation beacon',
-      reason: 'It reveals the whole sky map and wakes me up properly. I have been napping for years.',
-      tradeoff: ok ? 'Takes 20 wood and 10 energy.' : `We need ${BEACON_COST.wood} wood and ${BEACON_COST.energy} energy first.`,
-      confidence: ok ? 84 : 65,
-      alternative: 'Connect Mistral Heights first so energy is not a worry.',
-      art: 'newHaven',
-    })
-  }
-
-  if (proj.net.energy <= 0 && state.bridges.length) {
-    connectTip('mistral', 'We produce no energy yet. The turbines and panels on Mistral Heights give 6 after each action, plus forecasts.',
-      'Solar storms halve its output.', 78)
-  }
-
-  const next = activeMissions(state)[0]
-  out.push({
-    situation,
-    recommendation: next ? `Work toward “${next.name}”` : 'Hold steady and enjoy the view',
-    reason: next ? next.objective : 'Everything is balanced. That is the hardest thing to do up here.',
-    tradeoff: 'Growing faster is possible, but balance keeps the town resilient.',
-    confidence: 70,
-    alternative: null,
-  })
-
-  // de-duplicate by recommendation
-  const seen = new Set()
-  return out.filter((t) => (seen.has(t.recommendation) ? false : seen.add(t.recommendation)))
+  if (!countType(state, 'shelter')) add('Build a Shelter', 'The first families need a home. Choose an empty stone terrace on New Haven.', 'A shelter uses 10 wood and 2 stone.', 98, { art: 'shelter' })
+  if (!hasAnchor(state)) add('Build a Bridge Anchor', 'The workshop prepares the first crossing. An anchor lets us reach the three resource islands.', 'Reserve 8 wood and 4 stone for the anchor.', 96, { art: 'bridgeAnchor' })
+  if (!state.connected.includes('verdant')) connect('verdant', `New Haven has only ${state.deposits.wood} timber left. Verdant Reach supplies renewable wood, food, seeds and building materials.`, 94)
+  if (actionsOfSupply(state, 'water') <= 4 || state.connected.includes('verdant')) connect('rain', 'Rain Island supplies fresh water, fish and stone. Its waterfalls can support more homes and gardens.', 92)
+  if (projection.net.food < 0 && canAfford(state.resources, BUILDINGS.garden.cost) && getLevelInfo(state.xp).level >= 2) add('Plant a Food Garden', 'Food use is outpacing the starter garden. Seeds from Verdant Reach can fill another terrace with crops.', 'A garden uses 6 wood, 1 seed and water for upkeep.', 91, { art: 'garden' })
+  if (state.connected.includes('verdant') || getLevelInfo(state.xp).level >= 3) connect('prism', 'Prism Shelf supplies energy crystals and components for solar farms, batteries and advanced buildings.', 86)
+  if (state.deposits.stone > 0 && state.resources.stone < 4) add('Mine the starter stone deposit', 'The small stone outcrop provides material for shelters and your first bridge anchor.', 'This deposit is finite. Rain Island and Prism Shelf provide ongoing stone.', 90)
+  if (!state.beaconRestored && state.bridges.length && canAfford(state.resources, BEACON_COST)) add('Restore the beacon', 'The navigation beacon marks the home island and completes its story mission.', 'It uses 20 wood and 10 energy.', 82)
+  if (state.connected.includes('prism') && !countType(state, 'solarFarm')) add('Build a Solar Farm', 'Use Prism Shelf crystals and components to generate clean power on a free plot.', 'Needs level 3, 3 crystals and 2 building materials as well as wood and coins.', 84, { art: 'solarFarm' })
+  if (!tips.length) add('Keep the settlement balanced', 'Gather from the forest, waterfalls and crystal shelf, and use the workshop to expand your town.', 'More homes also increase food and water needs.', 80)
+  return tips
 }

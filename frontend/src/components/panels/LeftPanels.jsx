@@ -5,6 +5,7 @@ import { activeMissions, canAfford, countType, isUnlocked, unlockLevel } from '.
 import { getAdvice } from '../../game/advisor.js'
 import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
 import { Check, Lock, Close, ArtIcon, Plus } from '../icons.jsx'
+import BuildingArt from '../BuildingArt.jsx'
 import Vignette from '../vignettes.jsx'
 
 const CHAPTERS = { 1: 'A Place to Begin', 2: 'The First Connection', 3: 'A Town Needs More' }
@@ -141,7 +142,7 @@ export function BuildPanel() {
             return (
               <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`}>
                 <div className="ws-name">{def.name}</div>
-                <Vignette kind={key} className="ws-art" />
+                <BuildingArt type={key} className="ws-art" />
                 <p className="ws-desc">{def.desc}</p>
                 <div className="ws-meta">
                   {def.prod && <YieldChips yields={def.prod} />}

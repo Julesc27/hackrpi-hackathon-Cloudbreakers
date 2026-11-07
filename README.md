@@ -99,3 +99,22 @@ Backend needs `JWT_SECRET` in `backend/.env` (and in Railway variables).
 The frontend saves to localStorage on every change and, when logged in, uploads to
 `PUT /town` every 30s, after each successful gameplay action, and when the tab closes (`frontend/src/game/CloudSync.jsx`).
 It needs `VITE_API_URL` (set in docker-compose; on Railway set it on the frontend service).
+
+
+## Current island chapter
+
+- **New Haven**: eight shelter/building plots, a finite grove (36 harvestable wood), finite stone (18), a starter garden, collector, workshop and bridge anchors.
+- **Verdant Reach**: renewable wood, food, seeds and building materials.
+- **Rain Island**: fresh water, fishing, irrigation supplies and stone for infrastructure.
+- **Prism Shelf**: energy crystals, power, stone and advanced building materials. Solar farms, batteries and wind turbines consume these resources.
+- **Mercy Rise**: the hospital island improves resident happiness and supports community buildings.
+- **Hearthside**: the village provides eight additional homes and a small food supply.
+
+Click the resource landmarks to gather. Leaves, stone chips, water splashes and crystal sparkles show successful interactions; rewards appear over the source. Depleted starter deposits reject further harvesting. Gardens consume seeds, so expansion supplies a sustainable crop cycle. The workshop opens building placement, structures appear on their selected plots, and new bridges animate into place. Reduced-motion preferences are respected.
+
+The progression remains XP-based, with no End Turn control. Save version 5 migrates older towns into the current island chapter, retaining resources, XP, missions and structures; buildings from retired island layouts relocate to available plots on the corresponding resource island.
+
+Storm Island, Cloudroot Island, Ancient Ruins, Skyport Island and Void Island are future chapter ideas and are not active destinations in this map.
+
+
+New towns start with no bridges. Route buttons offer construction choices, but no bridge geometry appears until a valid build action pays its cost. A new bridge reveals its entire deck, posts and rails together from New Haven toward the destination. Its endpoints follow both islands’ floating motion, and built spans can be selected along their full length.

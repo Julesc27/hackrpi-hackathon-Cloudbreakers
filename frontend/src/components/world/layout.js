@@ -6,12 +6,13 @@
 //   props   – things standing on the island (see props.js)
 //   nav     – walkway graph residents move along: nodes { id: [x, y, tag?] }, edges [a, b]
 // Building plots for the player live in game/data.js (ISLANDS[id].plots) and are kept clear here.
+import { ISLAND_OFFSETS } from '../../game/mapLayout.js'
 import { ISLANDS } from '../../game/data.js'
 import { rng } from './iso.js'
 
 const P = (pts, w = 9) => ({ type: 'path', pts, w })
 
-export const WORLD_ISLANDS = {
+const BASE_WORLD_ISLANDS = {
   newHaven: {
     seed: 11, depth: 250, material: 'stone',
     biome: ['#d4f0a4', '#7ec86a', '#3f8a40'],
@@ -206,16 +207,47 @@ export const WORLD_ISLANDS = {
   },
 }
 
+export const WORLD_ISLANDS = {
+  newHaven: BASE_WORLD_ISLANDS.newHaven,
+  verdant: BASE_WORLD_ISLANDS.verdant,
+  rain: BASE_WORLD_ISLANDS.rain,
+  prism: BASE_WORLD_ISLANDS.mistral,
+  mercy: BASE_WORLD_ISLANDS.mercy,
+  hearth: BASE_WORLD_ISLANDS.hearth,
+}
+WORLD_ISLANDS.verdant.props = WORLD_ISLANDS.verdant.props.filter((p) => !['stall', 'bunting'].includes(p.type))
+WORLD_ISLANDS.prism.props = [{ type: 'crystal', x: 410, y: 210, s: 2 }, { type: 'crystal', x: 470, y: 250, s: 1.5 }, { type: 'crystal', x: 350, y: 260, s: 1.2 }]
+
+// Shift all geometric layers together; built bridges continue to land on the island edges.
+for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
+  const island = WORLD_ISLANDS[id]
+  island.ground = island.ground.map(([x, y, ...size]) => [x + dx, y + dy, ...size])
+  for (const fall of island.falls) fall.x += dx
+  for (const item of [...island.props, ...island.paved]) {
+    if (item.x != null) item.x += dx
+    if (item.y != null) item.y += dy
+    if (item.base != null) item.base += dy
+    if (item.pts) item.pts = item.pts.map(([x, y]) => [x + dx, y + dy])
+  }
+  for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
+}
+Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
+  e_mistral: [580, 365], e_rain: [930, 360], e_mercy: [470, 520],
+  e_hearth: [1090, 535], e_verdant: [580, 365], e_prism: [1065, 650], e_gardens: [1005, 695],
+})
+WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
+
 // Bridge anchor points (island edge → island edge) for every route in data.js
 export const BRIDGE_ENDS = {
-  'mistral-haven': { a: ['mistral', 'e_newHaven'], b: ['newHaven', 'e_mistral'] },
+  'verdant-haven': { a: ['verdant', 'e_newHaven'], b: ['newHaven', 'e_verdant'] },
   'rain-haven': { a: ['rain', 'e_newHaven'], b: ['newHaven', 'e_rain'] },
+  'prism-haven': { a: ['prism', 'e_newHaven'], b: ['newHaven', 'e_prism'] },
   'mercy-haven': { a: ['mercy', 'e_newHaven'], b: ['newHaven', 'e_mercy'] },
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
-  'verdant-haven': { a: ['verdant', 'e_newHaven'], b: ['newHaven', 'e_verdant'] },
-  'gardens-haven': { a: ['gardens', 'e_newHaven'], b: ['newHaven', 'e_gardens'] },
-  'hearth-skyport': { a: ['hearth', 'e_skyport'], b: ['skyport', 'e_hearth'] },
 }
+WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [550, 235]
+WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1080, 245]
+WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1170, 878]
 
 export function bridgePoints(routeId) {
   const e = BRIDGE_ENDS[routeId]

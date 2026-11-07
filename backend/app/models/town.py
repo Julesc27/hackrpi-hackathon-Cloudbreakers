@@ -22,6 +22,11 @@ class Resources(_Loose):
     food: NonNegInt
     energy: NonNegInt
     coins: NonNegInt
+    stone: NonNegInt = 0
+    seeds: NonNegInt = 0
+    crystals: NonNegInt = 0
+    materials: NonNegInt = 0
+    fish: NonNegInt = 0
 
 
 class Building(_Loose):

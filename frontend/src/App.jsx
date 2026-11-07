@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import { SyncProvider } from './game/CloudSync.jsx'
 import AuthModal from './components/panels/AuthModal.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
+import MiniMap from './components/hud/MiniMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
 import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls, CameraHint } from './components/hud/BottomBar.jsx'
@@ -40,6 +41,7 @@ function GameScreen() {
         <ObjectiveRibbon />
         <WeatherCard />
         <LeftRail />
+        <MiniMap />
         <ProgressionCard />
         <BottomNav />
         <SettingsButton />

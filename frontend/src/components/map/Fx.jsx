@@ -1,20 +1,14 @@
 import { useEffect, useRef } from 'react'
+import { INTERACTION_POINTS, STARTER_BEACON } from '../../game/mapLayout.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
+import { RES_ICON } from '../icons.jsx'
 import { bridgeMid } from '../world/layout.js'
 
 function ResIcon({ res, size = 26 }) {
-  const s = size / 24
-  const mark = {
-    energy: <polygon points="13,2 6,13 11,13 10,22 18,10 13,10" fill="#f6cf4b" />,
-    water: <path d="M12 3c3 4 5 7 5 10a5 5 0 0 1-10 0c0-3 2-6 5-10z" fill="#4db4ff" />,
-    wood: <rect x="4" y="9" width="12" height="7" rx="3.5" fill="#c98d55" />,
-    coins: <circle cx="12" cy="12" r="7" fill="#f4c34f" stroke="#a87d1e" />,
-    food: <><path d="M12 20V8" stroke="#86cf6a" strokeWidth="1.6" /><ellipse cx="9" cy="10" rx="2" ry="1.2" fill="#86cf6a" /><ellipse cx="15" cy="12" rx="2" ry="1.2" fill="#86cf6a" /></>,
-  }[res]
-  if (!mark) return null
-  return <g transform={`translate(${-size / 2} ${-size / 2}) scale(${s})`}>{mark}</g>
+  const Icon = RES_ICON[res]
+  return Icon ? <g transform={`translate(${-size / 2} ${-size / 2})`}><Icon size={size} /></g> : null
 }
 
 /** Renders floating numbers, sparkle bursts and tap-to-collect bubbles (world coordinates). */
@@ -32,6 +26,18 @@ export function FxLayer() {
               </g>
             </g>
           )
+        }
+        if (f.kind === 'harvest') {
+          const color = { wood: '#b1dc8b', garden: '#d2ec92', stone: '#d5dfed', water: '#94e9ff', crystal: '#a0eaff' }[f.material] || '#f0d598'
+          return <g key={f.id} transform={`translate(${f.x} ${f.y})`} pointerEvents="none" className={`harvest-effect harvest-${f.material}`}>
+            <ellipse className="harvest-flash" cy="10" rx="42" ry="24" fill={color} />
+            <ellipse className="harvest-ring" cy="12" rx="28" ry="12" fill="none" stroke={color} strokeWidth="2.5" />
+            {Array.from({ length: 12 }, (_, i) => <g key={i} transform={`rotate(${i * 30})`}>
+              <g className="harvest-particle" style={{ animationDelay: `${i % 3 * .035}s`, '--travel': `${60 + i % 3 * 16}px` }}>
+                {['wood', 'garden'].includes(f.material) ? <ellipse cy="-9" rx="4" ry="8" fill={color} transform="rotate(25)" /> : f.material === 'water' ? <path d="M0-19Q-9-9 0-5Q9-9 0-19" fill={color} /> : <path d="M0-20 5-12 0-4-5-12Z" fill={color} stroke="#e9f7ff" strokeWidth=".8" />}
+              </g>
+            </g>)}
+          </g>
         }
         if (f.kind === 'burst') {
           return (
@@ -111,21 +117,22 @@ export function useWorldEvents() {
       }
     }
 
-    // wood gathered / harvested: the engine adds a 'gain' toast for these actions
-    const fresh = state.toasts.filter((t) => !p.toasts.some((o) => o.id === t.id))
-    for (const t of fresh) {
-      if (t.kind !== 'gain') continue
-      const m = /\+(\d+) wood/.exec(t.text)
-      if (!m) continue
-      const fromForest = /Verdant/.test(t.text)
-      const [cx, cy] = ISLANDS[fromForest ? 'verdant' : 'newHaven'].hit
-      out.push({ kind: 'float', x: cx + (Math.random() - 0.5) * 60, y: cy - 30, res: 'wood', text: `+${m[1]}`, ttl: 1500 })
+    // Direct interaction receipts use the validated reward, so rejected clicks never animate gains.
+    const interaction = state.lastInteraction
+    if (interaction && interaction.id !== p.lastInteraction?.id) {
+      const point = INTERACTION_POINTS[interaction.siteId]
+      if (point) {
+        out.push({ kind: 'harvest', material: interaction.kind, x: point[0], y: point[1], ttl: 1700 })
+        Object.entries(interaction.reward).filter(([, value]) => value > 0).forEach(([res, amount], i) => {
+          out.push({ kind: 'float', x: point[0] + i * 26, y: point[1] - 35 - i * 26, res, text: `+${amount}`, ttl: 1450 })
+        })
+      }
     }
 
     // beacon
     if (state.beaconRestored && !p.beaconRestored) {
-      out.push({ kind: 'burst', x: 765, y: 299, ttl: 1200 }, { kind: 'float', x: 765, y: 250, text: 'The beacon wakes!', ttl: 2400 })
-      cam?.flyTo(765, 380, cam.fitScale * 1.4, { duration: 900 })
+      out.push({ kind: 'burst', x: STARTER_BEACON[0], y: STARTER_BEACON[1], ttl: 1200 }, { kind: 'float', x: STARTER_BEACON[0], y: STARTER_BEACON[1] - 45, text: 'The beacon wakes!', ttl: 2400 })
+      cam?.flyTo(STARTER_BEACON[0], STARTER_BEACON[1] + 80, cam.fitScale * 1.4, { duration: 900 })
     }
 
     // every action moves the settlement forward (the engine awards XP and applies production):
@@ -139,11 +146,11 @@ export function useWorldEvents() {
         for (const b of p.buildings.filter((x) => x.island === id)) {
           for (const [k, v] of Object.entries(BUILDINGS[b.type].prod || {})) yields[k] = (yields[k] || 0) + v
         }
-        const entries = Object.entries(yields).filter(([, v]) => v > 0)
+        const entries = Object.entries(yields).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 2)
         entries.forEach(([res, v], i) => {
           const amount = Math.max(1, Math.round(v * access[id]))
           const spread = (i - (entries.length - 1) / 2) * 56
-          out.push({ kind: 'bubble', x: cx + spread + (id === 'newHaven' ? -rx * 0.45 : 0), y: cy - ry * 0.55, res, amount, ttl: 5000 })
+          out.push({ kind: 'bubble', x: cx + spread + (id === 'newHaven' ? -rx * 0.45 : 0), y: cy - ry * 0.55, res, amount, ttl: 2400 })
         })
       }
     }

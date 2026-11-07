@@ -6,6 +6,7 @@ import './styles/hud.css'
 import './styles/panels.css'
 import './styles/map.css'
 import './styles/auth.css'
+import './styles/storybook.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
