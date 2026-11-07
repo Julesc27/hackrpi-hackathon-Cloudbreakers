@@ -9,6 +9,13 @@ build/
 !.env.example
 *.env
 atlas-credentials*
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
 
 # OS / editor
 .DS_Store

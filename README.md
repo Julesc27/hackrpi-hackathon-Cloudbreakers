@@ -3,7 +3,11 @@
 ```
 .
 ├── frontend/          React + Vite app
-├── backend/           (empty — to be added)
+├── backend/           FastAPI + Beanie (MongoDB Atlas)
+│   └── app/
+│       ├── models/    DB schema (one file per collection)
+│       ├── routers/   API endpoints
+│       └── db.py      Atlas connection
 └── docker-compose.yml
 ```
 
@@ -35,5 +39,6 @@ npm run dev
 
 ## Secrets
 
-Keep credentials (e.g. MongoDB Atlas) in `backend/.env` once the backend exists.
+Copy `backend/.env.example` to `backend/.env` and fill in the Atlas connection string.
+API runs at http://localhost:8000 (docs at http://localhost:8000/docs).
 `.env` files are git-ignored — never commit them or put DB credentials in the frontend.

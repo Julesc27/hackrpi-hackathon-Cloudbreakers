@@ -1,6 +1,8 @@
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev   # Dockerfile's final stage is the production build for Railway
     ports:
       - "5173:5173"
     volumes:
@@ -9,8 +11,15 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true   # reliable hot reload on Windows bind mounts
 
-  # backend:
-  #   build: ./backend
-  #   ports:
-  #     - "8000:8000"
-  #   env_file: ./backend/.env
+  backend:
+    build: ./backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload   # dev only; Dockerfile CMD is prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: ./backend/.env   # Atlas creds (git-ignored); see backend/.env.example
+        required: false        # so the frontend still runs for teammates without it
+    environment:
+      - WATCHFILES_FORCE_POLLING=true   # reliable hot reload on Windows bind mounts
