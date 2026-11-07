@@ -4,19 +4,13 @@ import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import { SyncProvider } from './game/CloudSync.jsx'
 
 import AuthModal from './components/panels/AuthModal.jsx'
-import Backdrop from './components/map/Backdrop.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import {
-  BottomNav,
-  ProgressionCard,
-  SettingsButton,
-  ObjectiveRibbon,
-  PlacingHint,
-} from './components/hud/BottomBar.jsx'
+import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls, CameraHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
+import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
 import {
   JournalModal,
@@ -50,7 +44,6 @@ function GameScreen() {
 
   return (
     <div className="game">
-      <Backdrop />
       <SkyMap />
 
       <div className="hud">
@@ -66,6 +59,8 @@ function GameScreen() {
         <ProgressionCard />
         <BottomNav />
         <SettingsButton />
+        <CameraControls />
+        <CameraHint />
         <PlacingHint />
       </div>
 
@@ -77,7 +72,7 @@ function GameScreen() {
       {ui.panel === 'storage' && <StorageModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
-
+      {ui.panel === 'bridges' && <BridgeAnchorModal />}
       {ui.bridgeRoute && <BridgeModal />}
 
       {auth.loginOpen && <AuthModal />}

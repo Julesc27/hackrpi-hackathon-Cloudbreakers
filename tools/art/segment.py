@@ -87,9 +87,14 @@ def save(name, m, soft_alpha, extra=None):
     cv2.imwrite(f'out/{name}.webp', rgba, [cv2.IMWRITE_WEBP_QUALITY, 88])
     out[name] = dict(x=round(x0 / S, 2), y=round(y0 / S, 2), w=round((x1 - x0) / S, 2), h=round((y1 - y0) / S, 2))
 
-# fade islands out toward the bottom nav line
+# fade islands out toward the bottom nav line, and soften any straight cut left by the
+# HUD boxes or the image border so pieces look natural when the camera pans past them
 fade = 1 - ss(735 * S, 792 * S, np.arange(H_)[:, None].astype(np.float32))
 fade = np.broadcast_to(fade, (H_, W_))
+hud_dist = ndi.distance_transform_edt(~hud)
+xx = np.arange(W_)[None, :].astype(np.float32)
+border = np.minimum(xx, W_ - 1 - xx)
+fade = fade * ss(0, 34 * S, hud_dist) * ss(0, 40 * S, np.broadcast_to(border, (H_, W_)))
 for i, k in enumerate(names):
     m = (lab == i + 1)
     soft = cv2.GaussianBlur(ndi.binary_dilation(m, iterations=5).astype(np.float32), (0, 0), 3) * (fg & ~hud & ~taken | m)

@@ -32,7 +32,7 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 
 ## How to play
 
-1. **Build** (left rail) → pick *Shelter* or *Bridge Anchor* → click a glowing plot on New Haven.
+1. **Build** (left rail) → pick *Shelter* → click a glowing plot on New Haven. Choose *Unlock bridges* in the workshop to enable crossings without using a plot.
 2. Click **New Haven** to *gather wood* (or restore the beacon later).
 3. Click a glowing **+** between islands to plan a bridge. Rope bridges are cheap but storms damage them; reinforced stone unlocks at level 3.
 4. Gather and build freely: each successful action earns **10 XP** and updates production and consumption automatically. Complete quests for bonus XP and **level up** to unlock buildings and bridges. Weather changes with your level.
@@ -40,6 +40,8 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 6. Final goal (*Higher Tomorrows*): 3+ islands connected, water/food/energy/happiness ≥ 50 and sustainability ≥ 60.
 
 Progress saves to the browser's localStorage, and to your account when logged in. Settings (gear) → *New game* resets it.
+
+**Moving around:** drag the sky to pan (it glides), scroll or pinch to zoom, double-click to zoom in, and press `0` or the target button to fly back to New Haven. Arrow keys / WASD and `+`/`−` work too. Tapping an island flies the camera to it. Each action you take shows what your islands produced as bubbles you can tap.
 
 ## Frontend layout
 
@@ -54,7 +56,8 @@ frontend/src/
 ├── auth/AuthContext.jsx  login state (token in localStorage)
 ├── api/client.js         backend calls (login, register, load/save town)
 ├── components/
-│   ├── map/              sky map: painted islands/bridges from the concept art + building sprites
+│   ├── world/            the living map, drawn in code every frame (islands, buildings, bridges, residents)
+│   ├── map/              camera (pan/zoom), clickable overlay (labels, bridge buttons, plots), effects
 │   ├── hud/              top resource bar, title, level badge, weather, rails, XP progress
 │   └── panels/           drawers and modals: quests, build, advisor, island, bridge, journal…
 ├── artPaths.js           (in components/) helpers for painted card art and badges
@@ -62,9 +65,18 @@ frontend/src/
 └── styles/               hud.css, panels.css, map.css
 ```
 
-**Art:** `frontend/public/art/` holds pieces cut from the concept art: each island, each bridge, the background islets/moon (`decor.webp`), HUD icons and card art. `src/game/artLayout.json` says where each piece sits in the 1600×900 map. Swap a `.webp` for a new painting at the same position and the game picks it up. `tools/art/` has the scripts that made the cut-outs.
+**The map:** independent painted island and building sprites are animated on a canvas. `components/world/` draws it on a canvas every frame, styled after the concept art:
+- `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
+- `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
+- `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
+- `people.js`: bridge curves. The town has a population count, but no characters are drawn.
+- `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
 
-**Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`; the server validates its shape in `backend/app/models/town.py` (update that if you add fields with constraints). If you change the save format, bump `version` in `createInitialState()`. Existing version 2 saves migrate automatically with their XP and town progress preserved. The reducer is deterministic, so the server can replay or validate actions; randomness is supplied as `roll` on `END_TURN`.
+Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
+
+**Art:** `frontend/public/art/` contains transparent island and building PNGs. `components/world/paintedArt.js` maps them to the world. Icons and panel scenes use drawn graphics; `concept/` holds the visual references.
+
+**Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`; the server validates its shape in `backend/app/models/town.py` (update that if you add fields with constraints). If you change the save format, bump `version` in `createInitialState()`. Existing version 2–5 saves migrate automatically with their XP and town progress preserved. The reducer is deterministic, so the server can replay or validate actions; gameplay advances after successful actions.
 
 ## Secrets
 
@@ -107,3 +119,23 @@ Environment variables (Project → Settings → Environment Variables):
 
 MongoDB Atlas → Network Access must allow `0.0.0.0/0` (Vercel has no fixed IPs).
 Pushes to `main` deploy to production; other branches get preview URLs.
+
+## Current island chapter
+
+- **New Haven**: eight shelter/building plots, a finite grove (36 harvestable wood), finite stone (18), a starter garden, collector, workshop and bridge anchors.
+- **Verdant Reach**: renewable wood, food, seeds and building materials.
+- **Rain Island**: fresh water, fishing, irrigation supplies and stone for infrastructure.
+- **Prism Shelf**: energy crystals, power, stone and advanced building materials. Solar farms, batteries and wind turbines consume these resources.
+- **Mercy Rise**: the hospital island improves resident happiness and supports community buildings.
+- **Hearthside**: the village provides eight additional homes and a small food supply.
+
+Click the resource landmarks to gather. Leaves, stone chips, water splashes and crystal sparkles show successful interactions; rewards appear over the source. Depleted starter deposits reject further harvesting. Gardens consume seeds, so expansion supplies a sustainable crop cycle. The workshop opens building placement, structures appear on their selected plots, and new bridges animate into place. Reduced-motion preferences are respected.
+
+The progression remains XP-based, with no End Turn control. Save version 5 migrates older towns into the current island chapter, retaining resources, XP, missions and structures; buildings from retired island layouts relocate to available plots on the corresponding resource island.
+
+Storm Island, Cloudroot Island, Ancient Ruins, Skyport Island and Void Island are future chapter ideas and are not active destinations in this map.
+
+
+New towns start with no bridges. Route buttons offer construction choices, but no bridge geometry appears until a valid build action pays its cost. A new bridge reveals its entire deck, posts and rails together from New Haven toward the destination. Its endpoints follow both islands’ floating motion, and built spans can be selected along their full length.
+
+Bridge access is a one-time workshop upgrade. It does not place a decorative bridge on the island or consume a shelter plot. Existing anchor buildings migrate to the plot-free upgrade. Use **Manage bridges** in the workshop to plan, reinforce or repair crossings.

@@ -60,45 +60,11 @@ export default function TopBar() {
   const r = state.resources
 
   return (
-    <div
-      className="topbar panel"
-      onClick={() => ui.setPanel('storage')}
-      role="button"
-      tabIndex={0}
-      aria-label="Resources — open storage"
-      data-tutorial="hud-resources"
-    >
-      <Meter
-        k="energy"
-        label="Energy"
-        value={r.energy}
-        max={cap.energy}
-        net={net.energy}
-        color="linear-gradient(90deg,#f0c53c,#ffe28a)"
-      />
-      <Meter
-        k="water"
-        label="Water"
-        value={r.water}
-        max={cap.water}
-        net={net.water}
-        color="linear-gradient(90deg,#3aa2f0,#8fd3ff)"
-      />
-      <Meter
-        k="food"
-        label="Food"
-        value={r.food}
-        max={cap.food}
-        net={net.food}
-        color="linear-gradient(90deg,#5fb24f,#a8e08a)"
-      />
-      <Meter
-        k="happiness"
-        label="Happiness"
-        value={state.happiness}
-        max={100}
-        color="linear-gradient(90deg,#b796f0,#e6d4ff)"
-      />
+    <div className="topbar panel" data-tutorial="hud-resources" onClick={() => ui.setPanel('storage')} role="button" tabIndex={0} aria-label="Resources — open storage">
+      <Meter k="energy" label="Energy" value={r.energy} max={cap.energy} net={net.energy} color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
+      <Meter k="water" label="Water" value={r.water} max={cap.water} net={net.water} color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
+      <Meter k="happiness" label="Happiness" value={state.happiness} max={100} color="linear-gradient(90deg,#b796f0,#e6d4ff)" />
+      <Meter k="food" label="Food" value={r.food} max={cap.food} net={net.food} color="linear-gradient(90deg,#5fb24f,#a8e08a)" />
       <Count k="wood" label="Wood" value={r.wood} net={net.wood} />
       <Count k="coins" label="Coins" value={r.coins} net={net.coins} />
     </div>

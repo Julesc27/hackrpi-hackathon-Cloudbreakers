@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Close, RES_ICON } from '../icons.jsx'
+import { Close, RES_ICON, Compass } from '../icons.jsx'
 
 function SealClose({ onClose }) {
   return (
@@ -55,7 +55,7 @@ export function Modal({ title, kicker, onClose, children, footer, size = 'md', d
     <div className="modal-backdrop" onMouseDown={(e) => dismissable && e.target === e.currentTarget && onClose?.()}>
       <div className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
         <Corners />
-        {crest && <div className="crest"><img src="/art/compass.webp" alt="" /></div>}
+        {crest && <div className="crest"><Compass size={52} /></div>}
         {dismissable && <SealClose onClose={onClose} />}
         <header className="p-head">
           <h2 className="p-title"><span className="spark">✦</span>{title}<span className="spark">✦</span></h2>
