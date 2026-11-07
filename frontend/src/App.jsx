@@ -3,11 +3,10 @@ import { GameProvider, UIProvider, useGame, useUI } from './game/GameContext.jsx
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import { SyncProvider } from './game/CloudSync.jsx'
 import AuthModal from './components/panels/AuthModal.jsx'
-import Backdrop from './components/map/Backdrop.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import { BottomNav, TurnControls, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
+import { BottomNav, TurnControls, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls, CameraHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
@@ -30,7 +29,6 @@ function GameScreen() {
 
   return (
     <div className="game">
-      <Backdrop />
       <SkyMap />
 
       <div className="hud">
@@ -45,6 +43,8 @@ function GameScreen() {
         <TurnControls />
         <BottomNav />
         <SettingsButton />
+        <CameraControls />
+        <CameraHint />
         <PlacingHint />
       </div>
 

@@ -280,6 +280,9 @@ export function IntroModal() {
   )
 }
 
+// These events are already shown on the map itself (floating numbers, bursts), so no toast
+const QUIET = ['gain', 'build', 'bridge']
+
 function ToastItem({ t, onDone }) {
   useEffect(() => {
     const ms = t.kind === 'mission' || t.kind === 'level' ? 5000 : 2800
@@ -301,7 +304,7 @@ export function Toasts() {
   const { state, dispatch } = useGame()
   return (
     <div className="toasts" aria-live="polite">
-      {state.toasts.slice(-4).map((t) => (
+      {state.toasts.filter((t) => !QUIET.includes(t.kind)).slice(-3).map((t) => (
         <ToastItem key={t.id} t={t} onDone={() => dispatch({ type: 'DISMISS_TOAST', id: t.id })} />
       ))}
     </div>

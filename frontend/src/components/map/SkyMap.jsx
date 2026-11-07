@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { openRoutes, hasAnchor, bridgeCost, islandAccess, bridgeStatus } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import LAYOUT from '../../game/artLayout.json'
 import { BUILDING_SPRITES } from './sprites.jsx'
 import Defs from './Defs.jsx'
+import Camera, { WORLD } from './Camera.jsx'
+import Backdrop from './Backdrop.jsx'
+import { CloudDefs, FarSky, CloudSea, Birds, Airship, Waterfalls, Walkers, Fireflies, BeaconLight, Cloud } from './Life.jsx'
+import { FxLayer, useWorldEvents } from './Fx.jsx'
 
 const art = (name) => `/art/${name}.webp`
 const box = (name) => LAYOUT[name]
@@ -38,24 +42,44 @@ export default function SkyMap() {
     dispatch({ type: 'BUILD', buildingType: ui.placing, island, slot })
     ui.setPlacing(null)
   }
+  const [hover, setHover] = useState(null)
 
-  // On narrow screens the map is wider than the viewport and pans sideways; start centred on New Haven.
-  const scroller = useRef(null)
+  useWorldEvents()
+
+  // Fly the camera to an island whenever its panel opens (from the map, the chart, a quest…)
   useEffect(() => {
-    const el = scroller.current
-    if (el && el.scrollWidth > el.clientWidth) el.scrollLeft = el.scrollWidth * (765 / 1600) - el.clientWidth / 2
-  }, [])
+    if (ui.panel === 'island' && ui.selected) ui.camera.current?.focusIsland(ui.selected)
+  }, [ui.panel, ui.selected]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // While placing a building, pull back so every free plot is in view
+  useEffect(() => {
+    if (!ui.placing) return
+    if (BUILDINGS[ui.placing]?.homeOnly) ui.camera.current?.focusIsland('newHaven', false)
+    else ui.camera.current?.home()
+  }, [ui.placing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connectedOk = state.connected.filter((id) => access[id])
 
   const ids = Object.keys(ISLANDS)
   // paint order: back (top of screen) to front
   const order = [...ids].sort((a, b) => box(`island-${a}`).y + box(`island-${a}`).h - (box(`island-${b}`).y + box(`island-${b}`).h))
 
+  const near = (
+    <svg className="near-clouds" viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} width="100%" height="100%" aria-hidden="true">
+      {/* a few big soft clouds that slide past in front of the world for depth */}
+      {[[-470, -220, 420, 1], [2050, -160, 460, 2], [-470, 1040, 520, 3], [2060, 1020, 480, 4], [-520, 420, 360, 5], [2110, 460, 380, 6]].map(([x, y, w, seed]) => (
+        <g key={seed} className="drift slow"><Cloud x={x} y={y} w={w} seed={seed * 31} opacity={0.7} /></g>
+      ))}
+    </svg>
+  )
+
   return (
-    <div className="map-scroll" ref={scroller}>
-    <svg className={`skymap${ui.placing ? ' is-placing' : ''}`} viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet">
+    <Camera apiRef={ui.camera} far={<Backdrop />} near={near}>
+    <svg className={`skymap${ui.placing ? ' is-placing' : ''}`} viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} width="100%" height="100%">
+      <defs><CloudDefs /></defs>
       <Defs />
-      {/* distant islets, cloud banks, moon and birds from the concept art */}
-      <ArtImage name="decor" className="decor" />
+      <FarSky />
+      <Airship />
 
       {/* islands */}
       {order.map((id) => {
@@ -64,7 +88,7 @@ export default function SkyMap() {
         const cut = st === 'connected' && !access[id]
         const filter = st === 'hidden' ? 'url(#hidden)' : st === 'discovered' || cut ? 'url(#locked)' : strained ? 'url(#dusk)' : undefined
         return (
-          <g key={id} className={`isle isle-${st}`}>
+          <g key={id} className={`isle isle-${st}${hover === id ? ' is-hover' : ''}`}>
             <g className="isle-bob" style={{ animationDelay: `${(ISLANDS[id].hit[0] % 9) * -0.7}s` }}>
               {id === 'newHaven' ? (
                 <>
@@ -78,6 +102,10 @@ export default function SkyMap() {
           </g>
         )
       })}
+
+      <CloudSea />
+      <Waterfalls connected={connectedOk} />
+      <BeaconLight lit={state.beaconRestored} />
 
       {/* bridges: built ones are painted; open routes show a faint blueprint of the bridge */}
       {state.bridges.map((b) => {
@@ -104,7 +132,7 @@ export default function SkyMap() {
         return (
           <g key={r.id} className={`ghost-route${anchor ? '' : ' is-locked'}`} onClick={() => ui.setBridgeRoute(r.id)}>
             <ArtImage name={name} className="ghost-art" filter="url(#blueprint)" />
-            <g transform={`translate(${c.x} ${c.y})`} className="route-btn">
+            <g transform={`translate(${c.x} ${c.y})`}><g className="route-btn">
               <circle r="27" fill="none" stroke="rgba(243,217,143,.5)" strokeWidth="1.5" className="route-pulse" />
               <circle r="20" fill="url(#goldBtn)" stroke="#fff1c4" strokeWidth="1.5" />
               {anchor ? (
@@ -119,7 +147,7 @@ export default function SkyMap() {
                 <rect x="-36" y="-11" width="72" height="22" rx="11" fill="rgba(12,19,58,.9)" stroke="#b8924a" />
                 <text textAnchor="middle" y="4.5" className="route-cost">{bridgeCost(r, 'rope').wood} wood</text>
               </g>
-            </g>
+            </g></g>
           </g>
         )
       })}
@@ -138,6 +166,10 @@ export default function SkyMap() {
           )
         })}
 
+      <Walkers connected={connectedOk} population={state.population} />
+      <Fireflies connected={connectedOk} />
+      <Birds />
+
       {/* click targets + labels */}
       {ids.map((id) => {
         const st2 = statusOf(id)
@@ -147,7 +179,8 @@ export default function SkyMap() {
         const lw = label ? label.length * 8.4 + 34 : 0
         return (
           <g key={id} className={`isle-hit isle-hit-${st2}`}>
-            <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="transparent" onClick={() => !ui.placing && ui.openIsland(id)} />
+            <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="transparent" onClick={() => !ui.placing && ui.openIsland(id)}
+              onPointerEnter={() => setHover(id)} onPointerLeave={() => setHover((h) => (h === id ? null : h))} />
             {selected && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#f3d98f" strokeWidth="2.5" strokeDasharray="8 8" className="select-ring" pointerEvents="none" />}
             {label && st2 !== 'connected' && (
               <g className="isle-label" transform={`translate(${cx} ${cy - ry * 0.15})`} onClick={() => !ui.placing && ui.openIsland(id)}>
@@ -179,8 +212,10 @@ export default function SkyMap() {
           )
         })
       })}
+
+      <FxLayer />
     </svg>
-    </div>
+    </Camera>
   )
 }
 
