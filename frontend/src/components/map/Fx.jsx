@@ -5,6 +5,7 @@ import { islandAccess } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { RES_ICON } from '../icons.jsx'
 import { bridgeMid } from '../world/layout.js'
+import { WORLD } from './Camera.jsx'
 
 function ResIcon({ res, size = 26 }) {
   const Icon = RES_ICON[res]
@@ -125,6 +126,17 @@ export function useWorldEvents() {
         out.push({ kind: 'harvest', material: interaction.kind, x: point[0], y: point[1], ttl: 1700 })
         Object.entries(interaction.reward).filter(([, value]) => value > 0).forEach(([res, amount], i) => {
           out.push({ kind: 'float', x: point[0] + i * 26, y: point[1] - 35 - i * 26, res, text: `+${amount}`, ttl: 1450 })
+
+          // Convert world coordinates to screen coordinates and fire flying tokens
+          const camEl = document.querySelector('.camera')
+          const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
+          const camState = cam?.view?.() || { x: 0, y: 0, s: 1 }
+          const { x: camX, y: camY, s } = camState
+          const screenX = cr.left + (point[0] - WORLD.x) * s + camX
+          const screenY = cr.top + (point[1] - WORLD.y) * s + camY
+          window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
+            detail: { res, amount, startX: screenX, startY: screenY, delayOffset: i * 120 },
+          }))
         })
       }
     }
@@ -158,4 +170,3 @@ export function useWorldEvents() {
     if (out.length) ui.emitFx(out)
   }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
 }
-
