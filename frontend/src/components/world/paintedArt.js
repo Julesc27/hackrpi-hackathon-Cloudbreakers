@@ -1,4 +1,13 @@
 // Independent, transparent sprites: the reference painting is never used as a map backdrop.
+export const PAINTED_ATLASES = {
+  starter: { src: '/art/starter-island-expanded.png', columns: 1, rows: 1 },
+  forest: { src: '/art/verdant-forest.png', columns: 1, rows: 1 },
+  prism: { src: '/art/prism-shelf.png', columns: 1, rows: 1 },
+  civic: { src: '/art/islands-civic-layered.png', columns: 2, rows: 2 },
+  settlement: { src: '/art/islands-settlement.png', columns: 2, rows: 2 },
+  buildings: { src: '/art/buildings.png', columns: 4, rows: 3 },
+}
+
 export const PAINTED_ISLANDS = {
   newHaven: { sheet: 'starter', src: '/art/starter-island-expanded.png', cell: 0, rect: [445, 185, 660, 645] },
   verdant: { sheet: 'forest', src: '/art/verdant-forest.png', cell: 0, rect: [120, 20, 470, 395] },
@@ -50,4 +59,14 @@ export class PaintedAtlas {
     ctx.drawImage(this.image, ...bounds, x, y, width, height)
     return true
   }
+}
+
+// Share both the image and its measured sprite bounds between the world and panels.
+const atlases = new Map()
+export function getPaintedAtlas(sheet) {
+  if (!atlases.has(sheet)) {
+    const { src, columns, rows } = PAINTED_ATLASES[sheet]
+    atlases.set(sheet, new PaintedAtlas(src, columns, rows))
+  }
+  return atlases.get(sheet)
 }

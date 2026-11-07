@@ -2,6 +2,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { BRIDGE_TYPES, ISLANDS } from '../../game/data.js'
 import { bridgeCost, bridgeLabel, canAfford, hasAnchor, openRoutes, otherEnd } from '../../game/engine.js'
 import { Modal, CostChips } from './Panel.jsx'
+import IslandArt from '../IslandArt.jsx'
 
 export default function BridgeAnchorModal() {
   const { state } = useGame()
@@ -24,6 +25,7 @@ export default function BridgeAnchorModal() {
               const cost = bridgeCost(route, 'rope')
               return (
                 <article className="anchor-route card" key={route.id}>
+                  <IslandArt id={otherEnd(route, state.connected)} />
                   <h3>{destination.name}</h3>
                   <div className="muted small">{destination.kind}</div>
                   <p>{route.note}</p>

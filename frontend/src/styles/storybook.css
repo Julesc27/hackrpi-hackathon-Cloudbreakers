@@ -74,7 +74,7 @@
 .world-gather { cursor: pointer; filter: drop-shadow(0 3px 8px #0b183b77); }
 .world-gather:hover { filter: brightness(1.15) drop-shadow(0 0 12px #f9d68c77); }
 .painted-island-preview { width: 100%; height: 195px; position: relative; overflow: hidden; border-radius: 13px; background: radial-gradient(ellipse, #6384a133, #142b4a00 70%); }
-.painted-island-preview > div { position: absolute; inset: 0; background-size: 200% 200%; background-repeat: no-repeat; }
+
 .cc-art .painted-island-preview { height: 150px; }
 .bridge-hero .painted-island-preview { height: 230px; }
 @keyframes cloud-companion { 50% { transform: translateY(-5px) rotate(1deg); } }
@@ -84,7 +84,7 @@
 @media (prefers-reduced-motion: reduce) { .game *, .game *::before, .game *::after { animation: none !important; transition: none !important; } }
 
 .painted-building-preview { position: relative; width: 100%; height: 130px; overflow: hidden; }
-.painted-building-preview > div { width: 130px; height: 130px; position: absolute; left: calc(50% - 65px); top: 0; background: url('/art/buildings.png') no-repeat; background-size: 400% 300%; }
+
 
 .plot-preview { opacity: 0; transition: opacity .16s; }
 .slot:hover .plot-preview, .slot:focus .plot-preview { opacity: .85; }
@@ -144,3 +144,22 @@
 
 .anchor-upgrade-art { display: grid; place-content: center; justify-items: center; gap: 7px; height: 130px; }
 .anchor-upgrade-art span { font-size: 12px; color: var(--ink-soft); }
+
+/* Every preview fits the same alpha-bounded sprite that the world renders. */
+.painted-sprite > svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.painted-island-preview { padding: 8px; }
+.painted-building-preview { padding: 6px; }
+.painted-scene { position: relative; aspect-ratio: 1.6; }
+.painted-scene > .painted-island-preview { width: 100%; height: 100%; }
+.workshop-art-badge { position: absolute; right: 5%; bottom: 5%; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #193d58; color: #f1d292; border: 1px solid #d9b56e; }
+.crossing-art { position: relative; aspect-ratio: 1.6; overflow: hidden; }
+.crossing-art > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.crossing-art .painted-island-preview { position: absolute; width: 57%; height: 80%; padding: 0; background: none; }
+.crossing-art .painted-island-preview:first-of-type { left: 0; bottom: 0; }
+.crossing-art .painted-island-preview:last-of-type { right: 0; top: 0; }
+.uncharted-art { display: grid; place-items: center; position: relative; height: 150px; color: #c4d9ed; background: radial-gradient(ellipse, #244b6e, #12294200 70%); border-radius: 12px; }
+.uncharted-art > span { position: absolute; top: 12%; right: 22%; color: #e8d7a5; font-size: 30px; }
+.suggestion .vignette { background: radial-gradient(ellipse, #8bb8d650, transparent 75%); }
+.anchor-route .painted-island-preview { height: 140px; }
+.modal.chart { min-width: 0; max-width: min(1080px, calc(100vw - 32px)); }
+.chart .modal-body { min-height: 0; min-width: 0; }
