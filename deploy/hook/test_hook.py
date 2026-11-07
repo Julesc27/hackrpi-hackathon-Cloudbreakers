@@ -5,6 +5,7 @@ import importlib.util
 import json
 import tempfile
 import threading
+import time
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -15,6 +16,47 @@ spec = importlib.util.spec_from_file_location("deploy_hook", Path(__file__).with
 assert spec is not None and spec.loader is not None
 hook = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hook)
+
+
+class DeployClaimsTests(unittest.TestCase):
+    def setUp(self):
+        hook._seen_jti.clear()
+
+    def verify_claims(self, event="push", **overrides):
+        ref = f"refs/heads/{hook.CONFIG['branch']}"
+        claims = {
+            "repository_id": hook.CONFIG["repository_id"],
+            "ref": ref,
+            "ref_type": "branch",
+            "workflow_ref": f"owner/repo/{hook.CONFIG['workflow_file']}@{ref}",
+            "event_name": event,
+            "runner_environment": "github-hosted",
+            "sha": "a" * 40,
+            "jti": "one-use-token",
+            "exp": time.time() + 60,
+        }
+        claims.update(overrides)
+        with patch.object(hook.jwt, "get_unverified_header", return_value={"alg": "RS256", "kid": "test"}), \
+             patch.object(hook._jwks, "get", return_value="test-key"), \
+             patch.object(hook.jwt, "decode", return_value=claims):
+            return hook.verify("test-token")
+
+    def test_main_push_and_manual_dispatch_can_deploy(self):
+        for event in ("push", "workflow_dispatch"):
+            with self.subTest(event=event):
+                hook._seen_jti.clear()
+                self.assertEqual(self.verify_claims(event)["event_name"], event)
+
+    def test_other_events_and_refs_cannot_deploy(self):
+        for event, overrides in (
+            ("pull_request", {}),
+            ("push", {"ref": "refs/heads/feature"}),
+            ("push", {"workflow_ref": "owner/repo/.github/workflows/gameplay.yml@refs/heads/main"}),
+        ):
+            with self.subTest(event=event, overrides=overrides):
+                hook._seen_jti.clear()
+                with self.assertRaisesRegex(hook.HookError, "token not allowed to deploy"):
+                    self.verify_claims(event, **overrides)
 
 
 class DeployProtocolTests(unittest.TestCase):

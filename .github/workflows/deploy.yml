@@ -1,10 +1,11 @@
 name: Deploy
 
-# Manual only: run ./deploy.sh or .\deploy.ps1 (or Actions tab -> Deploy -> Run workflow).
-# Build-checks frontend and backend at the tip of main, then tells the server to deploy it.
-# No secrets needed: the server trusts GitHub's signed OIDC token (see deploy/hook/hook.py).
-
+# Pushes to main (including PR merges) deploy after checks; manual dispatch remains available.
+# First rollout: manually dispatch after merge to update the old server hook, which rejects push tokens.
+# The server trusts GitHub's signed OIDC token and only accepts this workflow on main.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -20,11 +21,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Build frontend
+      - name: Test and build frontend
         working-directory: frontend
         run: |
-          npm install --no-audit --no-fund
+          npm ci
+          npm run checkpoints
+          git diff --exit-code -- e2e/checkpoints
+          npm test
           npm run build
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Playwright gameplay tests
+        working-directory: frontend
+        run: npm run test:e2e
 
       - uses: actions/setup-python@v5
         with:
@@ -34,6 +44,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           python -c "from app.main import app; print('backend OK')"
+          python -m unittest discover -s ../deploy/hook -p test_hook.py
 
   deploy:
     needs: check

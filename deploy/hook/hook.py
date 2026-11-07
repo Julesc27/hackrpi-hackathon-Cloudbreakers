@@ -4,7 +4,7 @@ Auth uses GitHub's OIDC tokens (no shared secret anywhere):
   - the workflow requests a short-lived JWT signed by GitHub (permissions: id-token: write)
   - we verify the signature against GitHub's public keys and check the claims:
     right repository (by numeric id), branch main, our deploy workflow file as it exists on
-    main, started by hand (workflow_dispatch) on a GitHub-hosted runner, our audience
+    main, started by hand or on a main push (workflow_dispatch/push) on a GitHub-hosted runner, our audience
 So a stranger who finds this URL can't trigger anything. Forks have a different repository id,
 and other branches/workflows/events (pull requests etc.) are refused.
 
@@ -114,7 +114,7 @@ def verify(token: str) -> dict:
         "ref_type": claims.get("ref_type") == "branch",
         # workflow_ref looks like "owner/repo/.github/workflows/deploy.yml@refs/heads/main"
         "workflow": str(claims.get("workflow_ref", "")).endswith(f"/{CONFIG['workflow_file']}@{want_ref}"),
-        "event": claims.get("event_name") == "workflow_dispatch",
+        "event": claims.get("event_name") in ("workflow_dispatch", "push"),
         "runner": claims.get("runner_environment") == "github-hosted",
         "sha": isinstance(claims.get("sha"), str) and bool(SHA_RE.match(claims["sha"])),
     }
