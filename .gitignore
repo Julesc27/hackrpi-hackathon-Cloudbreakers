@@ -2,6 +2,8 @@
 node_modules/
 dist/
 build/
+frontend/test-results/
+frontend/playwright-report/
 
 # Secrets — never commit credentials
 .env

@@ -1,0 +1,41 @@
+name: Gameplay checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Check committed save checkpoints
+        working-directory: frontend
+        run: |
+          npm run checkpoints
+          git diff --exit-code -- e2e/checkpoints
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Playwright gameplay tests
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-evidence
+          path: frontend/test-results/
+          if-no-files-found: ignore

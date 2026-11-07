@@ -1,0 +1,68 @@
+{
+  "version": 3,
+  "townName": "New Haven",
+  "resources": {
+    "wood": 24,
+    "water": 30,
+    "food": 24,
+    "energy": 12,
+    "coins": 40
+  },
+  "happiness": 62,
+  "population": 6,
+  "sustainability": 40,
+  "sustainPenalty": 0,
+  "xp": 0,
+  "blueprints": [],
+  "flags": {},
+  "buildings": [
+    {
+      "id": "b1",
+      "type": "starterGarden",
+      "island": "newHaven",
+      "slot": -1,
+      "builtLevel": 1
+    },
+    {
+      "id": "b2",
+      "type": "rainBarrel",
+      "island": "newHaven",
+      "slot": -2,
+      "builtLevel": 1
+    }
+  ],
+  "beaconRestored": false,
+  "connected": [
+    "newHaven"
+  ],
+  "discovered": [
+    "newHaven",
+    "verdant",
+    "rain",
+    "mistral",
+    "gardens",
+    "mercy",
+    "hearth"
+  ],
+  "bridges": [],
+  "weather": "clear",
+  "forecast": "clear",
+  "completed": [],
+  "counters": {
+    "waterStreak": 0,
+    "energyStreak": 0,
+    "foodSurplus": 0
+  },
+  "journal": [
+    {
+      "id": "j0",
+      "level": 1,
+      "type": "story",
+      "title": "Chapter 1 — A Place to Begin",
+      "text": "The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight."
+    }
+  ],
+  "journalUnread": 1,
+  "seenIntro": true,
+  "nextId": 3
+}

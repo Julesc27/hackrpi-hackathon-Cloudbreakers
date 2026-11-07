@@ -1,0 +1,123 @@
+{
+  "version": 3,
+  "townName": "New Haven",
+  "resources": {
+    "wood": 18,
+    "water": 31,
+    "food": 15,
+    "energy": 12,
+    "coins": 65
+  },
+  "happiness": 68,
+  "population": 10,
+  "sustainability": 50,
+  "sustainPenalty": 0,
+  "xp": 180,
+  "blueprints": [
+    "waterCollector"
+  ],
+  "flags": {},
+  "buildings": [
+    {
+      "id": "b1",
+      "type": "starterGarden",
+      "island": "newHaven",
+      "slot": -1,
+      "builtLevel": 1
+    },
+    {
+      "id": "b2",
+      "type": "rainBarrel",
+      "island": "newHaven",
+      "slot": -2,
+      "builtLevel": 1
+    },
+    {
+      "id": "b3",
+      "type": "shelter",
+      "island": "newHaven",
+      "slot": 0,
+      "builtLevel": 1
+    },
+    {
+      "id": "b7",
+      "type": "bridgeAnchor",
+      "island": "newHaven",
+      "slot": 1,
+      "builtLevel": 1
+    }
+  ],
+  "beaconRestored": false,
+  "connected": [
+    "newHaven"
+  ],
+  "discovered": [
+    "newHaven",
+    "verdant",
+    "rain",
+    "mistral",
+    "gardens",
+    "mercy",
+    "hearth"
+  ],
+  "bridges": [],
+  "weather": "heavyRain",
+  "forecast": "heatWave",
+  "completed": [
+    "firstSteps",
+    "anchor",
+    "placeForWater"
+  ],
+  "counters": {
+    "waterStreak": 4,
+    "energyStreak": 4,
+    "foodSurplus": 0
+  },
+  "journal": [
+    {
+      "id": "j0",
+      "level": 1,
+      "type": "story",
+      "title": "Chapter 1 — A Place to Begin",
+      "text": "The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight."
+    },
+    {
+      "id": "j6",
+      "level": 1,
+      "type": "mission",
+      "title": "First Steps",
+      "text": "Build the first shelter. Reward: 50 XP · 25 coins · basic housing."
+    },
+    {
+      "id": "j10",
+      "level": 1,
+      "type": "mission",
+      "title": "Hold Fast",
+      "text": "Build a bridge anchor on New Haven. Reward: 30 XP · bridges unlocked."
+    },
+    {
+      "id": "j12",
+      "level": 2,
+      "type": "level",
+      "title": "Reached level 2: Settler",
+      "text": "Unlocked Food Garden, Water Collector, Storage House."
+    },
+    {
+      "id": "j13",
+      "level": 2,
+      "type": "event",
+      "title": "Heavy Rain",
+      "text": "Collectors overflow. Rope bridges creak."
+    },
+    {
+      "id": "j16",
+      "level": 2,
+      "type": "mission",
+      "title": "A Place for Water",
+      "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
+    }
+  ],
+  "journalUnread": 6,
+  "seenIntro": true,
+  "nextId": 18
+}

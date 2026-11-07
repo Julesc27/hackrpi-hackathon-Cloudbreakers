@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test src/game/engine.test.js",
+    "test:e2e": "playwright test",
+    "checkpoints": "node e2e/generate-checkpoints.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
@@ -14,6 +16,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@vitejs/plugin-react": "4.3.4",
     "vite": "5.4.11"
   }

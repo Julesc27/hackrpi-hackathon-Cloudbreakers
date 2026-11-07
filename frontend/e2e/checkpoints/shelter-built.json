@@ -1,0 +1,84 @@
+{
+  "version": 3,
+  "townName": "New Haven",
+  "resources": {
+    "wood": 14,
+    "water": 29,
+    "food": 23,
+    "energy": 12,
+    "coins": 65
+  },
+  "happiness": 64,
+  "population": 8,
+  "sustainability": 40,
+  "sustainPenalty": 0,
+  "xp": 60,
+  "blueprints": [],
+  "flags": {},
+  "buildings": [
+    {
+      "id": "b1",
+      "type": "starterGarden",
+      "island": "newHaven",
+      "slot": -1,
+      "builtLevel": 1
+    },
+    {
+      "id": "b2",
+      "type": "rainBarrel",
+      "island": "newHaven",
+      "slot": -2,
+      "builtLevel": 1
+    },
+    {
+      "id": "b3",
+      "type": "shelter",
+      "island": "newHaven",
+      "slot": 0,
+      "builtLevel": 1
+    }
+  ],
+  "beaconRestored": false,
+  "connected": [
+    "newHaven"
+  ],
+  "discovered": [
+    "newHaven",
+    "verdant",
+    "rain",
+    "mistral",
+    "gardens",
+    "mercy",
+    "hearth"
+  ],
+  "bridges": [],
+  "weather": "clear",
+  "forecast": "heavyRain",
+  "completed": [
+    "firstSteps"
+  ],
+  "counters": {
+    "waterStreak": 1,
+    "energyStreak": 1,
+    "foodSurplus": 0
+  },
+  "journal": [
+    {
+      "id": "j0",
+      "level": 1,
+      "type": "story",
+      "title": "Chapter 1 — A Place to Begin",
+      "text": "The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight."
+    },
+    {
+      "id": "j6",
+      "level": 1,
+      "type": "mission",
+      "title": "First Steps",
+      "text": "Build the first shelter. Reward: 50 XP · 25 coins · basic housing."
+    }
+  ],
+  "journalUnread": 2,
+  "seenIntro": true,
+  "nextId": 7
+}
