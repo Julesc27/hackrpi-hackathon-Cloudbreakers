@@ -74,7 +74,7 @@
 .world-gather { cursor: pointer; filter: drop-shadow(0 3px 8px #0b183b77); }
 .world-gather:hover { filter: brightness(1.15) drop-shadow(0 0 12px #f9d68c77); }
 .painted-island-preview { width: 100%; height: 195px; position: relative; overflow: hidden; border-radius: 13px; background: radial-gradient(ellipse, #6384a133, #142b4a00 70%); }
-.painted-island-preview > div { position: absolute; inset: 0; background-size: 200% 200%; background-repeat: no-repeat; }
+
 .cc-art .painted-island-preview { height: 150px; }
 .bridge-hero .painted-island-preview { height: 230px; }
 @keyframes cloud-companion { 50% { transform: translateY(-5px) rotate(1deg); } }
@@ -84,7 +84,7 @@
 @media (prefers-reduced-motion: reduce) { .game *, .game *::before, .game *::after { animation: none !important; transition: none !important; } }
 
 .painted-building-preview { position: relative; width: 100%; height: 130px; overflow: hidden; }
-.painted-building-preview > div { width: 130px; height: 130px; position: absolute; left: calc(50% - 65px); top: 0; background: url('/art/buildings.png') no-repeat; background-size: 400% 300%; }
+
 
 .plot-preview { opacity: 0; transition: opacity .16s; }
 .slot:hover .plot-preview, .slot:focus .plot-preview { opacity: .85; }
@@ -144,3 +144,77 @@
 
 .anchor-upgrade-art { display: grid; place-content: center; justify-items: center; gap: 7px; height: 130px; }
 .anchor-upgrade-art span { font-size: 12px; color: var(--ink-soft); }
+
+/* Every preview fits the same alpha-bounded sprite that the world renders. */
+.painted-sprite > svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.painted-island-preview { padding: 8px; }
+.painted-building-preview { padding: 6px; }
+.painted-scene { position: relative; aspect-ratio: 1.6; }
+.painted-scene > .painted-island-preview { width: 100%; height: 100%; }
+.workshop-art-badge { position: absolute; right: 5%; bottom: 5%; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #193d58; color: #f1d292; border: 1px solid #d9b56e; }
+.crossing-art { position: relative; aspect-ratio: 1.6; overflow: hidden; }
+.crossing-art > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.crossing-art .painted-island-preview { position: absolute; width: 57%; height: 80%; padding: 0; background: none; }
+.crossing-art .painted-island-preview:first-of-type { left: 0; bottom: 0; }
+.crossing-art .painted-island-preview:last-of-type { right: 0; top: 0; }
+.uncharted-art { display: grid; place-items: center; position: relative; height: 150px; color: #c4d9ed; background: radial-gradient(ellipse, #244b6e, #12294200 70%); border-radius: 12px; }
+.uncharted-art > span { position: absolute; top: 12%; right: 22%; color: #e8d7a5; font-size: 30px; }
+.suggestion .vignette { background: radial-gradient(ellipse, #8bb8d650, transparent 75%); }
+.anchor-route .painted-island-preview { height: 140px; }
+.modal.chart { min-width: 0; max-width: min(1080px, calc(100vw - 32px)); height: min(680px, calc(100dvh - 90px)); }
+.chart .p-head, .chart .modal-foot { flex: none; }
+.chart .modal-body { flex: 1; min-height: 0; min-width: 0; overflow: hidden; padding: 4px 26px 0; }
+.chart .chart-cards { height: 100%; min-height: 0; overflow-y: hidden; padding-top: 32px; }
+.chart .chart-card { display: grid; grid-template-rows: minmax(0, 1fr) auto auto auto auto auto; justify-items: center; min-height: 0; padding: 30px 14px 12px; gap: 5px; }
+.chart .cc-art { min-height: 0; height: 100%; width: 100%; }
+.chart .cc-art .painted-island-preview, .chart .cc-art .vignette { height: 100%; min-height: 0; }
+.chart .chart-card h3 { font-size: 19px; margin: 0; }
+.chart .cc-desc { min-height: 0; font-size: 15px; line-height: 1.2; }
+.chart .cc-label { justify-self: center; padding-top: 6px; }
+.chart .cc-cost { width: 100%; margin: 0; min-height: 28px; }
+.chart .cc-cost .chips { justify-content: center; }
+.chart .btn-pill, .chart .btn-connected { width: 100%; min-height: 40px; height: auto; padding: 8px 10px; font-size: 13px; }
+.chart-manage-bridges { font-size: 11px; justify-self: center; }
+.chart-cards { padding-bottom: 18px; scrollbar-width: auto; scrollbar-color: #ad8141 #dfd0ac; scroll-snap-type: x proximity; scroll-padding-inline: 6px; overscroll-behavior-x: contain; }
+.chart-cards::-webkit-scrollbar { height: 14px; }
+.chart-cards::-webkit-scrollbar-track { background: #dfd0ac; border-radius: 10px; }
+.chart-cards::-webkit-scrollbar-thumb { background: #ad8141; border: 3px solid #dfd0ac; border-radius: 10px; }
+.chart-card { scroll-snap-align: start; }
+.chart-cards:focus-visible { outline: 2px solid #9b7438; outline-offset: 3px; border-radius: 10px; }
+.chart .modal-foot { padding: 12px 22px 18px; border-top: 1px solid #aa874b44; }
+.chart-navigation { display: flex; align-items: center; justify-content: center; gap: 22px; width: 100%; }
+.chart-scroll-btn { width: 48px; height: 44px; flex: none; display: grid; place-items: center; border: 1px solid #9c743a; border-radius: 12px; background: linear-gradient(#fff5d7, #e3cb92); color: #513a19; font: 32px/1 Georgia, serif; box-shadow: 0 2px 4px #5b3a1522; }
+.chart-scroll-btn:hover:not(:disabled) { background: #fff5d7; border-color: #65491f; }
+.chart-scroll-btn:disabled { opacity: .35; cursor: default; }
+.chart-scroll-btn:focus-visible { outline: 3px solid #405b93; outline-offset: 3px; }
+.chart-scroll-hint { display: grid; gap: 3px; text-align: center; color: #5e4c31; }
+.chart-scroll-hint strong { font-size: 13px; }
+.chart-scroll-hint span { font-size: 11px; }
+@media (max-width: 600px) {
+  .chart .modal-body { padding-left: 14px; padding-right: 14px; }
+  .chart-cards { grid-auto-columns: minmax(230px, 85%); }
+  .chart-navigation { gap: 12px; }
+}
+@media (max-height: 560px) {
+  .modal-backdrop:has(.chart) { padding: 46px 16px 12px; }
+  .modal.chart { height: calc(100dvh - 64px); max-height: calc(100dvh - 64px); }
+  .chart .p-head { padding: 10px 42px 4px; }
+  .chart .p-title { font-size: 21px; }
+  .chart .p-sub { font-size: 10px; }
+  .chart .crest { top: -36px; width: 70px; height: 42px; }
+  .chart .crest svg { width: 36px; height: 36px; }
+  .chart .chart-card { grid-template-columns: 70px minmax(0, 1fr); grid-template-rows: auto auto auto auto auto; align-content: center; gap: 4px 8px; padding: 20px 10px 8px; }
+  .chart .cc-art { grid-column: 1; grid-row: 1 / 4; }
+  .chart .chart-card h3 { grid-column: 2; grid-row: 1; }
+  .chart .cc-desc { grid-column: 2; grid-row: 2; }
+  .chart .cc-label { grid-column: 2; grid-row: 3; width: 100%; }
+  .chart .cc-cost { grid-column: 1 / -1; grid-row: 4; }
+  .chart .btn-pill, .chart .btn-connected { grid-column: 1 / -1; grid-row: 5; }
+  .chart .chart-card h3 { font-size: 16px; }
+  .chart .cc-desc { font-size: 13px; line-height: 1.15; }
+  .chart .cc-label { font-size: 9px; padding-top: 3px; }
+  .chart .cc-cost .chip { font-size: 12px; padding: 2px 5px; }
+  .chart .btn-pill, .chart .btn-connected { min-height: 32px; padding: 5px 8px; font-size: 11px; }
+  .chart .modal-foot { padding: 6px 16px 10px; }
+  .chart-scroll-btn { height: 36px; }
+}

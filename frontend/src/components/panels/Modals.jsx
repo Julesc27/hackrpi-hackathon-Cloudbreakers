@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { ISLANDS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES, MISSIONS } from '../../game/data.js'
+import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS } from '../../game/data.js'
 import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
@@ -190,10 +190,53 @@ function IslandBadge({ id }) {
   return <span className="card-badge ring" style={{ background: b.ring || '#1f2a5a' }}><ArtIcon name={b.icon || 'cloud'} size={30} /></span>
 }
 
+const ISLAND_SUMMARIES = {
+  verdant: 'Renewable timber, crops, seeds and building materials.',
+  rain: 'Fresh water, fish and stone from cascading pools.',
+  prism: 'Energy crystals and components for advanced technology.',
+  mercy: 'Hospital care and happier residents for your growing town.',
+  hearth: 'A welcoming village with eight extra homes and food.',
+}
+
 // "The Skyway Chart — choose your next horizon"
 export function MapModal() {
   const { state } = useGame()
   const ui = useUI()
+  const cardsRef = useRef(null)
+  const [scrollEdges, setScrollEdges] = useState({ start: true, end: true })
+
+  useEffect(() => {
+    const cards = cardsRef.current
+    const updateEdges = () => setScrollEdges({
+      start: cards.scrollLeft <= 2,
+      end: cards.scrollLeft + cards.clientWidth >= cards.scrollWidth - 2,
+    })
+    // A normal mouse wheel browses the horizontal cards.
+    const onWheel = (event) => {
+      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? cards.clientWidth : 1)
+      const next = Math.max(0, Math.min(cards.scrollWidth - cards.clientWidth, cards.scrollLeft + delta))
+      if (Math.abs(next - cards.scrollLeft) < .5) return
+      event.preventDefault()
+      cards.scrollLeft = next
+    }
+    const resize = new ResizeObserver(updateEdges)
+    resize.observe(cards)
+    cards.addEventListener('scroll', updateEdges, { passive: true })
+    cards.addEventListener('wheel', onWheel, { passive: false })
+    updateEdges()
+    return () => {
+      resize.disconnect()
+      cards.removeEventListener('scroll', updateEdges)
+      cards.removeEventListener('wheel', onWheel)
+    }
+  }, [])
+
+  const scrollCards = (direction) => {
+    const cards = cardsRef.current
+    const step = cards.children[1]?.offsetLeft - cards.children[0]?.offsetLeft || cards.clientWidth
+    cards.scrollBy({ left: direction * step, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
   const access = islandAccess(state)
   const routes = openRoutes(state)
   const ids = Object.keys(ISLANDS).filter((id) => id !== 'newHaven')
@@ -216,14 +259,23 @@ export function MapModal() {
       size="xl"
       className="chart"
       footer={
-        <div className="chart-foot">
-          <span className="dots" />
-          Further skies await
-          <span className="dots" />
+        <div className="chart-navigation" aria-label="Browse islands">
+          <button className="chart-scroll-btn" aria-label="Previous islands" disabled={scrollEdges.start} onClick={() => scrollCards(-1)}>‹</button>
+          <div className="chart-scroll-hint"><strong>{ids.length} islands to explore</strong><span>Scroll, swipe or use the arrows</span>
+            {state.bridges.length > 0 && <button className="link chart-manage-bridges" onClick={() => ui.setPanel('bridges')}>Manage bridges</button>}
+          </div>
+          <button className="chart-scroll-btn" aria-label="Next islands" disabled={scrollEdges.end} onClick={() => scrollCards(1)}>›</button>
         </div>
       }
     >
-      <div className="chart-cards">
+      <div className="chart-cards" ref={cardsRef} role="region" aria-label="Island cards" tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.preventDefault()
+            scrollCards(event.key === 'ArrowLeft' ? -1 : 1)
+          }
+        }}>
         {ids.map((id, idx) => {
           const d = ISLANDS[id]
           const status = state.connected.includes(id)
@@ -241,18 +293,18 @@ export function MapModal() {
               <h3>{hidden ? 'Uncharted' : d.name}</h3>
               <p className="cc-desc">
                 {hidden
-                  ? 'Something drifts beyond the clouds. Connect a neighbour to chart it.'
-                  : d.desc}
+                  ? 'Connect a neighbouring island to chart this horizon.'
+                  : ISLAND_SUMMARIES[id] || d.desc}
               </p>
 
               {!hidden && (
                 <>
                   <div className="cc-label">
-                    {status === 'connected' ? 'Produces' : 'Connection cost'}
+                    {status === 'connected' ? 'Produces per action' : 'Connection cost'}
                   </div>
                   <div className="cc-cost">
                     {status === 'connected'
-                      ? <YieldChips yields={d.yields} />
+                      ? <YieldChips yields={d.yields} suffix="" />
                       : route
                         ? <CostChips cost={bridgeCost(route, 'rope')} resources={state.resources} />
                         : <span className="muted small">No route yet</span>}
@@ -261,9 +313,9 @@ export function MapModal() {
               )}
 
               {status === 'connected' ? (
-                <div className="btn-connected">
-                  <Check size={18} /> {access[id] === 1 ? 'Connected' : 'Bridge damaged'}
-                </div>
+                <button className="btn-connected" onClick={() => ui.openIsland(id)} aria-label={`Explore ${d.name}`}>
+                  <Check size={18} /> {access[id] === 1 ? 'Connected · explore' : 'Bridge damaged · inspect'}
+                </button>
               ) : (
                 <button
                   className="btn-pill"
@@ -281,38 +333,7 @@ export function MapModal() {
         })}
       </div>
 
-      {state.bridges.length > 0 && (
-        <>
-          <h3 className="section">Bridges</h3>
-          <ul className="bridge-list">
-            {state.bridges.map((b) => (
-              <li key={b.route}>
-                <button
-                  className="link"
-                  onClick={() => {
-                    ui.setPanel(null)
-                    ui.setBridgeRoute(b.route)
-                  }}
-                >
-                  {bridgeLabel(b.route)}
-                </button>
-                <span className="muted small">{BRIDGE_TYPES[b.type].name}</span>
-                <span className="cond">
-                  <Progress
-                    value={b.condition}
-                    max={100}
-                    color={
-                      b.condition < 40
-                        ? 'linear-gradient(90deg,#ff7a4b,#ffb38f)'
-                        : 'linear-gradient(90deg,#5fb24f,#a8e08a)'
-                    }
-                  />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+
     </Modal>
   )
 }

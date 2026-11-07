@@ -5,12 +5,14 @@ Generated using the built-in image generation tool, then integrated as transpare
 
 ## Atlas layout
 
-- `islands-civic.png`: 2 columns by 2 rows. New Haven, Mistral Heights, Rain Island, Mercy Rise. Used in island cards.
-- `islands-civic-layered.png`: same grid with Mistral rotor blades removed. The map draws three rotating golden rotors over the painted hubs.
+- `islands-civic.png`: original reference atlas, 2 columns by 2 rows. New Haven, Mistral Heights, Rain Island, Mercy Rise.
+- `islands-civic-layered.png`: same grid with Mistral rotor blades removed. The active Rain Island and Mercy Rise sprites use this sheet in both the map and cards.
 - `islands-settlement.png`: 2 columns by 2 rows. Hearthside, Verdant Reach, Glass Gardens, Skyport.
 - `buildings.png`: 4 columns by 3 rows. Shelter, bridge anchor, garden, water collector; storage house, solar farm, market, clinic; community hall, wind turbine, battery, greenhouse.
 
 Rows are ordered left to right. The map measures the alpha bounds of each cell once at load. Art positions are in `components/world/paintedArt.js`; gameplay hit areas and plots remain in `game/data.js`.
+
+`PAINTED_ATLASES` is the shared source registry for the world and every preview. `PaintedSprite.jsx` fits each alpha-bounded sprite into its card and clips neighboring cells. The quest book, journal cover, advisor, island drawers, chart, workshop and bridge routes reuse the current island/building images. The workshop upgrade uses a hammer badge rather than the retired decorative anchor model.
 
 ## Generation prompts
 

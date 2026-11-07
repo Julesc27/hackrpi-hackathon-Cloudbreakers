@@ -6,11 +6,14 @@ export const ISLAND_OFFSETS = {
 
 // Stable slot indexes preserve buildings in existing saves. Each terrace holds two shelters.
 export const STARTER_PLOTS = [
-  [740, 505], [802, 518], // central residential terrace
-  [918, 430], [978, 450], // upper-right residential terrace
-  [944, 600], [998, 615], // lower-right residential terrace
-  [661, 357], [713, 371], // upper clearing
+  [738, 495], [795, 507], // central residential terrace
+  [928, 430], [981, 446], // upper-right residential terrace
+  [952, 594], [1002, 610], // lower-right residential terrace
+  [679, 344], [721, 352], // upper clearing, clear of the stairs and beacon
 ]
+
+// Smaller clearings need smaller footprints; saved buildings keep their slot indexes.
+export const STARTER_PLOT_WIDTHS = [58, 58, 56, 56, 54, 54, 42, 42]
 
 export const STARTER_BEACON = [798, 236]
 

@@ -10,8 +10,8 @@ import Vignette from '../vignettes.jsx'
 
 const CHAPTERS = { 1: 'A Place to Begin', 2: 'The First Connection', 3: 'A Town Needs More' }
 const QUEST_ART = {
-  firstSteps: 'shelter', anchor: 'bridgeAnchor', placeForWater: 'rain', firstBridge: 'bridgeAnchor',
-  gardenInSky: 'garden', beaconWakes: 'newHaven', keepLightsOn: 'solarFarm', longSpan: 'bridgeAnchor',
+  firstSteps: 'shelter', anchor: 'bridgeAnchor', placeForWater: 'rain', firstBridge: 'crossing',
+  gardenInSky: 'garden', beaconWakes: 'newHaven', keepLightsOn: 'solarFarm', prismPower: 'prism', longSpan: 'crossing',
   cleanRoute: 'verdant', balancedTown: 'garden',
 }
 
