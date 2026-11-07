@@ -22,3 +22,4 @@ services:
         required: false        # so the frontend still runs for teammates without it
     environment:
       - WATCHFILES_FORCE_POLLING=true   # reliable hot reload on Windows bind mounts
+      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173   # either dev URL can log in

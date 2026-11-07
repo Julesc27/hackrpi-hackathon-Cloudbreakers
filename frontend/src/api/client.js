@@ -57,6 +57,9 @@ export const loadTown = () => request('/town')
 // keepalive lets the request finish while the tab is closing
 export const saveTown = (state, { keepalive = false } = {}) => request('/town', { method: 'PUT', body: state, keepalive })
 
-// Not implemented on the backend yet.
-// The advisor should return: { situation, recommendation, reason, tradeoff, confidence, alternative }
-export const getAdvice = (summary) => request('/advisor', { method: 'POST', body: summary })
+// Consult the Gods (store item). Sends the live town; the journal is left out to save tokens.
+// -> { poem }
+export const consultGods = (state) => {
+  const { journal, toasts, lastInteraction, ...town } = state
+  return request('/advisor', { method: 'POST', body: town })
+}

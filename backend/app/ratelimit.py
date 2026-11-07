@@ -16,6 +16,7 @@ LIMITS = {
     "login_ip": (30, 10 * 60),          # login attempts per IP
     "login_fail_user": (50, 60 * 60),   # failed logins per username, from anywhere
     "register_ip": (10, 60 * 60),       # new accounts per IP
+    "oracle_player": (5, 60 * 60),      # Consult the Gods calls per player (Databricks Free Edition has a daily quota)
 }
 MAX_KEYS = 50_000  # memory cap; oldest entries are dropped past this
 

@@ -123,6 +123,8 @@ export const BRIDGE_TYPES = {
 
 export const REPAIR_COST = { wood: 6 }
 export const BEACON_COST = { wood: 20, energy: 10 }
+// Store: "Consult the Gods" (an AI reads the game's code and answers in a riddle)
+export const CONSULT_COST = { energy: 25, coins: 50 }
 export const HARVEST = { wood: 10, sustainability: 3 }
 
 // prod / upkeep are per action. happiness is an adjustment after each action.

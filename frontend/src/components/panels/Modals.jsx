@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
+import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford } from '../../game/engine.js'
+import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
 import Vignette from '../vignettes.jsx'
@@ -334,6 +335,76 @@ export function MapModal() {
       </div>
 
 
+    </Modal>
+  )
+}
+
+// Store listings.
+const STORE_ITEMS = [
+  {
+    id: 'consultGods',
+    name: 'Consult the Gods',
+    icon: 'ancestors',
+    desc: 'Light a lantern and ask the founders who came before.',
+    cost: CONSULT_COST,
+  },
+]
+
+function ConsultGodsCard({ item }) {
+  const { state, dispatch } = useGame()
+  const auth = useAuth()
+  const [phase, setPhase] = useState('idle') // idle | asking | spoken | silent
+  const [poem, setPoem] = useState('')
+  const [error, setError] = useState('')
+  const affordable = canAfford(state.resources, item.cost)
+  const loggedIn = auth.backend && auth.status === 'authed'
+
+  const ask = async () => {
+    setPhase('asking')
+    setError('')
+    try {
+      const res = await consultGods(state)
+      setPoem(res.poem)
+      setPhase('spoken')
+      dispatch({ type: 'CONSULT_GODS', poem: res.poem }) // charged only once a poem arrives
+    } catch (e) {
+      setError(e.status === 429 ? 'The gods grow weary of questions. Return later.' : 'The gods are silent. Nothing was spent.')
+      setPhase('silent')
+    }
+  }
+
+  const label = !loggedIn ? 'Log in to consult' : phase === 'asking' ? 'The gods are considering…' : phase === 'spoken' ? 'Ask again' : 'Consult'
+  const blocked = !auth.backend || (loggedIn && (!affordable || phase === 'asking'))
+
+  return (
+    <div className="store-card" data-tutorial={`store-${item.id}`}>
+      <ArtIcon name={item.icon} size={64} className={`store-art${phase === 'asking' ? ' is-lit' : ''}`} />
+      <div className="store-body">
+        <h3 className="store-name">{item.name}</h3>
+        <p className="store-desc">{item.desc}</p>
+        <CostChips cost={item.cost} resources={state.resources} />
+      </div>
+      <button
+        className="btn-gold store-btn"
+        disabled={blocked}
+        onClick={!loggedIn ? auth.openLogin : ask}
+        title={!loggedIn ? 'The gods only answer logged-in stewards' : !affordable ? 'Not enough energy or coins' : item.name}
+      >
+        {label}
+      </button>
+      {phase === 'spoken' && <blockquote className="oracle-poem">{poem}</blockquote>}
+      {phase === 'silent' && <p className="oracle-silent">{error}</p>}
+    </div>
+  )
+}
+
+export function StoreModal() {
+  const ui = useUI()
+  return (
+    <Modal title="Store" kicker="Trade with passing sky merchants" onClose={() => ui.setPanel(null)}>
+      <div className="store-items">
+        {STORE_ITEMS.map((item) => <ConsultGodsCard key={item.id} item={item} />)}
+      </div>
     </Modal>
   )
 }

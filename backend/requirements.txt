@@ -4,3 +4,4 @@ beanie>=2.0
 pymongo>=4.13
 pwdlib[argon2]
 PyJWT
+httpx

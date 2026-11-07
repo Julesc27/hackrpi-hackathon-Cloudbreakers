@@ -16,6 +16,7 @@ import BridgeModal from './components/panels/BridgeModal.jsx'
 import {
   JournalModal,
   StorageModal,
+  StoreModal,
   MapModal,
   SettingsModal,
   IntroModal,
@@ -71,6 +72,7 @@ function GameScreen() {
       {ui.panel === 'island' && <IslandPanel />}
       {ui.panel === 'journal' && <JournalModal />}
       {ui.panel === 'storage' && <StorageModal />}
+      {ui.panel === 'store' && <StoreModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
       {ui.panel === 'bridges' && <BridgeAnchorModal />}

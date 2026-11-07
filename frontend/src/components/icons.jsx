@@ -48,6 +48,12 @@ export const Book = (p) => (
 export const Crate = (p) => (
   <I {...p}><rect x="3.5" y="4.5" width="17" height="15" rx="1" fill="#c98d55" stroke="#6b4426" /><path d="M3.5 4.5l17 15M20.5 4.5l-17 15" stroke="#8a5a2e" strokeWidth="1.4" /><rect x="3.5" y="4.5" width="17" height="15" rx="1" fill="none" stroke="#6b4426" strokeWidth="1.5" /></I>
 )
+export const Shop = (p) => (
+  <I {...p}><path d="M4.5 10.5v9h15v-9" fill="#f1e2bd" stroke="#8a6a35" strokeLinejoin="round" /><path d="M3 6.5 4.5 3.5h15L21 6.5v1.5a2.25 2.25 0 0 1-4.5 0 2.25 2.25 0 0 1-4.5 0 2.25 2.25 0 0 1-4.5 0 2.25 2.25 0 0 1-4.5 0z" fill="#e3c27a" stroke="#8a6a35" strokeLinejoin="round" /><path d="M7.5 6.5v1.5M12 6.5v1.5M16.5 6.5v1.5" stroke="#c98d55" strokeLinecap="round" /><rect x="10" y="13.5" width="4" height="6" fill="#7a4d26" /><circle cx="7.5" cy="14.5" r="1.4" fill="#f4c34f" stroke="#a87d1e" strokeWidth=".6" /></I>
+)
+export const Lantern = (p) => (
+  <I {...p}><path d="M9 4.5h6M12 2.5v2" stroke="#8a6a35" strokeWidth="1.4" strokeLinecap="round" /><path d="M7.5 7.5h9l-1 11h-7z" fill="#2a3a6e" stroke="#e3c27a" strokeLinejoin="round" /><path d="M7 7.5h10M7.5 18.5h9" stroke="#e3c27a" strokeWidth="1.6" strokeLinecap="round" /><path d="M12 9.5c2 2.2 2.4 3.8 2.4 4.9a2.4 2.4 0 0 1-4.8 0c0-1.1.4-2.7 2.4-4.9z" fill="#b8a4f2" /><path d="M12 12.3c.9 1 1.1 1.7 1.1 2.2a1.1 1.1 0 0 1-2.2 0c0-.5.2-1.2 1.1-2.2z" fill="#f3eeff" /><path d="M10 21h4" stroke="#8a6a35" strokeWidth="1.4" strokeLinecap="round" /></I>
+)
 export const Gear = (p) => (
   <I {...p}><path fill="#c9d3f5" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.3 2.5h4l.4-2.5c.6-.3 1.1-.6 1.7-1l2.4 1 2-3.4zM12 15.3a3.3 3.3 0 1 1 0-6.6 3.3 3.3 0 0 1 0 6.6z" /></I>
 )
@@ -103,7 +109,7 @@ export const SunArt = (p) => (
 const ART = {
   energy: Bolt, water: Drop, happiness: Smile, wood: Log, coins: Coin,
   sun: SunArt, quest: Scroll, build: Hammer, cloud: CloudIcon, map: MapIcon,
-  journal: Book, storage: Crate, gear: Gear, 'hammer-gold': Hammer, scales: Scales,
+  journal: Book, storage: Crate, store: Shop, ancestors: Lantern, gear: Gear, 'hammer-gold': Hammer, scales: Scales,
 }
 
 // Drawn icons. Nothing here loads a picture file.

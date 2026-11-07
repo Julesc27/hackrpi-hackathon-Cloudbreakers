@@ -30,6 +30,7 @@ export function LeftRail() {
     { id: 'quests', label: 'Quest Book', icon: 'quest', badge: hasNewMission },
     { id: 'build', label: 'Build', icon: 'build' },
     { id: 'advisor', label: 'Cloud', icon: 'cloud' },
+    { id: 'store', label: 'Store', icon: 'store' },
   ]
   return (
     <nav className="left-rail" aria-label="Main actions">

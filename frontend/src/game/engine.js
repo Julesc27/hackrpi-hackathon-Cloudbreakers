@@ -1,6 +1,6 @@
 // Deterministic, action-driven game rules with XP and level unlocks.
 import {
-  BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS,
+  BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
   GATHER_AMOUNT, HARVEST, GATHER_SITES, STARTER_DEPOSITS, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
 
@@ -483,6 +483,16 @@ export function gameReducer(state, action) {
       s = toast(s, 'bridge', 'The navigation beacon hums back to life.', 'Beacon restored')
       s = journal(s, 'story', 'The Beacon Wakes', 'Cloud, the old planning assistant, blinks awake inside the beacon: "Oh! Visitors. Wonderful. I have notes."')
       return progressSettlement(s, 10)
+    }
+
+    case 'CONSULT_GODS': {
+      // Sent after the backend returns a poem, so a failed consultation costs nothing.
+      const poem = typeof action.poem === 'string' ? action.poem.trim() : ''
+      if (!poem) return state
+      if (!canAfford(state.resources, CONSULT_COST)) return toast(state, 'warn', 'The gods ask 25 energy and 50 coins.')
+      let s = { ...state, resources: pay(state.resources, CONSULT_COST) }
+      s = toast(s, 'story', 'Their words are written in your journal.', 'The gods have spoken')
+      return journal(s, 'oracle', 'Word from the gods', poem)
     }
 
     case 'DISMISS_TOAST':

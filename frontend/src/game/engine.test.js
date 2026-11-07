@@ -210,3 +210,23 @@ test('old decorative anchors become plot-free upgrades while retaining bridge ac
   const crossed = gameReducer(migrated, { type: 'BUILD_BRIDGE', routeId: 'verdant-haven', bridgeType: 'rope' })
   assert.equal(crossed.bridges.length, 1)
 })
+
+test('consulting the gods charges energy and coins and writes the poem to the journal', () => {
+  const rich = { ...createInitialState(), resources: { ...createInitialState().resources, energy: 30, coins: 60 } }
+  const s = gameReducer(rich, { type: 'CONSULT_GODS', poem: '  Line one\nLine two  ' })
+  assert.equal(s.resources.energy, 5)
+  assert.equal(s.resources.coins, 10)
+  const entry = s.journal.at(-1)
+  assert.equal(entry.type, 'oracle')
+  assert.equal(entry.text, 'Line one\nLine two')
+  assert.equal(s.journalUnread, rich.journalUnread + 1)
+  assert.equal(s.xp, rich.xp)
+})
+
+test('the gods take nothing without a poem or the full price', () => {
+  const poor = createInitialState() // 12 energy, 40 coins
+  const refused = gameReducer(poor, { type: 'CONSULT_GODS', poem: 'A riddle' })
+  assert.deepEqual(refused.resources, poor.resources)
+  assert.equal(refused.journal.length, poor.journal.length)
+  assert.equal(gameReducer(poor, { type: 'CONSULT_GODS', poem: '   ' }), poor)
+})
