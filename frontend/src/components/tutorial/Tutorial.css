@@ -5,53 +5,72 @@
 .tutorial-root {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 900;
   pointer-events: none;
   font-family: var(--font-body);
   user-select: none;
 }
 
-/* SVG Dark Backdrop with Cutout Spotlight */
-.tutorial-svg-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-}
-
-.tutorial-backdrop-path {
-  fill: rgba(4, 8, 28, 0.76);
+/* 4-Panel Cutout Backdrop (Guarantees target is 100% unobstructed and clickable) */
+.tutorial-backdrop-panel {
+  position: fixed;
+  background: rgba(4, 8, 28, 0.74);
+  z-index: 900;
+  pointer-events: auto;
   cursor: default;
-  transition: d 0.2s ease-out;
 }
 
-/* Glowing gold outline matching Cloudbreakers theme */
-.tutorial-spotlight-ring {
-  fill: none;
-  stroke: var(--gold);
-  stroke-width: 2.5px;
-  filter: drop-shadow(0 0 8px rgba(227, 194, 122, 0.85)) drop-shadow(0 0 18px rgba(227, 194, 122, 0.45));
-  animation: tutorialGlow 2s ease-in-out infinite;
+/* Glowing gold spotlight ring around the active target */
+.tutorial-spotlight-box {
+  position: fixed;
+  z-index: 901;
   pointer-events: none;
+  border: 2px solid var(--gold);
+  border-radius: 12px;
+  box-shadow:
+    0 0 14px rgba(227, 194, 122, 0.85),
+    0 0 28px rgba(227, 194, 122, 0.45),
+    inset 0 0 12px rgba(227, 194, 122, 0.25);
+  animation: tutorialGlowPulse 2s ease-in-out infinite;
 }
 
-@keyframes tutorialGlow {
+@keyframes tutorialGlowPulse {
   0%, 100% {
-    stroke: #e3c27a;
-    stroke-width: 2.5px;
-    filter: drop-shadow(0 0 8px rgba(227, 194, 122, 0.85)) drop-shadow(0 0 16px rgba(227, 194, 122, 0.45));
+    border-color: #e3c27a;
+    box-shadow:
+      0 0 12px rgba(227, 194, 122, 0.8),
+      0 0 24px rgba(227, 194, 122, 0.4),
+      inset 0 0 10px rgba(227, 194, 122, 0.2);
   }
   50% {
-    stroke: #fff2c6;
-    stroke-width: 3.5px;
-    filter: drop-shadow(0 0 14px rgba(255, 235, 170, 0.95)) drop-shadow(0 0 26px rgba(227, 194, 122, 0.75));
+    border-color: #fff4d0;
+    box-shadow:
+      0 0 18px rgba(255, 235, 170, 0.95),
+      0 0 36px rgba(227, 194, 122, 0.65),
+      inset 0 0 16px rgba(255, 235, 170, 0.35);
   }
+}
+
+/* Active element in-place highlight elevation */
+[data-tutorial-active="true"] {
+  position: relative;
+  z-index: 995 !important;
+  box-shadow:
+    0 0 0 3px var(--gold) !important,
+    0 0 16px rgba(227, 194, 122, 0.85) !important,
+    0 0 32px rgba(227, 194, 122, 0.5) !important;
+  cursor: pointer !important;
+}
+
+/* SVG elements active highlight */
+ellipse[data-tutorial-active="true"],
+g[data-tutorial-active="true"] {
+  filter: drop-shadow(0 0 12px rgba(227, 194, 122, 0.95)) drop-shadow(0 0 24px rgba(227, 194, 122, 0.6)) !important;
 }
 
 /* Tooltip Instruction Box */
 .tutorial-tooltip {
-  position: absolute;
+  position: fixed;
   width: min(340px, calc(100vw - 32px));
   background: linear-gradient(180deg, rgba(25, 36, 92, 0.98), rgba(11, 18, 56, 0.99));
   border: 1.5px solid var(--gold);
@@ -180,7 +199,7 @@
   font-size: 14.5px;
   line-height: 1.45;
   color: #dce3fc;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
 .tutorial-hint {
@@ -194,7 +213,7 @@
   border: 1px solid rgba(227, 194, 122, 0.3);
   border-radius: 8px;
   padding: 6px 10px;
-  margin-bottom: 8px;
+  margin-top: 6px;
 }
 
 .tutorial-hint-pulse {
@@ -238,22 +257,6 @@
 .tutorial-btn-primary:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
-}
-
-.tutorial-btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(227, 194, 122, 0.4);
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 13px;
-  padding: 6px 12px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.tutorial-btn-ghost:hover {
-  color: #fff;
-  border-color: var(--gold);
 }
 
 /* =========================================================
@@ -364,10 +367,11 @@
 
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
-  .tutorial-spotlight-ring,
+  .tutorial-spotlight-box,
   .tutorial-tooltip,
   .tutorial-modal-card,
-  .tutorial-hint-pulse {
+  .tutorial-hint-pulse,
+  [data-tutorial-active="true"] {
     animation: none !important;
     transition: none !important;
   }

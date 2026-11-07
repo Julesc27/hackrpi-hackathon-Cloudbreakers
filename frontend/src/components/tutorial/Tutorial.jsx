@@ -21,15 +21,6 @@ export default function Tutorial() {
   // Track initial values on step entry to detect player actions
   const stepSnapshot = useRef({})
 
-  // Determine current active target selector and copy based on tutorialStep & current UI state
-  let targetSelector = null
-  let title = ''
-  let text = ''
-  let hint = ''
-  let showNextBtn = false
-  let nextBtnLabel = 'Next ›'
-  let onNext = null
-
   // Record snapshots when step changes
   useEffect(() => {
     stepSnapshot.current = {
@@ -39,6 +30,15 @@ export default function Tutorial() {
       shelters: state.buildings.filter((b) => b.type === 'shelter').length,
     }
   }, [tutorialStep])
+
+  // Determine current active target selector and copy based on tutorialStep & current UI state
+  let targetSelector = null
+  let title = ''
+  let text = ''
+  let hint = ''
+  let showNextBtn = false
+  let nextBtnLabel = ''
+  let onNext = null
 
   // --- Step 1: Welcome ---
   if (tutorialStep === 1) {
@@ -53,17 +53,13 @@ export default function Tutorial() {
       title = 'Gather Resources'
       text = "Let's start by gathering some resources! Click New Haven to see what you can collect."
       hint = 'Click the New Haven island on the map'
-      showNextBtn = true
-      nextBtnLabel = 'Skip step ›'
-      onNext = () => setTutorialStep(3)
+      // No continue button: player must click New Haven
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
       text = 'Click Gather wood to collect materials for building structures!'
       hint = 'Click the Gather wood button'
-      showNextBtn = true
-      nextBtnLabel = 'Continue ›'
-      onNext = () => setTutorialStep(3)
+      // No continue button: player must click Gather wood
     }
   }
 
@@ -73,12 +69,7 @@ export default function Tutorial() {
     title = 'Town Workshop'
     text = 'Buildings help your village grow and survive. Click Build to open the Town Workshop!'
     hint = 'Click the Build button in the left rail'
-    showNextBtn = true
-    nextBtnLabel = 'Continue ›'
-    onNext = () => {
-      ui.setPanel('build')
-      setTutorialStep(4)
-    }
+    // No continue button: player must click Build
   }
 
   // --- Step 4: Select a Shelter ---
@@ -87,13 +78,7 @@ export default function Tutorial() {
     title = 'Choose a Building'
     text = 'A Shelter gives your villagers a place to live. Click the + button to select it!'
     hint = 'Click the gold + button on the Shelter card'
-    showNextBtn = true
-    nextBtnLabel = 'Continue ›'
-    onNext = () => {
-      ui.setPlacing('shelter')
-      ui.setPanel(null)
-      setTutorialStep(5)
-    }
+    // No continue button: player must click the Shelter + button
   }
 
   // --- Step 5: Place the Shelter ---
@@ -103,17 +88,12 @@ export default function Tutorial() {
       title = 'Place the Shelter'
       text = 'Now click a glowing plot on New Haven to place your Shelter!'
       hint = 'Click a glowing diamond building plot on the island'
-      showNextBtn = true
-      nextBtnLabel = 'Continue ›'
-      onNext = () => setTutorialStep(6)
+      // No continue button: player must click a plot
     } else {
       targetSelector = '[data-tutorial="rail-build"]'
       title = 'Select Shelter'
-      text = 'Shelter placement was cancelled. Click Build to open Town Workshop, or click Continue to proceed.'
-      hint = 'Click Build to select Shelter again'
-      showNextBtn = true
-      nextBtnLabel = 'Continue ›'
-      onNext = () => setTutorialStep(6)
+      text = 'Shelter placement was cancelled. Click Build to open Town Workshop and select Shelter again!'
+      hint = 'Click Build to select Shelter'
     }
   }
 
@@ -124,11 +104,7 @@ export default function Tutorial() {
       title = 'Explore Missions'
       text = 'Quests give you goals to work toward and rewards for completing them. Click Quest Book to see your missions!'
       hint = 'Click the Quest Book button in the left rail'
-      showNextBtn = true
-      nextBtnLabel = 'Continue ›'
-      onNext = () => {
-        ui.setPanel('quests')
-      }
+      // No continue button: player must click Quest Book
     } else {
       targetSelector = '[data-tutorial="quest-featured"]'
       title = "Captain's Log"
@@ -145,15 +121,11 @@ export default function Tutorial() {
   // --- Step 7: Understand Resources ---
   else if (tutorialStep === 7) {
     if (ui.panel !== 'storage') {
-      targetSelector = '[data-tutorial="topbar-resources"]'
+      targetSelector = '[data-tutorial="nav-storage"]'
       title = 'Resource Management'
-      text = 'Your villagers need food and water to survive. Keep an eye on your resources and build structures to produce more! Click the top bar or Storage to open the Storehouse.'
-      hint = 'Click the top resource bar or the Storage button'
-      showNextBtn = true
-      nextBtnLabel = 'Continue ›'
-      onNext = () => {
-        ui.setPanel('storage')
-      }
+      text = 'Your villagers need food and water to survive. Keep an eye on your resources and build structures to produce more! Click Storage to open the Storehouse.'
+      hint = 'Click the Storage button in the bottom bar'
+      // No continue button: player must click Storage
     } else {
       targetSelector = '[data-tutorial="storage-table"]'
       title = 'The Storehouse'
@@ -184,14 +156,13 @@ export default function Tutorial() {
       title = 'End Your Turn'
       text = 'You have a limited number of actions each turn. When you’re ready, click End Turn to advance time and collect resources!'
       hint = 'Click the End Turn button'
-      showNextBtn = true
-      nextBtnLabel = 'Skip step ›'
-      onNext = () => setTutorialStep(10)
+      // No continue button: player must click End Turn
     } else {
       targetSelector = '[data-tutorial="report-continue-btn"]'
       title = 'Turn Summary'
       text = 'Here is your turn report showing resources gained, consumption, and town morale. Click Begin turn to continue!'
       hint = 'Click Begin turn to dismiss the report'
+      // No continue button: player must click Begin turn
     }
   }
 
@@ -199,7 +170,7 @@ export default function Tutorial() {
   useEffect(() => {
     if (!tutorialActive) return
 
-    // Step 2: Auto-advance if wood was gathered or actions used while in island panel
+    // Step 2: Auto-advance when wood is gathered
     if (tutorialStep === 2) {
       const isNewHavenDrawer = ui.panel === 'island' && ui.selected === 'newHaven'
       if (isNewHavenDrawer) {
@@ -207,7 +178,7 @@ export default function Tutorial() {
         if (state.resources.wood > snap.wood || state.actionsLeft < snap.actionsLeft) {
           const timer = setTimeout(() => {
             setTutorialStep(3)
-          }, 400)
+          }, 350)
           return () => clearTimeout(timer)
         }
       }
@@ -218,7 +189,7 @@ export default function Tutorial() {
       if (ui.panel === 'build') {
         const timer = setTimeout(() => {
           setTutorialStep(4)
-        }, 200)
+        }, 150)
         return () => clearTimeout(timer)
       }
     }
@@ -228,7 +199,7 @@ export default function Tutorial() {
       if (ui.placing === 'shelter') {
         const timer = setTimeout(() => {
           setTutorialStep(5)
-        }, 200)
+        }, 150)
         return () => clearTimeout(timer)
       }
     }
@@ -240,14 +211,10 @@ export default function Tutorial() {
       if (currentShelters > (snap.shelters || 0) || (!ui.placing && currentShelters > 0 && snap.shelters === 0)) {
         const timer = setTimeout(() => {
           setTutorialStep(6)
-        }, 400)
+        }, 350)
         return () => clearTimeout(timer)
       }
     }
-
-    // Step 6: When in 6a and quest panel opens, re-render happens naturally
-
-    // Step 7: When in 7a and storage modal opens, re-render happens naturally
 
     // Step 9: When in 9 and turn report closes after advancing turn
     if (tutorialStep === 9) {
@@ -255,7 +222,7 @@ export default function Tutorial() {
       if (state.turn > snap.turn && !state.showReport) {
         const timer = setTimeout(() => {
           setTutorialStep(10)
-        }, 300)
+        }, 250)
         return () => clearTimeout(timer)
       }
     }
@@ -273,101 +240,80 @@ export default function Tutorial() {
     setTutorialStep,
   ])
 
-  // --- Dynamic Measurement of Target Element ---
-  useLayoutEffect(() => {
-    if (!tutorialActive) return
+  // --- Mark active target element with data-tutorial-active="true" ---
+  useEffect(() => {
+    if (!targetSelector) return
+    let currentEl = null
+    const syncActiveAttr = () => {
+      const el = document.querySelector(targetSelector)
+      if (el !== currentEl) {
+        if (currentEl) currentEl.removeAttribute('data-tutorial-active')
+        if (el) el.setAttribute('data-tutorial-active', 'true')
+        currentEl = el
+      }
+    }
+    syncActiveAttr()
+    const timer = setInterval(syncActiveAttr, 100)
+    return () => {
+      clearInterval(timer)
+      if (currentEl) currentEl.removeAttribute('data-tutorial-active')
+    }
+  }, [targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing, state.showReport])
 
-    const updateDimensions = () => {
+  // --- Continuous Tracking of Target Element via requestAnimationFrame ---
+  useLayoutEffect(() => {
+    if (!tutorialActive || !targetSelector) {
+      setTargetRect(null)
+      return
+    }
+
+    let rafId
+    const update = () => {
       setViewWidth(window.innerWidth)
       setViewHeight(window.innerHeight)
-    }
 
-    const measureTarget = () => {
-      if (!targetSelector) {
-        setTargetRect(null)
-        return
-      }
-      const el = document.querySelector(targetSelector)
-      if (!el) {
-        setTargetRect(null)
-        return
-      }
-      const r = el.getBoundingClientRect()
-      if (r.width === 0 || r.height === 0) {
-        setTargetRect(null)
-        return
-      }
-      setTargetRect({
-        top: r.top,
-        left: r.left,
-        width: r.width,
-        height: r.height,
-        right: r.right,
-        bottom: r.bottom,
-      })
-    }
-
-    measureTarget()
-    updateDimensions()
-
-    // Multiple timers to measure after layout/CSS transitions (such as drawer/modal rise)
-    const t1 = setTimeout(measureTarget, 60)
-    const t2 = setTimeout(measureTarget, 160)
-    const t3 = setTimeout(measureTarget, 320)
-
-    window.addEventListener('resize', updateDimensions)
-    window.addEventListener('resize', measureTarget)
-    window.addEventListener('scroll', measureTarget, true)
-
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-      window.removeEventListener('resize', updateDimensions)
-      window.removeEventListener('resize', measureTarget)
-      window.removeEventListener('scroll', measureTarget, true)
-    }
-  }, [tutorialActive, tutorialStep, targetSelector, ui.panel, ui.selected, ui.placing, state.showReport])
-
-  // Periodic safety check to ensure targetRect stays locked onto target even if animating
-  useEffect(() => {
-    if (!tutorialActive || !targetSelector) return
-    let animId
-    const check = () => {
       const el = document.querySelector(targetSelector)
       if (el) {
         const r = el.getBoundingClientRect()
-        setTargetRect((prev) => {
-          if (
-            !prev ||
-            Math.abs(prev.top - r.top) > 1 ||
-            Math.abs(prev.left - r.left) > 1 ||
-            Math.abs(prev.width - r.width) > 1 ||
-            Math.abs(prev.height - r.height) > 1
-          ) {
-            return {
-              top: r.top,
-              left: r.left,
-              width: r.width,
-              height: r.height,
-              right: r.right,
-              bottom: r.bottom,
+        if (r.width > 0 && r.height > 0) {
+          setTargetRect((prev) => {
+            if (
+              !prev ||
+              Math.abs(prev.top - r.top) > 0.5 ||
+              Math.abs(prev.left - r.left) > 0.5 ||
+              Math.abs(prev.width - r.width) > 0.5 ||
+              Math.abs(prev.height - r.height) > 0.5
+            ) {
+              return {
+                top: r.top,
+                left: r.left,
+                width: r.width,
+                height: r.height,
+                right: r.right,
+                bottom: r.bottom,
+              }
             }
-          }
-          return prev
-        })
+            return prev
+          })
+        }
       }
+      rafId = requestAnimationFrame(update)
     }
-    const interval = setInterval(check, 100)
+
+    rafId = requestAnimationFrame(update)
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+
     return () => {
-      clearInterval(interval)
-      cancelAnimationFrame(animId)
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
     }
-  }, [tutorialActive, targetSelector])
+  }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing, state.showReport])
 
   if (!tutorialActive) return null
 
-  // Handle clicking on the dimmed backdrop (blocks unrelated interactions and provides feedback)
+  // Handle clicking on the dimmed backdrop
   const handleBackdropClick = (e) => {
     e.stopPropagation()
     e.preventDefault()
@@ -379,14 +325,11 @@ export default function Tutorial() {
   if (tutorialStep === 1) {
     return (
       <div className="tutorial-root" role="dialog" aria-label="Tutorial - Welcome" aria-live="polite">
-        <svg className="tutorial-svg-overlay" preserveAspectRatio="none">
-          <path
-            d={`M 0 0 H ${viewWidth} V ${viewHeight} H 0 Z`}
-            className="tutorial-backdrop-path"
-            pointerEvents="auto"
-            onClick={handleBackdropClick}
-          />
-        </svg>
+        <div
+          className="tutorial-backdrop-panel"
+          style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}
+          onClick={handleBackdropClick}
+        />
         <div className="tutorial-modal-wrap">
           <div className="tutorial-modal-card">
             <div className="tutorial-modal-crest">
@@ -422,14 +365,11 @@ export default function Tutorial() {
   if (tutorialStep === 10) {
     return (
       <div className="tutorial-root" role="dialog" aria-label="Tutorial - Complete" aria-live="polite">
-        <svg className="tutorial-svg-overlay" preserveAspectRatio="none">
-          <path
-            d={`M 0 0 H ${viewWidth} V ${viewHeight} H 0 Z`}
-            className="tutorial-backdrop-path"
-            pointerEvents="auto"
-            onClick={handleBackdropClick}
-          />
-        </svg>
+        <div
+          className="tutorial-backdrop-panel"
+          style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}
+          onClick={handleBackdropClick}
+        />
         <div className="tutorial-modal-wrap">
           <div className="tutorial-modal-card">
             <div className="tutorial-modal-crest">
@@ -455,29 +395,29 @@ export default function Tutorial() {
     )
   }
 
-  // --- Steps 2–9: Interactive Guided Steps with Spotlight & Tooltip ---
+  // --- Steps 2–9: Cutout Hole Calculation ---
   const pad = 6
-  let spotlightBox = null
-  let pathD = `M 0 0 H ${viewWidth} V ${viewHeight} H 0 Z`
-
+  let hole = null
   if (targetRect) {
-    const bx = Math.max(0, targetRect.left - pad)
-    const by = Math.max(0, targetRect.top - pad)
-    const bw = Math.min(viewWidth - bx, targetRect.width + pad * 2)
-    const bh = Math.min(viewHeight - by, targetRect.height + pad * 2)
-    const r = Math.min(14, bw / 2, bh / 2)
-
-    spotlightBox = { x: bx, y: by, w: bw, h: bh, r }
-
-    // SVG compound path with cutout hole: outer screen rectangle + inner cutout
-    pathD = `M 0 0 H ${viewWidth} V ${viewHeight} H 0 Z M ${bx + r} ${by} H ${bx + bw - r} A ${r} ${r} 0 0 1 ${bx + bw} ${by + r} V ${by + bh - r} A ${r} ${r} 0 0 1 ${bx + bw - r} ${by + bh} H ${bx + r} A ${r} ${r} 0 0 1 ${bx} ${by + bh - r} V ${by + r} A ${r} ${r} 0 0 1 ${bx + r} ${by} Z`
+    const hx = Math.max(0, targetRect.left - pad)
+    const hy = Math.max(0, targetRect.top - pad)
+    const hw = Math.min(viewWidth - hx, targetRect.width + pad * 2)
+    const hh = Math.min(viewHeight - hy, targetRect.height + pad * 2)
+    hole = {
+      left: hx,
+      top: hy,
+      width: hw,
+      height: hh,
+      right: hx + hw,
+      bottom: hy + hh,
+    }
   }
 
   // Calculate smart tooltip coordinates and directional arrow placement
   const tooltipWidth = Math.min(340, viewWidth - 32)
-  const tooltipHeight = 175 // Estimated height for clamping
+  const tooltipHeight = 155 // Reference estimated height
   const margin = 16
-  const arrowDist = 12
+  const arrowDist = 14
 
   let placement = 'bottom'
   let tTop = (viewHeight - tooltipHeight) / 2
@@ -486,18 +426,18 @@ export default function Tutorial() {
 
   if (targetRect) {
     // Left rail items: place tooltip to the right
-    if (targetRect.right < 220 && targetRect.top > 80 && targetRect.bottom < viewHeight - 60) {
+    if (targetRect.left < 200 && targetRect.top > 80 && targetRect.bottom < viewHeight - 120) {
       placement = 'right'
       tLeft = targetRect.right + arrowDist
       tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
     }
-    // Far-right items (like weather card): place tooltip to the left
-    else if (targetRect.left > viewWidth - 280) {
+    // Items on the right side of the screen (IslandPanel or WeatherCard): place tooltip to the left
+    else if (targetRect.left > viewWidth - 380) {
       placement = 'left'
       tLeft = targetRect.left - tooltipWidth - arrowDist
       tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
     }
-    // Bottom items (like End Turn or bottom nav): place tooltip above
+    // Items near the bottom (End Turn, BottomNav, Shelter card + button): place tooltip above
     else if (targetRect.bottom + tooltipHeight + margin > viewHeight) {
       placement = 'top'
       tTop = targetRect.top - tooltipHeight - arrowDist
@@ -514,13 +454,13 @@ export default function Tutorial() {
     tLeft = Math.max(margin, Math.min(viewWidth - tooltipWidth - margin, tLeft))
     tTop = Math.max(margin, Math.min(viewHeight - tooltipHeight - margin, tTop))
 
-    // Calculate arrow alignment to point at target center
+    // Calculate arrow alignment to point directly at target center
     if (placement === 'bottom' || placement === 'top') {
       const targetCenter = targetRect.left + targetRect.width / 2
-      arrowOffset = Math.max(22, Math.min(tooltipWidth - 22, targetCenter - tLeft))
+      arrowOffset = Math.max(24, Math.min(tooltipWidth - 24, targetCenter - tLeft))
     } else {
       const targetCenter = targetRect.top + targetRect.height / 2
-      arrowOffset = Math.max(22, Math.min(tooltipHeight - 22, targetCenter - tTop))
+      arrowOffset = Math.max(24, Math.min(tooltipHeight - 24, targetCenter - tTop))
     }
   }
 
@@ -528,27 +468,51 @@ export default function Tutorial() {
 
   return (
     <div className="tutorial-root" role="dialog" aria-label={`Tutorial Step ${stepDisplayNumber}`} aria-live="polite">
-      {/* Darkened overlay with interactive pass-through cutout hole */}
-      <svg className="tutorial-svg-overlay" preserveAspectRatio="none">
-        <path
-          d={pathD}
-          fillRule="evenodd"
-          className="tutorial-backdrop-path"
-          pointerEvents="auto"
+      {/* 4-Panel Cutout Backdrop: Leaves the target element 100% unobstructed and clickable */}
+      {hole ? (
+        <>
+          {/* Top Panel */}
+          <div
+            className="tutorial-backdrop-panel"
+            style={{ top: 0, left: 0, width: '100vw', height: `${hole.top}px` }}
+            onClick={handleBackdropClick}
+          />
+          {/* Bottom Panel */}
+          <div
+            className="tutorial-backdrop-panel"
+            style={{ top: `${hole.bottom}px`, left: 0, width: '100vw', bottom: 0 }}
+            onClick={handleBackdropClick}
+          />
+          {/* Left Panel */}
+          <div
+            className="tutorial-backdrop-panel"
+            style={{ top: `${hole.top}px`, left: 0, width: `${hole.left}px`, height: `${hole.height}px` }}
+            onClick={handleBackdropClick}
+          />
+          {/* Right Panel */}
+          <div
+            className="tutorial-backdrop-panel"
+            style={{ top: `${hole.top}px`, left: `${hole.right}px`, right: 0, height: `${hole.height}px` }}
+            onClick={handleBackdropClick}
+          />
+          {/* Glowing spotlight box framing the active target */}
+          <div
+            className="tutorial-spotlight-box"
+            style={{
+              top: `${hole.top}px`,
+              left: `${hole.left}px`,
+              width: `${hole.width}px`,
+              height: `${hole.height}px`,
+            }}
+          />
+        </>
+      ) : (
+        <div
+          className="tutorial-backdrop-panel"
+          style={{ top: 0, left: 0, width: '100vw', height: '100vh' }}
           onClick={handleBackdropClick}
         />
-        {spotlightBox && (
-          <rect
-            x={spotlightBox.x}
-            y={spotlightBox.y}
-            width={spotlightBox.w}
-            height={spotlightBox.h}
-            rx={spotlightBox.r}
-            ry={spotlightBox.r}
-            className="tutorial-spotlight-ring"
-          />
-        )}
-      </svg>
+      )}
 
       {/* Instruction box */}
       <aside
