@@ -90,11 +90,27 @@ export const WeatherIcon = ({ kind, ...p }) => {
   }
 }
 
-// Painted icons cut from the concept art (public/art/icon-*.webp)
-export const ArtIcon = ({ name, size = 24, className = '', style, ...p }) => (
-  <img src={`/art/icon-${name}.webp`} width={size} height={size} alt="" aria-hidden="true" draggable="false"
-    className={`art-icon ${className}`} style={{ objectFit: 'contain', ...style }} {...p} />
+export const Scales = (p) => (
+  <I {...p}><path d="M12 3v16M8 19h8" stroke="#1f2a5a" strokeWidth="1.6" strokeLinecap="round" /><path d="M6 6h12" stroke="#c9a24f" strokeWidth="1.6" strokeLinecap="round" /><path d="M6 6 3.5 11h5zM18 6l-2.5 5h5z" fill="#d7c4f2" stroke="#1f2a5a" strokeLinejoin="round" /></I>
 )
+export const MapIcon = (p) => (
+  <I {...p}><path d="M4 6.5 9 4.5l6 2.2 5-2v13.2l-5 2-6-2.2-5 2z" fill="#e7f0ff" stroke="#1f2a5a" strokeLinejoin="round" /><path d="M9 4.5v13.2M15 6.7v13.2" stroke="#8aa4d8" /><circle cx="12" cy="11" r="1.6" fill="#e3c27a" /></I>
+)
+export const SunArt = (p) => (
+  <I {...p}><circle cx="12" cy="12" r="4.4" fill="#ffe28a" stroke="#c9a24f" /><path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7" stroke="#f0c53c" strokeWidth="1.6" strokeLinecap="round" /></I>
+)
+
+const ART = {
+  energy: Bolt, water: Drop, happiness: Smile, wood: Log, coins: Coin,
+  sun: SunArt, quest: Scroll, build: Hammer, cloud: CloudIcon, map: MapIcon,
+  journal: Book, storage: Crate, gear: Gear, 'hammer-gold': Hammer, scales: Scales,
+}
+
+// Drawn icons. Nothing here loads a picture file.
+export const ArtIcon = ({ name, size = 24, ...p }) => {
+  const Icon = ART[name] || CloudIcon
+  return <Icon size={size} {...p} />
+}
 const art = (name) => (p) => <ArtIcon name={name} {...p} />
 export const EnergyArt = art('energy')
 export const WaterArt = art('water')

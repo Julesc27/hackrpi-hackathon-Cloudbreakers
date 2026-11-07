@@ -5,12 +5,13 @@ import { activeMissions, canAfford, countType, isUnlocked, unlockLevel } from '.
 import { getAdvice } from '../../game/advisor.js'
 import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
 import { Check, Lock, Close, ArtIcon, Plus } from '../icons.jsx'
+import Vignette from '../vignettes.jsx'
 
 const CHAPTERS = { 1: 'A Place to Begin', 2: 'The First Connection', 3: 'A Town Needs More' }
 const QUEST_ART = {
-  firstSteps: 'quest-shelter', anchor: 'build-bridgeAnchor', placeForWater: 'advisor-rain', firstBridge: 'quest-bridge',
-  gardenInSky: 'quest-garden', beaconWakes: 'island-newHaven', keepLightsOn: 'build-solarFarm', longSpan: 'quest-bridge',
-  cleanRoute: 'card-verdant', balancedTown: 'quest-garden',
+  firstSteps: 'shelter', anchor: 'bridgeAnchor', placeForWater: 'rain', firstBridge: 'bridgeAnchor',
+  gardenInSky: 'garden', beaconWakes: 'newHaven', keepLightsOn: 'solarFarm', longSpan: 'bridgeAnchor',
+  cleanRoute: 'verdant', balancedTown: 'garden',
 }
 
 function useEsc(onClose) {
@@ -55,7 +56,7 @@ export function QuestBook() {
         <div className="book-page book-left">
           <div className="p-sub">New Haven Archives</div>
           <h2 className="log-title"><span className="spark">✦</span>Captain's<br />Log<span className="spark">✦</span></h2>
-          <img className="log-art" src="/art/log-illustration.webp" alt="" />
+          <Vignette kind="log" className="log-art" />
           <div className="p-sub chapter">— Chapter {chapter}: {CHAPTERS[chapter]} —</div>
           <p className="script">Higher homes.<br />Kinder skies.<br />A brighter tomorrow.</p>
           <div className="p-sub tiny">People · Places · Progress</div>
@@ -76,7 +77,7 @@ export function QuestBook() {
                   <div className="qbody">
                     <div className="qtitle">{m.name}</div>
                     <div className="qrow">
-                      {(featured || isActive) && <img className="qart" src={`/art/${QUEST_ART[m.id]}.webp`} alt="" />}
+                      {(featured || isActive) && <Vignette kind={QUEST_ART[m.id]} className="qart" />}
                       <div className="qtext">
                         <p>{isActive || done ? m.objective : `Unlocks after ${(m.requires || []).map((r) => MISSIONS.find((x) => x.id === r).name).join(', ')}.`}</p>
                         {isActive && !featured && (
@@ -140,7 +141,7 @@ export function BuildPanel() {
             return (
               <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`}>
                 <div className="ws-name">{def.name}</div>
-                <img className="ws-art" src={`/art/build-${key}.webp`} alt="" />
+                <Vignette kind={key} className="ws-art" />
                 <p className="ws-desc">{def.desc}</p>
                 <div className="ws-meta">
                   {def.prod && <YieldChips yields={def.prod} />}
@@ -178,13 +179,25 @@ export function AdvisorPanel() {
   const a = all[n % all.length]
   return (
     <aside className="notes" role="dialog" aria-label="Cloud's Notes">
-      <img className="notes-header" src="/art/advisor-header.webp" alt="Cloud's Notes — here for a brighter tomorrow" />
+      <div className="notes-header" role="img" aria-label="Cloud's Notes — here for a brighter tomorrow">
+        <svg viewBox="0 0 330 150" aria-hidden="true">
+          <ellipse cx="118" cy="78" rx="78" ry="42" fill="#fff" />
+          <ellipse cx="168" cy="70" rx="62" ry="40" fill="#f7f4ff" />
+          <ellipse cx="78" cy="84" rx="46" ry="30" fill="#fff" />
+          <path d="M92 72c2-8 10-8 12 0M150 66c2-8 10-8 12 0" stroke="#3a3550" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M118 88c8 8 22 8 30 0" stroke="#3a3550" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <circle cx="100" cy="86" r="6" fill="#ffc2c8" opacity="0.8" />
+          <circle cx="168" cy="84" r="6" fill="#ffc2c8" opacity="0.8" />
+          <path d="M36 118h258l-14 22H50z" fill="#f6ecd2" stroke="#c9a24f" />
+          <text x="165" y="136" textAnchor="middle" fill="#1f2a5a" fontFamily="Georgia, serif" fontSize="18" fontWeight="700" letterSpacing="1.5">CLOUD&apos;S NOTES</text>
+        </svg>
+      </div>
       <button className="seal-close notes-close" onClick={close} aria-label="Close"><Close size={20} /></button>
       <div className="notes-scroll">
         <div className="notes-card">
           <div className="notes-label">My suggestion</div>
           <button className="suggestion" onClick={() => a.routeId && ui.setBridgeRoute(a.routeId)} disabled={!a.routeId}>
-            {a.art && <img src={a.art} alt="" />}
+            {a.art && <Vignette kind={a.art} />}
             <strong>{a.recommendation}</strong>
             {a.routeId && <span className="chev">›</span>}
           </button>

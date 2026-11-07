@@ -2,7 +2,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, BUILDINGS, ROUTES, BEACON_COST, GATHER_AMOUNT, HARVEST } from '../../game/data.js'
 import { islandAccess, openRoutes, otherEnd, canAfford, hasAnchor } from '../../game/engine.js'
 import { Drawer, CostChips, YieldChips } from './Panel.jsx'
-import { islandCardArt } from '../artPaths.js'
+import Vignette from '../vignettes.jsx'
 
 export default function IslandPanel() {
   const { state, dispatch } = useGame()
@@ -30,7 +30,7 @@ export default function IslandPanel() {
 
   return (
     <Drawer side="right" title={def.name} kicker={def.kind} onClose={close}>
-      <img className="island-art" src={islandCardArt(id)} alt="" />
+      <Vignette kind={id} className="island-art" />
       <div className={`status-chip status-${status === 'connected' ? (access[id] === 1 ? 'ok' : 'warn') : 'locked'}`}>{statusText}</div>
       <p>{def.desc}</p>
       <blockquote className="question">{def.question}</blockquote>

@@ -4,10 +4,9 @@ import { ISLANDS } from '../../game/data.js'
 import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
 import { WORLD_ISLANDS, FAR_ISLETS } from './layout.js'
-import { ART_SCALE, ISLAND_ART, PAINTED_BEACON, artReady, islandImage } from './artLayout.js'
 import { PROPS, towerTop } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudPuff, cloudBank } from './island.js'
-import { Crowd, buildGraph, drawPerson, personLight, bridgeCurve } from './people.js'
+import { bridgeCurve } from './people.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
 /* ---------------- player buildings → prop specs ---------------- */
@@ -182,17 +181,7 @@ export default function WorldCanvas({ hoverRef }) {
   stateRef.current = state
   const uiRef = useRef(ui)
   uiRef.current = ui
-  const crowd = useRef(new Crowd())
   const cache = useRef(new SpriteCache())
-
-  // walkable graph follows connections and bridges
-  useEffect(() => {
-    const access = islandAccess(state)
-    const graph = buildGraph(state, access)
-    const reachable = Object.keys(access).filter((k) => access[k]).length
-    const target = Math.max(6, Math.min(56, Math.round(state.population * 1.5) + reachable * 3))
-    crowd.current.setGraph(graph, target)
-  }, [state.bridges, state.connected, state.population]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const cv = canvasRef.current
@@ -250,14 +239,13 @@ export default function WorldCanvas({ hoverRef }) {
 
     const frame = (now) => {
       raf = requestAnimationFrame(frame)
-      const dt = Math.min(0.05, (now - last) / 1000); last = now
+      last = now
       const t = now / 1000
       const cam = uiRef.current.camera.current
       if (!cam?.view || !W) return
       const v = cam.view()
       const st = stateRef.current
       const access = islandAccess(st)
-      crowd.current.update(dt)
       cache.current.setBucket(v.s * dpr)
 
       ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -292,43 +280,18 @@ export default function WorldCanvas({ hoverRef }) {
         blit(sp, Math.sin(t * c.sp + c.ph) * 18, Math.sin(t * 0.4 + c.ph) * 2, c.a)
       }
 
-      // 2. island bodies, back to front. Painted crops of the concept art when they
-      // have loaded; the procedural island remains the fallback for the first frames.
+      // 2. island bodies, back to front — geometry only, no painted crops
       const order = Object.values(WORLD_ISLANDS).sort((a, b) => a.ground[0][1] - b.ground[0][1])
-      const painted = {}
       for (const isl of order) {
         const mode = islandMode(isl.id, st, access)
         const bob = Math.sin(t * 0.7 + isl.seed) * 1.2
         isl._bob = bob
-        const img = islandImage(isl.id)
-        if (artReady(isl.id)) {
-          painted[isl.id] = true
-          const [ox, oy] = ISLAND_ART[isl.id]
-          ctx.save()
-          ctx.translate(0, bob)
-          if (mode === 'hidden') ctx.filter = 'saturate(0.15) brightness(0.48) hue-rotate(8deg)'
-          else if (mode === 'locked') ctx.filter = 'saturate(0.8) brightness(0.9) hue-rotate(6deg)'
-          else if (hoverRef?.current === isl.id) ctx.filter = 'brightness(1.07) saturate(1.06)'
-          ctx.drawImage(img, ox, oy, img.naturalWidth * ART_SCALE, img.naturalHeight * ART_SCALE)
-          ctx.filter = 'none'
-          if (isl.id === 'newHaven' && !st.beaconRestored && mode === 'lit') {
-            const [bx, by] = PAINTED_BEACON
-            const g = ctx.createRadialGradient(bx, by, 2, bx, by, 34)
-            g.addColorStop(0, 'rgba(16,20,52,0.62)')
-            g.addColorStop(1, 'rgba(16,20,52,0)')
-            ctx.fillStyle = g
-            ctx.beginPath(); ctx.arc(bx, by, 34, 0, TAU); ctx.fill()
-          }
-          if (mode === 'lit') animIslandBase(ctx, isl, t)
-          ctx.restore()
-        } else {
-          const sp = cache.current.get(`isle:${isl.id}`, islandBounds(isl), mode, (cx) => drawIslandBase(cx, isl))
-          blit(sp, 0, bob)
-          if (mode === 'lit') { ctx.save(); ctx.translate(0, bob); animIslandBase(ctx, isl, t); ctx.restore() }
-          if (hoverRef?.current === isl.id && mode !== 'hidden') {
-            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.07
-            ctx.drawImage(sp.cv, sp.b.x, sp.b.y + bob, sp.b.w, sp.b.h); ctx.restore()
-          }
+        const sp = cache.current.get(`isle:${isl.id}`, islandBounds(isl), mode, (cx) => drawIslandBase(cx, isl))
+        blit(sp, 0, bob)
+        if (mode === 'lit') { ctx.save(); ctx.translate(0, bob); animIslandBase(ctx, isl, t); ctx.restore() }
+        if (hoverRef?.current === isl.id && mode !== 'hidden') {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.07
+          ctx.drawImage(sp.cv, sp.b.x, sp.b.y + bob, sp.b.w, sp.b.h); ctx.restore()
         }
       }
 
@@ -338,41 +301,26 @@ export default function WorldCanvas({ hoverRef }) {
       setMode('lit')
       if (!uiRef.current.placing) for (const r of openRoutes(st)) drawBridge(ctx, { route: r.id }, t, true)
 
-      // 4. everything that stands up, depth-sorted together with the residents
+      // 4. buildings, trees and props, depth-sorted. No characters.
       const items = []
       for (const isl of order) {
         const mode = islandMode(isl.id, st, access)
-        for (const p of isl.props) items.push({ y: p.pts ? Math.max(p.pts[0][1], p.pts[1][1]) : p.y, p, mode, bob: isl._bob, painted: painted[isl.id] })
+        for (const p of isl.props) items.push({ y: p.pts ? Math.max(p.pts[0][1], p.pts[1][1]) : p.y, p, mode, bob: isl._bob })
       }
       for (const b of st.buildings) {
         if (b.slot < 0 || !st.connected.includes(b.island)) continue
         const p = buildingProp(b)
         if (p) items.push({ y: p.y, p, mode: access[b.island] ? 'lit' : 'locked', bob: WORLD_ISLANDS[b.island]._bob, fresh: b.id })
       }
-      for (const a of crowd.current.agents) {
-        const isl = WORLD_ISLANDS[crowd.current.graph?.nodes.get(a.node)?.island]
-        items.push({ y: a.y, person: a, bob: isl?._bob || 0 })
-      }
       items.sort((a, b) => a.y - b.y)
       const lights = []
       for (const it of items) {
-        if (it.person) {
-          const a = it.person
-          if (a.x < vx0 - 10 || a.x > vx1 + 10 || a.y < vy0 - 20 || a.y > vy1 + 10) continue
-          ctx.save(); ctx.translate(0, it.bob); drawPerson(ctx, a, t); ctx.restore()
-          const l = personLight(a); if (l) lights.push([l[0], l[1] + it.bob, l[2]])
-          continue
-        }
         const p = it.p, def = PROPS[p.type]
         if (!def) continue
-        // The painting already contains the scenic buildings. Keep only the parts
-        // that move: blades, flags, chimney smoke, reservoir ripples, lamplight.
-        const liveOnPaint = it.painted && ['turbine', 'banner', 'bunting', 'tank', 'house'].includes(p.type)
-        if (it.painted && !liveOnPaint && !def.lights) continue
         const b = propBounds(p)
         if (!visible({ ...b, y: b.y + it.bob })) continue
-        if (!it.painted && b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
-        if (def.anim && it.mode !== 'hidden' && (!it.painted || liveOnPaint)) {
+        if (b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
+        if (def.anim && it.mode !== 'hidden') {
           setMode(it.mode)
           ctx.save(); ctx.translate(0, it.bob); def.anim(ctx, p, t, { beacon: st.beaconRestored }); ctx.restore()
           setMode('lit')
@@ -389,7 +337,7 @@ export default function WorldCanvas({ hoverRef }) {
         glow(ctx, x, y, r * f, PAL.glow, 0.32)
       }
       if (st.beaconRestored) {
-        const [cx, cy] = artReady('newHaven') ? PAINTED_BEACON : towerTop({ x: 765, y: 447, h: 100 })
+        const [cx, cy] = towerTop({ x: 765, y: 447, h: 100 })
         ctx.translate(0, WORLD_ISLANDS.newHaven._bob)
         glow(ctx, cx, cy + 78, 120, '#fff3c4', 0.22)
         for (const s of [0, Math.PI]) {

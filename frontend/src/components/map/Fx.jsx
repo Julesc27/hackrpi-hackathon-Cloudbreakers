@@ -4,23 +4,17 @@ import { islandAccess } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { bridgeMid } from '../world/layout.js'
 
-const ICON = { wood: 'wood', water: 'water', food: null, energy: 'energy', coins: 'coins' }
-const FOOD_COLOR = '#5fae4f'
-
 function ResIcon({ res, size = 26 }) {
-  if (ICON[res]) return <image href={`/art/icon-${ICON[res]}.webp`} x={-size / 2} y={-size / 2} width={size} height={size} />
-  // food: a little wheat sprig
-  return (
-    <g transform={`scale(${size / 24}) translate(-12 -12)`}>
-      <path d="M12 22V8" stroke="#a5d47b" strokeWidth="1.6" strokeLinecap="round" />
-      {[0, 1, 2].map((i) => (
-        <g key={i}>
-          <ellipse cx="9.5" cy={9 + i * 4} rx="2.4" ry="1.4" transform={`rotate(-35 9.5 ${9 + i * 4})`} fill={FOOD_COLOR} />
-          <ellipse cx="14.5" cy={9 + i * 4} rx="2.4" ry="1.4" transform={`rotate(35 14.5 ${9 + i * 4})`} fill={FOOD_COLOR} />
-        </g>
-      ))}
-    </g>
-  )
+  const s = size / 24
+  const mark = {
+    energy: <polygon points="13,2 6,13 11,13 10,22 18,10 13,10" fill="#f6cf4b" />,
+    water: <path d="M12 3c3 4 5 7 5 10a5 5 0 0 1-10 0c0-3 2-6 5-10z" fill="#4db4ff" />,
+    wood: <rect x="4" y="9" width="12" height="7" rx="3.5" fill="#c98d55" />,
+    coins: <circle cx="12" cy="12" r="7" fill="#f4c34f" stroke="#a87d1e" />,
+    food: <><path d="M12 20V8" stroke="#86cf6a" strokeWidth="1.6" /><ellipse cx="9" cy="10" rx="2" ry="1.2" fill="#86cf6a" /><ellipse cx="15" cy="12" rx="2" ry="1.2" fill="#86cf6a" /></>,
+  }[res]
+  if (!mark) return null
+  return <g transform={`translate(${-size / 2} ${-size / 2}) scale(${s})`}>{mark}</g>
 }
 
 /** Renders floating numbers, sparkle bursts and tap-to-collect bubbles (world coordinates). */

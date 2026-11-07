@@ -67,12 +67,12 @@ frontend/src/
 - `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
 - `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
 - `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
-- `people.js`: residents walk the walkway graph, cross bridges once built, chat, sit on benches and tend crops.
+- `people.js`: bridge curves. The town has a population count, but no characters are drawn.
 - `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
 
 Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
 
-**Art:** `frontend/public/art/` now only holds the HUD icons and the card pictures used in panels, cut from the concept art by the scripts in `tools/art/`.
+**Art:** the client does not paint with picture files. Icons, panel scenes, islands and buildings are drawn in code. `concepts/` is reference only. `tools/art/` can still cut source paintings, but those files are not loaded by the game.
 
 **Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`. The reducer is deterministic, so the server can replay or validate actions. Existing version 2 saves migrate automatically with their XP and town progress preserved.
 

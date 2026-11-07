@@ -10,7 +10,7 @@ import {
 } from './engine.js'
 
 const fmtActions = (n) => (n === Infinity ? 'stable' : `${n} action${n === 1 ? '' : 's'}`)
-const islandArt = (id) => (id === 'rain' ? '/art/advisor-rain.webp' : `/art/island-${id}.webp`)
+const islandArt = (id) => id
 
 export function getAdvice(state) {
   const proj = projectProduction(state)
@@ -50,7 +50,7 @@ export function getAdvice(state) {
       tradeoff: 'Uses 10 of your wood, which delays the bridge anchor slightly.',
       confidence: 92,
       alternative: 'Build the Bridge Anchor first if you want to reach another island sooner.',
-      art: '/art/build-shelter.webp',
+      art: 'shelter',
     })
   }
 
@@ -62,7 +62,7 @@ export function getAdvice(state) {
       tradeoff: '8 wood now means one more round of gathering before the first bridge.',
       confidence: 88,
       alternative: 'Gather wood first so you can build the anchor and a bridge back-to-back.',
-      art: '/art/build-bridgeAnchor.webp',
+      art: 'bridgeAnchor',
     })
   }
 
@@ -95,7 +95,7 @@ export function getAdvice(state) {
         tradeoff: 'Gathering also advances production and resident needs.',
         confidence: 80,
         alternative: null,
-        art: '/art/card-verdant.webp',
+        art: 'verdant',
       })
     }
   }
@@ -111,7 +111,7 @@ export function getAdvice(state) {
         tradeoff: 'Gardens use 1 water per action.',
         confidence: 85,
         alternative: null,
-        art: '/art/build-garden.webp',
+        art: 'garden',
       })
     }
   }
@@ -129,7 +129,7 @@ export function getAdvice(state) {
         tradeoff: 'More residents means more food and water after each action.',
         confidence: 70,
         alternative: 'Staying small is valid too — a quiet Skystead is a sustainable one.',
-        art: '/art/build-shelter.webp',
+        art: 'shelter',
       })
     }
   }
@@ -143,7 +143,7 @@ export function getAdvice(state) {
       tradeoff: ok ? 'Takes 20 wood and 10 energy.' : `We need ${BEACON_COST.wood} wood and ${BEACON_COST.energy} energy first.`,
       confidence: ok ? 84 : 65,
       alternative: 'Connect Mistral Heights first so energy is not a worry.',
-      art: '/art/island-newHaven.webp',
+      art: 'newHaven',
     })
   }
 

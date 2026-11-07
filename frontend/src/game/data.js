@@ -13,7 +13,7 @@ export const RESOURCES = {
   coins: { label: 'Coins', color: 'var(--coin)' },
 }
 
-// Islands are painted cut-outs from the concept art (public/art/island-*.webp).
+// Islands are drawn in code (components/world). These records are gameplay data only.
 // Map coordinates use the concept art's 1600 x 900 frame. `hit` is the clickable
 // ellipse [cx, cy, rx, ry]; `plots` are building spots in the same frame.
 export const ISLANDS = {

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../../game/data.js'
 import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
-import { islandCardArt, ISLAND_BADGE } from '../artPaths.js'
+import { ISLAND_BADGE } from '../artPaths.js'
+import Vignette from '../vignettes.jsx'
 import { Modal, YieldChips, Progress, CostChips } from './Panel.jsx'
 import { RES_ICON, People, Leaf, Smile, Check, Star, ArtIcon } from '../icons.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
@@ -106,8 +107,7 @@ export function StorageModal() {
 
 function IslandBadge({ id }) {
   const b = ISLAND_BADGE[id] || {}
-  if (b.img) return <img className="card-badge" src={b.img} alt="" />
-  return <span className="card-badge ring" style={{ background: b.ring }}><ArtIcon name={b.icon} size={30} /></span>
+  return <span className="card-badge ring" style={{ background: b.ring || '#1f2a5a' }}><ArtIcon name={b.icon || 'cloud'} size={30} /></span>
 }
 
 // "The Skyway Chart — choose your next horizon"
@@ -131,7 +131,7 @@ export function MapModal() {
           return (
             <article key={id} className={`chart-card is-${status}`}>
               <IslandBadge id={id} />
-              <div className="cc-art"><img src={islandCardArt(id)} alt="" /></div>
+              <div className="cc-art"><Vignette kind={hidden ? 'uncharted' : id} /></div>
               <h3>{hidden ? 'Uncharted' : d.name}</h3>
               <p className="cc-desc">{hidden ? 'Something drifts beyond the clouds. Connect a neighbour to chart it.' : d.desc}</p>
               {!hidden && (
