@@ -2,9 +2,18 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { gradeGatherWood, parseAction } from './agent.mjs'
+import { defaultModel, gradeGatherWood, parseAction, requestTimeoutMs } from './agent.mjs'
 
 const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
+
+test('defaults to the Flash Lite model that answers text and image requests with this key', () => {
+  assert.equal(defaultModel, 'gemini-3.5-flash-lite')
+})
+
+test('Gemini gets more than the 25 seconds that aborted the first CI request', () => {
+  assert.ok(requestTimeoutMs > 25_000)
+  assert.ok(requestTimeoutMs <= 60_000)
+})
 
 test('grader requires a real grove gathering action, not just extra XP or wood', () => {
   assert.equal(gradeGatherWood(start, start), false)

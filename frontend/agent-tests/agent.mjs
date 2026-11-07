@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs'
 
 const instructions = readFileSync(new URL('./HOW_TO_PLAY.md', import.meta.url), 'utf8')
-const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
+export const defaultModel = 'gemini-3.5-flash-lite'
+const model = process.env.GEMINI_MODEL || defaultModel
 const maxSteps = 8
 const maxTokens = 30_000
+export const requestTimeoutMs = 60_000
 
 export function gradeGatherWood(start, end) {
   return Boolean(
@@ -33,6 +35,8 @@ export function parseAction(data, viewport) {
 
 async function nextAction(page, objective, previous, key) {
   const screenshot = await page.screenshot({ type: 'jpeg', quality: 65 })
+  const started = Date.now()
+  console.log(`Gemini request started (${model}; ${screenshot.length} screenshot bytes)`)
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
@@ -58,8 +62,14 @@ async function nextAction(page, objective, previous, key) {
         },
       },
     }),
-    signal: AbortSignal.timeout(25_000),
+    signal: AbortSignal.timeout(requestTimeoutMs),
+  }).catch((error) => {
+    if (error.name === 'TimeoutError') {
+      throw new Error(`Gemini sent no response within ${requestTimeoutMs / 1000}s; request or model may be slow or unreachable`, { cause: error })
+    }
+    throw error
   })
+  console.log(`Gemini responded HTTP ${response.status} in ${Date.now() - started}ms`)
   if (!response.ok) throw new Error(`Gemini request failed (HTTP ${response.status}); check key, model access, and free-tier quota`)
   return response.json()
 }

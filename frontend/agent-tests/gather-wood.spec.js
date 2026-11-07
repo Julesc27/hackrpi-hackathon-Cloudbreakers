@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { gradeGatherWood, runAgent } from './agent.mjs'
+import { defaultModel, gradeGatherWood, runAgent } from './agent.mjs'
 
 const saveKey = 'cloudbreakers-save-v1'
 const objective = 'Gather wood at New Haven.'
 
 test('a browser agent can gather wood from a new town', async ({ page }, testInfo) => {
   const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
-  const report = { objective, checkpoint: 'new-town', model: process.env.GEMINI_MODEL || 'gemini-3.8-flash', transcript: [], passed: false }
+  const report = { objective, checkpoint: 'new-town', model: process.env.GEMINI_MODEL || defaultModel, transcript: [], passed: false }
   try {
     await page.addInitScript(({ key, state }) => {
       localStorage.setItem('cloudbreakers-guest', '1')
