@@ -41,7 +41,7 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 
 Progress saves to the browser's localStorage. Settings (gear) → *New game* resets it.
 
-**Moving around:** drag the sky to pan (it glides), scroll or pinch to zoom, double-click to zoom in, and press `0` or the target button to fly back to New Haven. Arrow keys / WASD and `+`/`−` work too. Tapping an island flies the camera to it. After each turn, tap the bubbles over your islands to collect what they produced.
+**Moving around:** drag the sky to pan (it glides), scroll or pinch to zoom, double-click to zoom in, and press `0` or the target button to fly back to New Haven. Arrow keys / WASD and `+`/`−` work too. Tapping an island flies the camera to it. Each action you take shows what your islands produced as bubbles you can tap.
 
 ## Frontend layout
 
@@ -54,7 +54,8 @@ frontend/src/
 │   └── GameContext.jsx   React state + localStorage save, UI state (open panels, placement)
 ├── api/client.js         stub for the future backend (login, load/save town, advisor)
 ├── components/
-│   ├── map/              sky map: painted islands/bridges from the concept art + building sprites
+│   ├── world/            the living map, drawn in code every frame (islands, buildings, bridges, residents)
+│   ├── map/              camera (pan/zoom), clickable overlay (labels, bridge buttons, plots), effects
 │   ├── hud/              top resource bar, title, level badge, weather, rails, XP progress
 │   └── panels/           drawers and modals: quests, build, advisor, island, bridge, journal…
 ├── artPaths.js           (in components/) helpers for painted card art and badges
@@ -62,7 +63,16 @@ frontend/src/
 └── styles/               hud.css, panels.css, map.css
 ```
 
-**Art:** `frontend/public/art/` holds pieces cut from the concept art: each island, each bridge, the background islets/moon (`decor.webp`), HUD icons and card art. `src/game/artLayout.json` says where each piece sits in the 1600×900 map. Swap a `.webp` for a new painting at the same position and the game picks it up. `tools/art/` has the scripts that made the cut-outs.
+**The map:** nothing on the map is a picture. `components/world/` draws it on a canvas every frame, styled after the concept art:
+- `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
+- `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
+- `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
+- `people.js`: residents walk the walkway graph, cross bridges once built, chat, sit on benches and tend crops.
+- `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
+
+Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
+
+**Art:** `frontend/public/art/` now only holds the HUD icons and the card pictures used in panels, cut from the concept art by the scripts in `tools/art/`.
 
 **Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`. The reducer is deterministic, so the server can replay or validate actions. Existing version 2 saves migrate automatically with their XP and town progress preserved.
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import LAYOUT from '../../game/artLayout.json'
+import { bridgeMid } from '../world/layout.js'
 
 const ICON = { wood: 'wood', water: 'water', food: null, energy: 'energy', coins: 'coins' }
 const FOOD_COLOR = '#5fae4f'
@@ -107,8 +107,8 @@ export function useWorldEvents() {
     // new bridges
     if (state.bridges.length > p.bridges.length) {
       const b = state.bridges[state.bridges.length - 1]
-      const box = LAYOUT[`bridge-${b.route}`]
-      if (box) out.push({ kind: 'burst', x: box.x + box.w / 2, y: box.y + box.h / 2, ttl: 900 })
+      const [mx, my] = bridgeMid(b.route)
+      out.push({ kind: 'burst', x: mx, y: my, ttl: 900 })
       const dest = state.connected.find((id) => !p.connected.includes(id))
       if (dest) {
         const [cx, cy, , ry] = ISLANDS[dest].hit
@@ -117,41 +117,39 @@ export function useWorldEvents() {
       }
     }
 
-    // wood gathered / harvested (same turn, no build)
-    if (state.turn === p.turn && state.resources.wood > p.resources.wood && state.buildings.length === p.buildings.length) {
-      const fromForest = state.sustainPenalty > p.sustainPenalty
+    // wood gathered / harvested: the engine adds a 'gain' toast for these actions
+    const fresh = state.toasts.filter((t) => !p.toasts.some((o) => o.id === t.id))
+    for (const t of fresh) {
+      if (t.kind !== 'gain') continue
+      const m = /\+(\d+) wood/.exec(t.text)
+      if (!m) continue
+      const fromForest = /Verdant/.test(t.text)
       const [cx, cy] = ISLANDS[fromForest ? 'verdant' : 'newHaven'].hit
-      out.push({ kind: 'float', x: cx + (Math.random() - 0.5) * 60, y: cy - 30, res: 'wood', text: `+${state.resources.wood - p.resources.wood}`, ttl: 1500 })
+      out.push({ kind: 'float', x: cx + (Math.random() - 0.5) * 60, y: cy - 30, res: 'wood', text: `+${m[1]}`, ttl: 1500 })
     }
 
     // beacon
     if (state.beaconRestored && !p.beaconRestored) {
-      out.push({ kind: 'burst', x: 765, y: 287, ttl: 1200 }, { kind: 'float', x: 765, y: 230, text: 'The beacon wakes!', ttl: 2400 })
+      out.push({ kind: 'burst', x: 765, y: 299, ttl: 1200 }, { kind: 'float', x: 765, y: 250, text: 'The beacon wakes!', ttl: 2400 })
       cam?.flyTo(765, 380, cam.fitScale * 1.4, { duration: 900 })
     }
 
-    // end of turn → collect bubbles over every island that produced something
-    if (state.turn > p.turn) {
+    // every action moves the settlement forward (the engine awards XP and applies production):
+    // show what each island produced as resource bubbles you can tap
+    if (state.xp > p.xp) {
       const access = islandAccess(p)
       for (const id of Object.keys(access)) {
         const isl = ISLANDS[id]
         const [cx, cy, rx, ry] = isl.hit
         const yields = { ...(isl.yields || {}) }
-        if (id === 'newHaven') {
-          for (const b of p.buildings) {
-            if (b.island !== 'newHaven') continue
-            for (const [k, v] of Object.entries(BUILDINGS[b.type].prod || {})) yields[k] = (yields[k] || 0) + v
-          }
-        } else {
-          for (const b of p.buildings.filter((x) => x.island === id)) {
-            for (const [k, v] of Object.entries(BUILDINGS[b.type].prod || {})) yields[k] = (yields[k] || 0) + v
-          }
+        for (const b of p.buildings.filter((x) => x.island === id)) {
+          for (const [k, v] of Object.entries(BUILDINGS[b.type].prod || {})) yields[k] = (yields[k] || 0) + v
         }
         const entries = Object.entries(yields).filter(([, v]) => v > 0)
         entries.forEach(([res, v], i) => {
           const amount = Math.max(1, Math.round(v * access[id]))
           const spread = (i - (entries.length - 1) / 2) * 56
-          out.push({ kind: 'bubble', x: cx + spread + (id === 'newHaven' ? -rx * 0.45 : 0), y: cy - ry * 0.55, res, amount, ttl: 9000 })
+          out.push({ kind: 'bubble', x: cx + spread + (id === 'newHaven' ? -rx * 0.45 : 0), y: cy - ry * 0.55, res, amount, ttl: 5000 })
         })
       }
     }

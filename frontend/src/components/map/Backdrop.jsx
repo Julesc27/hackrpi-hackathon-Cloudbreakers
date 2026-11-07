@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import SPRITES from '../../game/spriteSizes.json'
 
 // Far parallax layer: night sky, stars and the moon. It moves much slower than the world,
 // which is what makes panning feel deep.
@@ -9,7 +8,6 @@ export default function Backdrop() {
     const r = () => ((s = (s * 16807) % 2147483647) / 2147483647)
     return Array.from({ length: 170 }, () => ({ x: r() * 1600, y: r() * 900, r: 0.4 + r() * 1.2, d: r() * 4 }))
   }, [])
-  const moon = SPRITES.moon
 
   return (
     <svg className="backdrop" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -29,7 +27,14 @@ export default function Backdrop() {
         <circle key={i} cx={st.x} cy={st.y} r={st.r} fill="#fff" className="star" style={{ animationDelay: `${st.d}s` }} />
       ))}
       <circle cx="1290" cy="170" r="120" fill="url(#moonHalo)" />
-      <image href="/art/sprite-moon.webp" x={1290 - moon.w * 0.6} y={170 - moon.h * 0.6} width={moon.w * 1.2} height={moon.h * 1.2} />
+      {/* crescent moon */}
+      <mask id="moonCut">
+        <rect x="1200" y="80" width="180" height="180" fill="#fff" />
+        <circle cx="1270" cy="156" r="44" fill="#000" />
+      </mask>
+      <circle cx="1290" cy="170" r="46" fill="#3a4a8f" opacity=".55" />
+      <circle cx="1290" cy="170" r="46" fill="#f2f0ff" mask="url(#moonCut)" />
+      <circle cx="1290" cy="170" r="46" fill="none" stroke="#e3dcff" strokeOpacity=".5" />
     </svg>
   )
 }

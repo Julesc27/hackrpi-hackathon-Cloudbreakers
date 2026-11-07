@@ -20,7 +20,7 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
  * Children are rendered in world units (a WORLD.w x WORLD.h box whose origin is WORLD.x/WORLD.y).
  * `far` and `near` render parallax layers that move slower / faster than the world.
  */
-export default function Camera({ apiRef, children, far, near, onMove }) {
+export default function Camera({ apiRef, children, far, mid, near, onMove }) {
   const viewport = useRef(null)
   const worldEl = useRef(null)
   const farEl = useRef(null)
@@ -47,6 +47,7 @@ export default function Camera({ apiRef, children, far, near, onMove }) {
   const apply = useCallback(() => {
     const { x, y, s } = cam.current
     if (worldEl.current) worldEl.current.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${s})`
+    viewport.current?.style.setProperty('--ui-k', String(Math.min(1.15, limits.current.fit / s)))
     const { w, h } = size()
     // parallax relative to the centred home view
     const cx = x + (HOME.x - WORLD.x) * s - w / 2
@@ -128,6 +129,7 @@ export default function Camera({ apiRef, children, far, near, onMove }) {
     flyTo, home, focusIsland,
     zoomIn: () => { const { w, h } = size(); zoomAt(1.35, w / 2, h / 2) },
     zoomOut: () => { const { w, h } = size(); zoomAt(1 / 1.35, w / 2, h / 2) },
+    view: () => cam.current,
     get scale() { return cam.current.s },
     get fitScale() { return limits.current.fit },
   }), [flyTo, home, focusIsland, zoomAt])
@@ -316,6 +318,7 @@ export default function Camera({ apiRef, children, far, near, onMove }) {
   return (
     <div className="camera" ref={viewport} aria-label="Sky map — drag to move, scroll or pinch to zoom">
       <div className="cam-layer cam-far" ref={farEl}>{far}</div>
+      {mid}
       <div className="cam-layer cam-world" ref={worldEl} style={{ width: WORLD.w, height: WORLD.h }}>
         {children}
       </div>

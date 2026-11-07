@@ -12,6 +12,7 @@
 .cam-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .cam-far { inset: -18%; width: 136%; height: 136%; transform-origin: 50% 50%; }
 .cam-near { pointer-events: none; }
+.world-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
 .camera.is-moving .cam-world, .camera.is-moving .cam-near, .camera.is-moving .cam-far { will-change: transform; }
 .skymap, .near-clouds { display: block; overflow: visible; }
 .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -89,8 +90,9 @@
 .ghost-route { cursor: pointer; }
 .ghost-art { animation: ghost 2.6s ease-in-out infinite; }
 @keyframes ghost { 50% { opacity: 0.55; } }
-.route-btn { transition: transform 0.15s; transform-box: fill-box; transform-origin: center; }
-.ghost-route:hover .route-btn { transform: scale(1.1); }
+.route-btn { transition: transform 0.15s; transform-box: fill-box; transform-origin: 50% 35%; transform: scale(var(--ui-k, 1)); }
+.ghost-route:hover .route-btn { transform: scale(calc(var(--ui-k, 1) * 1.1)); }
+.ui-scale { transform: scale(var(--ui-k, 1)); transform-box: fill-box; transform-origin: center; }
 .route-pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2s ease-out infinite; }
 @keyframes pulse { from { transform: scale(0.85); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 .route-cost { font-family: var(--font-body); font-weight: 800; font-size: 13px; fill: #f3e6c4; }

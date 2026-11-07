@@ -24,7 +24,7 @@ export const ISLANDS = {
     yields: {},
     desc: 'What remains of a small outpost: a gathering plaza, a fountain and a dormant navigation beacon.',
     question: 'New Haven is small, but it is still here.',
-    plots: [[640, 478], [688, 540], [882, 468], [905, 528], [612, 520]],
+    plots: [[590, 500], [650, 560], [935, 498], [900, 552], [812, 372]],
   },
   verdant: {
     name: 'Verdant Reach',
@@ -34,7 +34,7 @@ export const ISLANDS = {
     badge: 'wood',
     desc: 'Pine groves around an old trading post. The easiest island to reach and the fastest way to build.',
     question: 'How much of the forest should the town harvest, and how much should it protect?',
-    plots: [[545, 695], [610, 700]],
+    plots: [[560, 725], [455, 725]],
   },
   rain: {
     name: 'Rain Island',
@@ -44,7 +44,7 @@ export const ISLANDS = {
     badge: 'drop',
     desc: 'Crystal reservoirs and endless waterfalls. The sky\'s lifeblood flows here.',
     question: 'Redirect the water now for growth, or restore the natural collection system first?',
-    plots: [[840, 255], [1065, 270]],
+    plots: [[845, 268], [1055, 282]],
   },
   mistral: {
     name: 'Mistral Heights',
@@ -55,7 +55,7 @@ export const ISLANDS = {
     badge: 'energy',
     desc: 'Old turbines and solar rows on an exposed ridge. Reliable power, and a good view of the weather.',
     question: 'Is the town willing to accept noisy machinery in exchange for reliable energy?',
-    plots: [[430, 285], [525, 248]],
+    plots: [[345, 315], [505, 305]],
   },
   mercy: {
     name: 'Mercy Rise',
@@ -66,7 +66,7 @@ export const ISLANDS = {
     badge: 'happiness',
     desc: 'A white stone clinic and an airship pad. Healthy residents are happy residents.',
     question: 'Who gets care first when supplies run short?',
-    plots: [[440, 470], [470, 505]],
+    plots: [[440, 505], [480, 478]],
   },
   hearth: {
     name: 'Hearthside',
@@ -77,7 +77,7 @@ export const ISLANDS = {
     badge: 'town',
     desc: 'Cottages and lantern-lit lanes, ready for new families. Adds homes for 8 residents.',
     question: 'Grow quickly, or keep the town small enough that everyone knows each other?',
-    plots: [[1110, 480], [1300, 520]],
+    plots: [[1110, 490], [1250, 548]],
   },
   gardens: {
     name: 'The Glass Gardens',
@@ -87,7 +87,7 @@ export const ISLANDS = {
     badge: 'leaf',
     desc: 'A greenhouse, a windmill and tidy crop rows left by a vanished community.',
     question: 'Preserve the old seeds as a library, or plant them now to solve shortages?',
-    plots: [[890, 690], [1180, 735]],
+    plots: [[900, 700], [1175, 735]],
   },
   skyport: {
     name: 'Skyport',
@@ -97,11 +97,11 @@ export const ISLANDS = {
     badge: 'coins',
     desc: 'A timber dock where trade airships tie up. Brings cloud coins from distant towns.',
     question: 'Who should New Haven trade with — and what should it never sell?',
-    plots: [[1440, 655]],
+    plots: [[1450, 668]],
   },
 }
 
-// Route ids match the painted bridge files (public/art/bridge-<id>.webp).
+// Route ids match the bridge anchors in components/world/layout.js.
 export const ROUTES = [
   { id: 'verdant-haven', a: 'newHaven', b: 'verdant', wood: 14, note: 'A short stair down to the grove.' },
   { id: 'mistral-haven', a: 'newHaven', b: 'mistral', wood: 18, note: 'A long boardwalk. Gusty, but well anchored.' },
