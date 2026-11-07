@@ -104,12 +104,31 @@ export function line(ctx, x1, y1, x2, y2, stroke, lw = 1, cap = 'round') {
   ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineCap = cap; ctx.stroke()
 }
 
+// Glows are drawn from a small pre-rendered radial sprite (one per colour) instead of
+// building a new gradient for every light on every frame.
+const glowSprites = new Map()
+function glowSprite(color) {
+  const key = col(color, 1)
+  let sp = glowSprites.get(key)
+  if (!sp) {
+    sp = document.createElement('canvas')
+    sp.width = sp.height = 64
+    const g = sp.getContext('2d')
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+    gr.addColorStop(0, col(color, 1))
+    gr.addColorStop(1, col(color, 0))
+    g.fillStyle = gr
+    g.fillRect(0, 0, 64, 64)
+    glowSprites.set(key, sp)
+  }
+  return sp
+}
 export function glow(ctx, x, y, r, color = PAL.glow, a = 0.55) {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
-  g.addColorStop(0, col(color, a))
-  g.addColorStop(1, col(color, 0))
-  ctx.fillStyle = g
-  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill()
+  if (a <= 0.004 || r <= 0) return
+  const prev = ctx.globalAlpha
+  ctx.globalAlpha = prev * a
+  ctx.drawImage(glowSprite(color), x - r, y - r, r * 2, r * 2)
+  ctx.globalAlpha = prev
 }
 
 /** An isometric box. Footprint a (along U) x b (along V), height h, standing at (x, y) at elevation z. */
