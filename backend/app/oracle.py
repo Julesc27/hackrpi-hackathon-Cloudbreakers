@@ -19,7 +19,7 @@ log = logging.getLogger("uvicorn.error")  # uvicorn prints this logger; the root
 
 ADVISOR_DIR = Path(__file__).resolve().parents[1] / "advisor"
 GAME_FILES = ("data.js", "engine.js")  # copied by tools/sync_advisor_context.py
-TIMEOUT_SECONDS = 45
+TIMEOUT_SECONDS = 90  # high reasoning effort takes ~30-50s per attempt
 ATTEMPTS = 2
 MAX_POEM_CHARS = 1200
 MIN_POEM_LINES = 4
@@ -67,11 +67,8 @@ A player has lit a lantern and asked for your counsel. Do two things.
    - "gather" (collect or mine), "beacon" (restore it), "repair" (fix bridges), "balance" (keep things steady)
    The player never sees this either.
 
-4. "key": the single word in your poem that most carries the answer. It must appear in the poem
-   exactly as written. The game makes it glow faintly so the player knows a real clue is hidden there.
-
 Reply with only a JSON object, no other text:
-{{"strategy": "...", "poem": "first line\\nsecond line\\n...", "focus": "...", "key": "..."}}""".format(
+{{"strategy": "...", "poem": "first line\\nsecond line\\n...", "focus": "..."}}""".format(
     buildings=", ".join(FOCUS_BUILDINGS), islands=", ".join(FOCUS_ISLANDS))
 
 
@@ -150,17 +147,8 @@ def parse_reply(text: str) -> dict:
     if not poem or len(poem) > MAX_POEM_CHARS or len([l for l in lines if l]) > MAX_POEM_LINES:
         raise ValueError("poem is empty or too long")
     focus = obj.get("focus")
-    # A bad focus or key isn't worth a retry; the game just skips that touch.
-    return {"strategy": strategy.strip(), "poem": poem, "focus": focus if focus in FOCUSES else None,
-            "key": clue_word(poem, obj.get("key"))}
-
-
-def clue_word(poem: str, key) -> str | None:
-    """The clue word as it appears in the poem, or None if the model picked something not in it."""
-    if not isinstance(key, str) or not key.strip():
-        return None
-    m = re.search(rf"\b{re.escape(key.strip())}\b", poem, re.IGNORECASE)
-    return m.group(0) if m else None
+    # A bad focus isn't worth a retry; Cloud just won't compare.
+    return {"strategy": strategy.strip(), "poem": poem, "focus": focus if focus in FOCUSES else None}
 
 
 def short(poem: str) -> bool:
@@ -176,33 +164,51 @@ def leaks(poem: str) -> list[str]:
     return found
 
 
-async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str, messages: list[dict]) -> str:
+EFFORTS = ("low", "medium", "high")
+
+
+async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str, messages: list[dict],
+                effort: str | None) -> str:
+    # Reasoning models (e.g. databricks-gpt-oss-120b) think before answering: low ~3s, medium ~8s, high ~30-50s.
+    # effort=None for models without thinking, like Llama.
+    body = {"messages": messages, "max_tokens": 1000, "temperature": 0.9}
+    if effort in EFFORTS:
+        body = {"messages": messages, "max_tokens": 12000, "reasoning_effort": effort}  # thinking tokens count too
     res = await client.post(
         f"{host}/serving-endpoints/{endpoint}/invocations",
         headers={"Authorization": f"Bearer {token}"},
-        json={"messages": messages, "max_tokens": 1000, "temperature": 0.9},
+        json=body,
     )
     if res.status_code != 200:
         log.warning("oracle: Databricks returned %s: %s", res.status_code, res.text[:300])
         raise OracleUnavailable(f"Databricks returned {res.status_code}")
-    return extract_text(res.json())
+    data = res.json()
+    text = extract_text(data)
+    if not text.strip():
+        log.warning("oracle: empty reply (effort %s), finish_reason=%s", effort,
+                    (data.get("choices") or [{}])[0].get("finish_reason"))
+    return text
 
 
 async def consult(town: dict) -> dict:
-    """Ask the gods. Returns {"strategy", "poem", "focus", "key"}; raises OracleUnavailable."""
+    """Ask the gods. Returns {"strategy", "poem", "focus"}; raises OracleUnavailable."""
     host, token, endpoint = _config()
     messages = build_messages(town)
+    effort = os.getenv("DATABRICKS_REASONING_EFFORT", "").strip().lower() or None
     best = None
     async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
         for attempt in range(1, ATTEMPTS + 1):
+            text = ""
             try:
-                text = await _call(client, host, token, endpoint, messages)
+                text = await _call(client, host, token, endpoint, messages, effort)
                 reply = parse_reply(text)
             except httpx.HTTPError as e:
                 log.warning("oracle: request failed (attempt %s): %r", attempt, e)
                 continue
             except (ValueError, json.JSONDecodeError) as e:
-                log.warning("oracle: unusable reply (attempt %s): %s", attempt, e)
+                log.warning("oracle: unusable reply (attempt %s): %s | reply starts: %r", attempt, e, text[:200])
+                if not text.strip() and effort in EFFORTS[1:]:
+                    effort = EFFORTS[EFFORTS.index(effort) - 1]  # thought itself out of room: think less next time
                 continue
             leaked = leaks(reply["poem"])
             if short(reply["poem"]):

@@ -351,16 +351,25 @@ const STORE_ITEMS = [
   },
 ]
 
-// The poem with its clue word glowing (the first whole-word match; the backend checks it is in the poem).
-function PoemWithClue({ poem, clue }) {
-  const m = clue ? new RegExp(`\\b${clue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).exec(poem) : null
-  if (!m) return <blockquote className="oracle-poem">{poem}</blockquote>
+// The poem walks in line by line; Cloud's reaction waits until the last line has landed.
+const LINE_DELAY_MS = 900
+
+function RevealPoem({ poem }) {
+  const lines = poem.split('\n')
   return (
-    <blockquote className="oracle-poem">
-      {poem.slice(0, m.index)}
-      <span className="oracle-clue" title="The gods hid something here">{m[0]}</span>
-      {poem.slice(m.index + m[0].length)}
-    </blockquote>
+    <>
+      <blockquote className="oracle-poem" aria-label={poem}>
+        {lines.map((line, i) => (
+          <span key={i} className="oracle-line" style={{ animationDelay: `${i * LINE_DELAY_MS}ms` }} aria-hidden="true">
+            {line || '\u00a0'}
+          </span>
+        ))}
+      </blockquote>
+      <p className="oracle-cloud oracle-line" style={{ animationDelay: `${lines.length * LINE_DELAY_MS + 400}ms` }}>
+        <ArtIcon name="cloud" size={22} />
+        <span><strong>Friendly Cloud:</strong> Oh, that’s far beyond me. But the gods have never once been wrong.</span>
+      </p>
+    </>
   )
 }
 
@@ -369,7 +378,6 @@ function ConsultGodsCard({ item }) {
   const auth = useAuth()
   const [phase, setPhase] = useState('idle') // idle | asking | spoken | silent
   const [poem, setPoem] = useState('')
-  const [clue, setClue] = useState(null)
   const [error, setError] = useState('')
   const affordable = canAfford(state.resources, item.cost)
   const loggedIn = auth.backend && auth.status === 'authed'
@@ -380,7 +388,6 @@ function ConsultGodsCard({ item }) {
     try {
       const res = await consultGods(state)
       setPoem(res.poem)
-      setClue(res.key || null)
       setPhase('spoken')
       dispatch({ type: 'CONSULT_GODS', poem: res.poem, focus: res.focus }) // charged only once a poem arrives
     } catch (e) {
@@ -409,15 +416,7 @@ function ConsultGodsCard({ item }) {
       >
         {label}
       </button>
-      {phase === 'spoken' && (
-        <>
-          <PoemWithClue poem={poem} clue={clue} />
-          <p className="oracle-cloud">
-            <ArtIcon name="cloud" size={22} />
-            <span><strong>Friendly Cloud:</strong> Oh, that’s far beyond me. But the gods have never once been wrong.</span>
-          </p>
-        </>
-      )}
+      {phase === 'spoken' && <RevealPoem key={poem} poem={poem} />}
       {phase === 'silent' && <p className="oracle-silent">{error}</p>}
     </div>
   )

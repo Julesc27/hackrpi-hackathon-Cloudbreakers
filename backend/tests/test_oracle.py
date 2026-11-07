@@ -37,6 +37,7 @@ def databricks(monkeypatch):
     monkeypatch.setenv("DATABRICKS_HOST", "dbc-test.cloud.databricks.com")
     monkeypatch.setenv("DATABRICKS_TOKEN", "test-token")
     monkeypatch.setenv("DATABRICKS_ENDPOINT", "databricks-test")
+    monkeypatch.delenv("DATABRICKS_REASONING_EFFORT", raising=False)
 
     class Fake:
         replies: list = []
@@ -103,15 +104,7 @@ def test_extract_text_handles_endpoint_shapes(data):
 
 def test_parse_reply_accepts_fenced_json():
     text = "```json\n" + json.dumps({"strategy": "Bridge to the forest.", "poem": "  a\n b \nc\nd  "}) + "\n```"
-    assert oracle.parse_reply(text) == {"strategy": "Bridge to the forest.", "poem": "a\nb\nc\nd", "focus": None, "key": None}
-
-
-def test_parse_reply_keeps_key_only_if_in_poem():
-    reply = lambda key: json.dumps({"strategy": "s", "poem": GOOD_POEM, "key": key})
-    assert oracle.parse_reply(reply("green"))["key"] == "green"
-    assert oracle.parse_reply(reply("HOLLOW"))["key"] == "hollow"  # as written in the poem
-    assert oracle.parse_reply(reply("dragon"))["key"] is None
-    assert oracle.parse_reply(reply("gre"))["key"] is None  # whole words only
+    assert oracle.parse_reply(text) == {"strategy": "Bridge to the forest.", "poem": "a\nb\nc\nd", "focus": None}
 
 
 def test_parse_reply_splits_slash_lines():
@@ -135,9 +128,9 @@ def test_leaks_catch_names_and_numbers():
 # ---------- consult ----------
 
 async def test_consult_sends_prompt_and_returns_reply(databricks):
-    databricks.replies.append(chat_reply(json.dumps({"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant", "key": "green"})))
+    databricks.replies.append(chat_reply(json.dumps({"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant"})))
     reply = await oracle.consult(TOWN)
-    assert reply == {"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant", "key": "green"}
+    assert reply == {"strategy": "Bridge to Verdant Reach for food.", "poem": GOOD_POEM, "focus": "verdant"}
     req = databricks.requests[0]
     assert str(req.url) == "https://dbc-test.cloud.databricks.com/serving-endpoints/databricks-test/invocations"
     assert req.headers["authorization"] == "Bearer test-token"
@@ -165,6 +158,26 @@ async def test_consult_retries_garbage_then_gives_up(databricks):
         await oracle.consult(TOWN)
 
 
+async def test_reasoning_effort_is_sent_only_when_set(databricks, monkeypatch):
+    ok = chat_reply(json.dumps({"strategy": "s", "poem": GOOD_POEM}))
+    databricks.replies += [ok, ok]
+    await oracle.consult(TOWN)
+    assert "reasoning_effort" not in json.loads(databricks.requests[0].content)
+    monkeypatch.setenv("DATABRICKS_REASONING_EFFORT", "high")
+    await oracle.consult(TOWN)
+    body = json.loads(databricks.requests[1].content)
+    assert body["reasoning_effort"] == "high" and "temperature" not in body
+
+
+async def test_empty_reply_retries_with_less_thinking(databricks, monkeypatch):
+    monkeypatch.setenv("DATABRICKS_REASONING_EFFORT", "high")
+    ran_out = {"choices": [{"finish_reason": "length", "message": {"content": ""}}]}
+    databricks.replies += [ran_out, chat_reply(json.dumps({"strategy": "s", "poem": GOOD_POEM}))]
+    assert (await oracle.consult(TOWN))["poem"] == GOOD_POEM
+    efforts = [json.loads(r.content)["reasoning_effort"] for r in databricks.requests]
+    assert efforts == ["high", "medium"]
+
+
 async def test_consult_without_config(monkeypatch):
     monkeypatch.delenv("DATABRICKS_TOKEN", raising=False)
     with pytest.raises(oracle.OracleUnavailable):
@@ -187,9 +200,9 @@ def client():
 
 
 def test_route_returns_poem_and_focus_but_not_strategy(client, databricks):
-    databricks.replies.append(chat_reply(json.dumps({"strategy": "secret plan", "poem": GOOD_POEM, "focus": "rain", "key": "thread"})))
+    databricks.replies.append(chat_reply(json.dumps({"strategy": "secret plan", "poem": GOOD_POEM, "focus": "rain"})))
     res = client.post("/advisor", json=TOWN)
-    assert res.status_code == 200 and res.json() == {"poem": GOOD_POEM, "focus": "rain", "key": "thread"}
+    assert res.status_code == 200 and res.json() == {"poem": GOOD_POEM, "focus": "rain"}
     sent = json.loads(databricks.requests[0].content)["messages"][1]["content"]
     assert "Secret diary" not in sent  # journal is stripped
 

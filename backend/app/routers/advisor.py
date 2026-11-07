@@ -15,7 +15,6 @@ MAX_BODY_BYTES = 200_000  # the frontend strips the journal; a town is a few KB
 class OracleResponse(BaseModel):
     poem: str
     focus: str | None = None  # one word; lets Friendly Cloud notice when the gods disagree with it
-    key: str | None = None  # the poem's clue word, shown with a faint glow
 
 
 @router.post("", response_model=OracleResponse)
@@ -29,4 +28,4 @@ async def consult_gods(town: TownSave, request: Request, player: CurrentPlayer):
         reply = await oracle.consult(town.model_dump(exclude={"journal"}))
     except oracle.OracleUnavailable as e:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
-    return OracleResponse(poem=reply["poem"], focus=reply["focus"], key=reply["key"])
+    return OracleResponse(poem=reply["poem"], focus=reply["focus"])
