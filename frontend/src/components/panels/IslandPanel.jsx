@@ -77,8 +77,8 @@ export default function IslandPanel() {
               </button>
             )}
             {freeSlots > 0 && (
-              <button className="btn-action" onClick={() => ui.setPanel('build')}>
-                <span>Build here…</span><small>Opens the build menu</small>
+              <button className="btn-action" onClick={() => { ui.setPlaceFocus(id); ui.setPanel('build') }}>
+                <span>Build on {def.name}</span><small>{freeSlots} open plot{freeSlots === 1 ? '' : 's'} on this island</small>
               </button>
             )}
           </div>

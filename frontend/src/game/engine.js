@@ -385,6 +385,7 @@ export function gameReducer(state, action) {
       if (!isUnlocked(state, buildingType)) return toast(state, 'warn', `${def.name} unlocks at level ${unlockLevel(buildingType)}.`)
       if (def.unique && countType(state, buildingType)) return toast(state, 'warn', `You already have a ${def.name}.`)
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
+      if (!islandAccess(state)[island]) return toast(state, 'warn', `Connect ${ISLANDS[island]?.name || 'that island'} before building there.`)
       if (!canAfford(state.resources, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
       if (slot < 0 || slot >= (ISLANDS[island].plots || []).length) return state
       if (state.buildings.some((b) => b.island === island && b.slot === slot)) return state

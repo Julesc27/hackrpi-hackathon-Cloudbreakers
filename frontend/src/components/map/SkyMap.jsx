@@ -38,12 +38,15 @@ export default function SkyMap() {
     if (ui.panel === 'island' && ui.selected) ui.camera.current?.focusIsland(ui.selected)
   }, [ui.panel, ui.selected]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While placing a building, pull back so every free plot is in view
+  // While placing, frame the island the player chose. Home-only buildings stay on New Haven.
+  // Otherwise show that island's plots up close; with no focus, pull back so every connected plot is visible.
   useEffect(() => {
     if (!ui.placing) return
-    if (BUILDINGS[ui.placing]?.homeOnly) ui.camera.current?.focusIsland('newHaven', false)
-    else ui.camera.current?.home()
-  }, [ui.placing]) // eslint-disable-line react-hooks/exhaustive-deps
+    const cam = ui.camera.current
+    if (BUILDINGS[ui.placing]?.homeOnly) cam?.focusIsland('newHaven', false, 1.35)
+    else if (ui.placeFocus && state.connected.includes(ui.placeFocus)) cam?.focusIsland(ui.placeFocus, false, 1.65)
+    else cam?.home()
+  }, [ui.placing, ui.placeFocus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const ids = Object.keys(ISLANDS)
 
@@ -75,7 +78,7 @@ export default function SkyMap() {
               <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="transparent" onClick={() => !ui.placing && ui.openIsland(id)}
                 onPointerEnter={() => setHover(id)} onPointerLeave={() => setHover((h) => (h === id ? null : h))} />
               {selected && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#f3d98f" strokeWidth="2.5" strokeDasharray="8 8" className="select-ring" pointerEvents="none" />}
-              {label && st !== 'connected' && (
+              {label && (
                 <g className="isle-label" transform={`translate(${cx} ${cy - ry * 0.15})`} onClick={() => !ui.placing && ui.openIsland(id)}><g className="ui-scale">
                   <rect x={-lw / 2} y="-14" width={lw} height="28" rx="14" fill="rgba(12,19,58,.82)" stroke="#d6b36a" strokeWidth="1.2" />
                   {st === 'discovered' && (
@@ -133,7 +136,20 @@ export default function SkyMap() {
           )
         })}
 
-        {/* plots while placing a building */}
+        {/* built player buildings can be inspected */}
+        {state.buildings.map((b) => {
+          if (b.slot < 0) return null
+          const plot = ISLANDS[b.island]?.plots?.[b.slot]
+          if (!plot) return null
+          return (
+            <g key={b.id} className="building-hit" transform={`translate(${plot[0]} ${plot[1]})`}
+              onClick={(e) => { e.stopPropagation(); if (!ui.placing) ui.openIsland(b.island) }}>
+              <polygon points="0,-18 26,0 0,18 -26,0" fill="transparent" />
+            </g>
+          )
+        })}
+
+        {/* plots while placing a building — every connected island, not only New Haven */}
         {placingDef && ids.map((id) => {
           if (statusOf(id) !== 'connected' || !access[id]) return null
           if (placingDef.homeOnly && id !== 'newHaven') return null

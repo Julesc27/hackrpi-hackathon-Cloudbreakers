@@ -70,7 +70,8 @@ function windowsOn(ctx, x, y, a, b, h, n, lights) {
 }
 
 function house(ctx, p) {
-  const a = p.a || 18, b = p.b || 14, h = p.h || 12, rh = p.rh || 9
+  const k = 1.2
+  const a = (p.a || 18) * k, b = (p.b || 14) * k, h = (p.h || 12) * k, rh = (p.rh || 9) * k
   ellipse(ctx, p.x, p.y + 2, (a + b) * 0.62, (a + b) * 0.26, 'rgba(18,24,60,.22)')
   box(ctx, p.x, p.y, a, b, h, { left: col(PAL.wall), right: col(PAL.wallShade), edge: EDGE })
   // cream stone flecks and a timber door
@@ -488,7 +489,11 @@ function crystal(ctx, p) {
 /* ---------------------------------------------------------------- registry */
 export const PROPS = {
   tree: { draw: tree, size: (p) => [16 * (p.s || 1), 40 * (p.s || 1), 5] },
-  house: { draw: house, anim: chimneySmoke, lights: houseLights, size: (p) => [(p.a || 18) + (p.b || 14), (p.h || 12) + (p.rh || 9) + (p.b || 14) / 2 + 12, 14] },
+  house: { draw: house, anim: chimneySmoke, lights: houseLights, size: (p) => {
+    const k = 1.2
+    const a = (p.a || 18) * k, b = (p.b || 14) * k, h = (p.h || 12) * k, rh = (p.rh || 9) * k
+    return [a + b, h + rh + b / 2 + 16, 16]
+  } },
   lamp: { draw: lamp, lights: (p) => [[p.x, p.y - 18, 18]], size: () => [6, 26, 3] },
   bench: { draw: bench, size: () => [10, 10, 5] },
   crate: { draw: crate, size: (p) => [8 * (p.s || 1), 10 * (p.s || 1), 6] },

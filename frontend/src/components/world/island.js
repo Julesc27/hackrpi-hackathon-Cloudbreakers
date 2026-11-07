@@ -106,7 +106,7 @@ function rockBody(ctx, isl, r) {
       const t = i / n
       const x = cx - rx + t * rx * 2
       const env = Math.sin(t * Math.PI) ** 0.8
-      const base = cy + 3 + env * depth * (0.55 + 0.45 * (1 - Math.abs(x - tipX) / rx))
+      const base = cy + 3 + env * depth * (0.78 + 0.22 * (1 - Math.abs(x - tipX) / rx))
       const spike = i % 2 ? base : base - depth * (0.12 + r() * 0.1) * env
       ctx.lineTo(x, spike)
     }
@@ -241,6 +241,23 @@ function paved(ctx, p, r) {
   }
 }
 
+/** A coastline with capes and coves, so the island is not a flat ellipse. */
+function organicEllipse(ctx, cx, cy, rx, ry, rand, fill) {
+  const n = Math.max(28, Math.round((rx + ry) / 4))
+  ctx.beginPath()
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * TAU
+    const wobble = 1 + Math.sin(a * 3.0 + cx * 0.01) * 0.07 + Math.sin(a * 7.0 + cy * 0.02) * 0.045 + (rand() - 0.5) * 0.035
+    const x = cx + Math.cos(a) * rx * wobble
+    const y = cy + Math.sin(a) * ry * wobble
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = fill
+  ctx.fill()
+}
+
 function meadowBlooms(ctx, isl, r) {
   const colors = ['#ffe07a', '#ff8eae', '#ffffff', '#c9a6ff', '#ffb067']
   const n = Math.max(4, Math.round(isl.ground[0][2] / 22))
@@ -299,12 +316,18 @@ export function drawIslandBase(ctx, isl) {
     ctx.fillRect(w.x - w.w * 0.18, y0, w.w * 0.36, w.len * 0.85)
     cloudPuff(ctx, w.x, y0 + w.len - 4, w.w * 0.85, 1)
   }
-  // 4. ground: an earthy lip, then grass
-  for (const [cx, cy, rx, ry] of isl.ground) ellipse(ctx, cx, cy + 5, rx, ry, col(isl.material === 'stone' ? PAL.stoneDark : PAL.grassEdge))
+  // 4. ground: a soil lip, then an irregular meadow (not a perfect oval)
+  const [gLight, gMid, gDark] = isl.biome || [PAL.grassLight, PAL.grass, PAL.grassDark]
+  for (const [cx, cy, rx, ry] of isl.ground) organicEllipse(ctx, cx, cy + 6, rx * 1.04, ry * 1.08, r, col(isl.material === 'stone' ? PAL.stoneDark : PAL.grassEdge))
   for (const [cx, cy, rx, ry] of isl.ground) {
-    const g = ctx.createRadialGradient(cx - rx * 0.2, cy - ry * 0.3, 2, cx, cy, rx)
-    g.addColorStop(0, col(PAL.grassLight)); g.addColorStop(0.6, col(PAL.grass)); g.addColorStop(1, col(PAL.grassDark))
-    ellipse(ctx, cx, cy, rx, ry, g)
+    const g = ctx.createRadialGradient(cx - rx * 0.25, cy - ry * 0.35, 2, cx, cy, rx)
+    g.addColorStop(0, col(gLight)); g.addColorStop(0.55, col(gMid)); g.addColorStop(1, col(gDark))
+    organicEllipse(ctx, cx, cy, rx, ry, r, g)
+    // a cliff shelf so the top reads as a terrace, not a disc
+    ctx.save()
+    ctx.globalAlpha = 0.35
+    organicEllipse(ctx, cx, cy + ry * 0.15, rx * 0.72, ry * 0.55, r, col(gDark))
+    ctx.restore()
   }
   // sunlit crown + grass blades, so the meadow reads even from far away
   for (const [cx, cy, rx, ry] of isl.ground) {

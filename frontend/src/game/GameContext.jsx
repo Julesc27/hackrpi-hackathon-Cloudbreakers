@@ -36,6 +36,7 @@ export function UIProvider({ children }) {
   const [panel, setPanel] = useState(null) // quests | build | advisor | island | journal | storage | map | settings
   const [selected, setSelected] = useState(null) // island id
   const [placing, setPlacing] = useState(null) // building type
+  const [placeFocus, setPlaceFocus] = useState(null) // island the player asked to build on
   const [bridgeRoute, setBridgeRoute] = useState(null) // route id for the bridge modal
   const [seenQuests, setSeenQuests] = useState([]) // mission ids the player has looked at
   // Short-lived world effects (floating numbers, sparkle bursts, collect bubbles), in map coordinates
@@ -53,11 +54,11 @@ export function UIProvider({ children }) {
   const camera = useRef(null)
 
   const openIsland = (id) => { setSelected(id); setPanel('island') }
-  const closeAll = () => { setPanel(null); setSelected(null); setPlacing(null); setBridgeRoute(null) }
+  const closeAll = () => { setPanel(null); setSelected(null); setPlacing(null); setPlaceFocus(null); setBridgeRoute(null) }
   const toggle = (name) => setPanel((p) => (p === name ? null : name))
 
   return (
-    <UICtx.Provider value={{ panel, setPanel, toggle, selected, setSelected, openIsland, placing, setPlacing, bridgeRoute, setBridgeRoute, seenQuests, setSeenQuests, closeAll, fx, emitFx, clearFx, camera }}>
+    <UICtx.Provider value={{ panel, setPanel, toggle, selected, setSelected, openIsland, placing, setPlacing, placeFocus, setPlaceFocus, bridgeRoute, setBridgeRoute, seenQuests, setSeenQuests, closeAll, fx, emitFx, clearFx, camera }}>
       {children}
     </UICtx.Provider>
   )

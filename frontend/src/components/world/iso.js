@@ -43,10 +43,11 @@ export function col(hex, a = 1) {
   if (v) return v
   let [r, g, b] = hexToRgb(hex)
   if (MODE === 'locked') {
+    // Night, but the neighborhood colors still read: purple roofs, blue water, white stone.
     const l = 0.3 * r + 0.59 * g + 0.11 * b
-    r = (r * 0.3 + l * 0.7) * 0.5 + 24
-    g = (g * 0.3 + l * 0.7) * 0.54 + 30
-    b = (b * 0.3 + l * 0.7) * 0.66 + 78
+    r = r * 0.62 + l * 0.18 + 14
+    g = g * 0.66 + l * 0.16 + 20
+    b = b * 0.78 + l * 0.12 + 42
   } else if (MODE === 'hidden') {
     const l = 0.3 * r + 0.59 * g + 0.11 * b
     r = l * 0.16 + 26

@@ -13,7 +13,8 @@ const P = (pts, w = 9) => ({ type: 'path', pts, w })
 
 export const WORLD_ISLANDS = {
   newHaven: {
-    seed: 11, depth: 210, material: 'stone',
+    seed: 11, depth: 250, material: 'stone',
+    biome: ['#d4f0a4', '#7ec86a', '#3f8a40'],
     ground: [[765, 455, 210, 112], [700, 535, 92, 48], [842, 525, 82, 44]],
     falls: [{ x: 738, w: 26, len: 200 }, { x: 600, w: 18, len: 110 }],
     paved: [
@@ -50,11 +51,12 @@ export const WORLD_ISLANDS = {
         ['n3', 'e_mistral'], ['n5', 'e_rain'], ['n1', 'e_mercy'], ['n7', 'e_hearth'], ['n11', 'e_verdant'], ['n9', 'e_gardens'],
       ],
     },
-    treeCount: 22,
+    treeCount: 34,
   },
 
   mistral: {
-    seed: 21, depth: 125,
+    seed: 21, depth: 160,
+    biome: ['#e2e6a0', '#8aaa52', '#4e7034'],
     ground: [[410, 238, 195, 92], [545, 265, 65, 36], [300, 285, 75, 38]],
     falls: [{ x: 575, w: 14, len: 85 }, { x: 330, w: 12, len: 60 }],
     paved: [P([[318, 282], [378, 268], [445, 262], [520, 262], [598, 262]]), P([[445, 262], [460, 295], [400, 300], [378, 268]], 7),
@@ -72,11 +74,12 @@ export const WORLD_ISLANDS = {
       nodes: { m1: [318, 282], m2: [378, 268], m3: [445, 262], m4: [520, 262], m5: [460, 295], m6: [400, 300], w1: [492, 252, 'tend'], e_newHaven: [598, 262] },
       edges: [['m1', 'm2'], ['m2', 'm3'], ['m3', 'm4'], ['m4', 'e_newHaven'], ['m3', 'm5'], ['m5', 'm6'], ['m6', 'm2'], ['m4', 'w1']],
     },
-    treeCount: 16,
+    treeCount: 24,
   },
 
   rain: {
-    seed: 31, depth: 115,
+    seed: 31, depth: 155,
+    biome: ['#c8f0d4', '#5eae90', '#2c7060'],
     ground: [[930, 212, 185, 92], [835, 250, 68, 34], [1048, 258, 72, 36]],
     falls: [{ x: 1000, w: 16, len: 80 }, { x: 870, w: 12, len: 55 }],
     paved: [P([[880, 250], [940, 262], [1000, 255], [1045, 268]]), P([[940, 262], [895, 298]], 8), P([[1000, 255], [980, 232]], 7)],
@@ -92,11 +95,12 @@ export const WORLD_ISLANDS = {
       nodes: { r1: [880, 250], r2: [940, 262], r3: [1000, 255], r4: [980, 232, 'look'], r5: [1045, 268], s1: [965, 268, 'sit'], e_newHaven: [895, 298] },
       edges: [['r1', 'r2'], ['r2', 'r3'], ['r3', 'r5'], ['r3', 'r4'], ['r2', 'e_newHaven'], ['r2', 's1']],
     },
-    treeCount: 12,
+    treeCount: 18,
   },
 
   mercy: {
-    seed: 41, depth: 115,
+    seed: 41, depth: 150,
+    biome: ['#e4f0cc', '#9cc48a', '#5a8858'],
     ground: [[318, 462, 160, 88], [440, 478, 58, 36], [228, 515, 62, 32]],
     falls: [{ x: 300, w: 14, len: 65 }],
     paved: [P([[215, 452], [250, 478], [318, 492], [390, 480], [445, 466], [490, 465]]),
@@ -112,11 +116,12 @@ export const WORLD_ISLANDS = {
       nodes: { c1: [318, 492], c2: [250, 478], c3: [215, 452, 'look'], c4: [390, 480], c5: [445, 466], s1: [400, 494, 'sit'], e_newHaven: [490, 465] },
       edges: [['c3', 'c2'], ['c2', 'c1'], ['c1', 'c4'], ['c4', 'c5'], ['c5', 'e_newHaven'], ['c4', 's1']],
     },
-    treeCount: 14,
+    treeCount: 20,
   },
 
   hearth: {
-    seed: 51, depth: 120,
+    seed: 51, depth: 165,
+    biome: ['#d2eea0', '#6fbf62', '#3a8444'],
     ground: [[1215, 452, 195, 102], [1080, 438, 58, 32], [1335, 522, 72, 38]],
     falls: [{ x: 1215, w: 16, len: 75 }],
     paved: [P([[1062, 436], [1110, 445], [1200, 435], [1270, 455], [1320, 488], [1380, 545]]), P([[1200, 435], [1210, 505], [1320, 488]], 8),
@@ -138,11 +143,12 @@ export const WORLD_ISLANDS = {
       nodes: { e_newHaven: [1062, 436], h1: [1110, 445], h2: [1200, 435], h3: [1270, 455], h4: [1320, 488], h5: [1210, 505], t1: [1175, 525, 'tend'], s1: [1182, 446, 'sit'], e_skyport: [1380, 545] },
       edges: [['e_newHaven', 'h1'], ['h1', 'h2'], ['h2', 'h3'], ['h3', 'h4'], ['h4', 'e_skyport'], ['h2', 'h5'], ['h5', 'h4'], ['h5', 't1'], ['h2', 's1']],
     },
-    treeCount: 14,
+    treeCount: 20,
   },
 
   verdant: {
-    seed: 61, depth: 110,
+    seed: 61, depth: 150,
+    biome: ['#7fb85e', '#3d7a3c', '#1e4a28'],
     ground: [[505, 688, 165, 82], [615, 668, 55, 30], [395, 715, 58, 30]],
     falls: [],
     paved: [P([[598, 628], [575, 660], [530, 675], [470, 680], [420, 705], [510, 705], [530, 675]]),
@@ -157,11 +163,12 @@ export const WORLD_ISLANDS = {
       nodes: { e_newHaven: [598, 628], v3: [575, 660], v2: [530, 675], v1: [470, 680, 'look'], v5: [420, 705], v4: [510, 705], m1: [495, 668, 'look'] },
       edges: [['e_newHaven', 'v3'], ['v3', 'v2'], ['v2', 'v1'], ['v1', 'v5'], ['v5', 'v4'], ['v4', 'v2'], ['v2', 'm1']],
     },
-    treeCount: 22, pines: 0.8,
+    treeCount: 32, pines: 0.85,
   },
 
   gardens: {
-    seed: 71, depth: 110,
+    seed: 71, depth: 150,
+    biome: ['#e4ee8a', '#8fbf48', '#4e7a2c'],
     ground: [[1040, 690, 182, 86], [905, 688, 58, 30], [1172, 722, 58, 30]],
     falls: [{ x: 1088, w: 14, len: 60 }],
     paved: [P([[930, 640], [960, 672], [1030, 690], [1110, 690]]),
@@ -176,11 +183,12 @@ export const WORLD_ISLANDS = {
       nodes: { e_newHaven: [930, 640], g1: [960, 672], g2: [1030, 690], g3: [1110, 690], t1: [995, 720, 'tend'], t2: [1092, 708, 'tend'], t3: [1058, 742, 'tend'] },
       edges: [['e_newHaven', 'g1'], ['g1', 'g2'], ['g2', 'g3'], ['g2', 't1'], ['g3', 't2'], ['g2', 't3']],
     },
-    treeCount: 14,
+    treeCount: 20,
   },
 
   skyport: {
-    seed: 81, depth: 90,
+    seed: 81, depth: 130,
+    biome: ['#f0ddb0', '#c4a574', '#8a6840'],
     ground: [[1472, 655, 92, 48], [1412, 612, 42, 24]],
     falls: [{ x: 1395, w: 14, len: 70 }],
     paved: [{ type: 'deck', x: 1482, y: 642, a: 96, b: 56, legs: 60 }],
@@ -194,7 +202,7 @@ export const WORLD_ISLANDS = {
       nodes: { e_hearth: [1410, 605], s1: [1442, 630], s2: [1490, 640], s3: [1522, 628, 'look'] },
       edges: [['e_hearth', 's1'], ['s1', 's2'], ['s2', 's3']],
     },
-    treeCount: 4,
+    treeCount: 6,
   },
 }
 
