@@ -4,12 +4,14 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import db
+from app import auth, db
+from app.routers import auth as auth_routes
 from app.routers import players
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    auth.check_config()
     await db.connect()
     yield
     await db.disconnect()
@@ -30,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_routes.router)
 app.include_router(players.router)
 
 

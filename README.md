@@ -69,3 +69,16 @@ frontend/src/
 Copy `backend/.env.example` to `backend/.env` and fill in the Atlas connection string.
 API runs at http://localhost:8000 (docs at http://localhost:8000/docs).
 `.env` files are git-ignored — never commit them or put DB credentials in the frontend.
+
+## Auth API
+
+| Method | Path | Auth | What |
+|---|---|---|---|
+| POST | `/auth/register` | — | `{username, password}` → `{access_token, player}` |
+| POST | `/auth/login` | — | `{username, password}` → `{access_token, player}` |
+| GET | `/me` | Bearer | your player |
+| PATCH | `/me` | Bearer | update `experience` / `coins` / `food` / `completion` (completion is merged) |
+| GET | `/players/{username}` | — | public profile |
+
+Send the token as `Authorization: Bearer <access_token>`. Tokens last 7 days.
+Backend needs `JWT_SECRET` in `backend/.env` (and in Railway variables).

@@ -1,23 +1,31 @@
 from fastapi import APIRouter, HTTPException
-from pymongo.errors import DuplicateKeyError
 
-from app.models import Player
+from app.auth import CurrentPlayer
+from app.models import Player, PlayerOut, PlayerUpdate
 
-router = APIRouter(prefix="/players", tags=["players"])
-
-
-@router.post("", response_model=Player, status_code=201)
-async def create_player(player: Player):
-    try:
-        await player.insert()
-    except DuplicateKeyError:
-        raise HTTPException(409, "Username already taken")
-    return player
+router = APIRouter(tags=["players"])
 
 
-@router.get("/{username}", response_model=Player)
+@router.get("/me", response_model=PlayerOut)
+async def get_me(player: CurrentPlayer):
+    return PlayerOut.from_doc(player)
+
+
+@router.patch("/me", response_model=PlayerOut)
+async def update_me(changes: PlayerUpdate, player: CurrentPlayer):
+    data = changes.model_dump(exclude_unset=True, exclude_none=True)
+    if "completion" in data:
+        player.completion = {**player.completion, **data.pop("completion")}
+    for field, value in data.items():
+        setattr(player, field, value)
+    await player.save()
+    return PlayerOut.from_doc(player)
+
+
+@router.get("/players/{username}", response_model=PlayerOut)
 async def get_player(username: str):
+    """Public profile lookup (e.g. leaderboards). No login needed."""
     player = await Player.find_one(Player.username == username)
     if player is None:
         raise HTTPException(404, "Player not found")
-    return player
+    return PlayerOut.from_doc(player)
