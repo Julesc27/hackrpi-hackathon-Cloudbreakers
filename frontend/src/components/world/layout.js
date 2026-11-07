@@ -6,7 +6,7 @@
 //   props   – things standing on the island (see props.js)
 //   nav     – walkway graph residents move along: nodes { id: [x, y, tag?] }, edges [a, b]
 // Building plots for the player live in game/data.js (ISLANDS[id].plots) and are kept clear here.
-import { ISLAND_OFFSETS } from '../../game/mapLayout.js'
+import { ISLAND_OFFSETS, shiftIslandPoint } from '../../game/mapLayout.js'
 import { ISLANDS } from '../../game/data.js'
 import { rng } from './iso.js'
 
@@ -232,8 +232,8 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
   for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
-  e_mistral: [585, 382], e_rain: [902, 377], e_mercy: [490, 526],
-  e_hearth: [1064, 518], e_verdant: [585, 382], e_prism: [1012, 648], e_gardens: [1005, 695],
+  e_mistral: [579, 370], e_rain: [915, 365], e_mercy: [490, 526],
+  e_hearth: [1080, 520], e_verdant: [579, 370], e_prism: [1080, 520], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
 
@@ -246,20 +246,23 @@ export const BRIDGE_ENDS = {
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
 }
 // Land on the walking surface inside the dock posts, not on its outer corner.
-WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [535, 239]
+WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = shiftIslandPoint('verdant', [535, 239])
 WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1184, 230]
-WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1191, 882]
+WORLD_ISLANDS.prism.nav.nodes.e_newHaven = shiftIslandPoint('prism', [1191, 882])
 WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [312, 525]
 WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1305, 491]
 
 // Continuous, on-island approaches: first point is the bridge landing, last point
 // joins the existing painted path. They are constructed only with the crossing.
 export const BRIDGE_APPROACHES = {
-  'verdant-haven': { a: [[535, 239], [518, 225], [496, 214]], b: [[585, 382], [606, 390], [628, 394]] },
-  'rain-haven': { a: [[1184, 230], [1174, 215], [1160, 207]], b: [[902, 377], [885, 389], [866, 401]] },
-  'prism-haven': { a: [[1191, 882], [1214, 890], [1238, 892]], b: [[1012, 648], [988, 650], [970, 640]] },
+  'verdant-haven': { a: [[535, 239], [518, 225], [496, 214]], b: [[579, 370], [596, 381], [616, 390]] },
+  'rain-haven': { a: [[1184, 230], [1174, 215], [1160, 207]], b: [[915, 365], [897, 377], [883, 391]] },
+  'prism-haven': { a: [[1191, 882], [1214, 890], [1238, 892]], b: [[1080, 520], [1060, 520], [1037, 533]] },
   'mercy-haven': { a: [[312, 525], [296, 514], [279, 509]], b: [[490, 526], [508, 527], [531, 539]] },
-  'hearth-haven': { a: [[1305, 491], [1335, 495], [1358, 480]], b: [[1064, 518], [1045, 521], [1027, 533]] },
+  'hearth-haven': { a: [[1305, 491], [1335, 495], [1358, 480]], b: [[1080, 520], [1060, 520], [1037, 533]] },
+}
+for (const [route, id] of [['verdant-haven', 'verdant'], ['prism-haven', 'prism']]) {
+  BRIDGE_APPROACHES[route].a = BRIDGE_APPROACHES[route].a.map((point) => shiftIslandPoint(id, point))
 }
 
 export function bridgePoints(routeId) {

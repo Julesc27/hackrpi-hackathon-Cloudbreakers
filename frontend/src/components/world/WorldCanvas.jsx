@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { STARTER_BEACON } from '../../game/mapLayout.js'
+import { STARTER_BEACON, INTERACTION_POINTS } from '../../game/mapLayout.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
@@ -326,7 +326,7 @@ export default function WorldCanvas({ hoverRef }) {
               }
             }
             if (isl.id === 'prism') {
-              glow(ctx, 1360, 890, 28 + Math.sin(t * 1.7) * 5, '#80dfff', .16)
+              glow(ctx, ...INTERACTION_POINTS.crystals, 28 + Math.sin(t * 1.7) * 5, '#80dfff', .16)
             }
 
             ctx.restore()

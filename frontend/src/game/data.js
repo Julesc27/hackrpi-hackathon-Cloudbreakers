@@ -1,4 +1,4 @@
-import { ISLAND_OFFSETS, STARTER_PLOTS } from './mapLayout.js'
+import { ISLAND_OFFSETS, STARTER_PLOTS, BRIDGE_LAYOUT_SHIFTS, shiftIslandPoint } from './mapLayout.js'
 
 // Static game content: islands, routes, buildings, levels, missions, weather.
 // Everything here is plain data so the backend can later serve the same shapes.
@@ -75,6 +75,10 @@ ISLANDS.verdant.hit = [355, 215, 240, 155]
 ISLANDS.verdant.plots = [[280, 213], [340, 227], [400, 241], [300, 245], [360, 259], [420, 273]]
 ISLANDS.prism.hit = [1355, 945, 230, 160]
 ISLANDS.prism.plots = [[1278, 879], [1474, 924], [1292, 975], [1445, 1002]]
+for (const id of Object.keys(BRIDGE_LAYOUT_SHIFTS)) {
+  ISLANDS[id].hit = shiftIslandPoint(id, ISLANDS[id].hit)
+  ISLANDS[id].plots = ISLANDS[id].plots.map((point) => shiftIslandPoint(id, point))
+}
 
 export const ROUTES = [
   { id: 'verdant-haven', a: 'newHaven', b: 'verdant', wood: 14, note: 'Timber, crops and seeds for a growing town.' },

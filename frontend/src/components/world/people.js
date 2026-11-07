@@ -18,7 +18,7 @@ export function bridgeCurve(routeId, n = 10) {
     const ends = BRIDGE_ENDS[routeId]
     const bobA = WORLD_ISLANDS[ends.a[0]]._bob || 0
     const bobB = WORLD_ISLANDS[ends.b[0]]._bob || 0
-    const y = p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t + Math.sin(t * Math.PI) * 5
+    const y = p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t - Math.sin(t * Math.PI) * 7
     out.push([x, y])
   }
   return out
