@@ -232,8 +232,8 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
   for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
-  e_mistral: [566, 363], e_rain: [930, 360], e_mercy: [470, 520],
-  e_hearth: [1086, 523], e_verdant: [566, 363], e_prism: [1038, 634], e_gardens: [1005, 695],
+  e_mistral: [585, 382], e_rain: [902, 377], e_mercy: [490, 526],
+  e_hearth: [1064, 518], e_verdant: [585, 382], e_prism: [1012, 648], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
 
@@ -245,12 +245,22 @@ export const BRIDGE_ENDS = {
   'mercy-haven': { a: ['mercy', 'e_newHaven'], b: ['newHaven', 'e_mercy'] },
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
 }
-WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [550, 235]
-// Match the painted landing surfaces, rather than the older procedural island layout.
-WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1184, 258]
-WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1188, 880]
-WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [321, 534]
-WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1290, 493]
+// Land on the walking surface inside the dock posts, not on its outer corner.
+WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [535, 239]
+WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1184, 230]
+WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1191, 882]
+WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [312, 525]
+WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1305, 491]
+
+// Continuous, on-island approaches: first point is the bridge landing, last point
+// joins the existing painted path. They are constructed only with the crossing.
+export const BRIDGE_APPROACHES = {
+  'verdant-haven': { a: [[535, 239], [518, 225], [496, 214]], b: [[585, 382], [606, 390], [628, 394]] },
+  'rain-haven': { a: [[1184, 230], [1174, 215], [1160, 207]], b: [[902, 377], [885, 389], [866, 401]] },
+  'prism-haven': { a: [[1191, 882], [1214, 890], [1238, 892]], b: [[1012, 648], [988, 650], [970, 640]] },
+  'mercy-haven': { a: [[312, 525], [296, 514], [279, 509]], b: [[490, 526], [508, 527], [531, 539]] },
+  'hearth-haven': { a: [[1305, 491], [1335, 495], [1358, 480]], b: [[1064, 518], [1045, 521], [1027, 533]] },
+}
 
 export function bridgePoints(routeId) {
   const e = BRIDGE_ENDS[routeId]
