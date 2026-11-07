@@ -6,6 +6,7 @@ import { SyncProvider } from './game/CloudSync.jsx'
 import AuthModal from './components/panels/AuthModal.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
+import FlyingResources from './components/hud/FlyingResources.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
 import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls, CameraHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
@@ -86,6 +87,9 @@ function GameScreen() {
       )}
 
       <Toasts />
+
+      {/* Fixed overlay for resource tokens flying from harvest sites to the top bar */}
+      <FlyingResources />
     </div>
   )
 }

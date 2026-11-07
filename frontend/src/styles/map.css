@@ -139,3 +139,69 @@
 .bubble-bob { animation: bubbleBob 1.8s ease-in-out infinite; filter: drop-shadow(0 4px 6px rgba(10, 16, 50, 0.35)); }
 @keyframes bubbleBob { 50% { transform: translateY(-6px); } }
 .bubble-num { font-family: var(--font-body); font-weight: 900; font-size: 13px; fill: #fff6d6; }
+
+/* ---------- Flying resource tokens ---------- */
+.flying-resources-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  overflow: hidden;
+}
+
+.flying-token {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(13, 25, 58, 0.78);
+  border: 1.5px solid rgba(243, 217, 143, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 10px rgba(243, 217, 143, 0.15);
+  will-change: transform, opacity;
+}
+
+/* Token glow tints by resource type */
+.flying-token-wood   { border-color: rgba(177, 220, 139, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(177,220,139,.2); }
+.flying-token-energy { border-color: rgba(246, 207, 75, 0.7);  box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(246,207,75,.22); }
+.flying-token-water  { border-color: rgba(148, 233, 255, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(148,233,255,.22); }
+.flying-token-food   { border-color: rgba(140, 215, 110, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(140,215,110,.22); }
+.flying-token-coins  { border-color: rgba(244, 195, 79, 0.7);  box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(244,195,79,.22); }
+.flying-token-stone  { border-color: rgba(181, 198, 217, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(181,198,217,.18); }
+.flying-token-crystals { border-color: rgba(126, 230, 255, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(126,230,255,.22); }
+.flying-token-seeds  { border-color: rgba(199, 216, 121, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(199,216,121,.18); }
+.flying-token-fish   { border-color: rgba(143, 205, 223, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(143,205,223,.18); }
+.flying-token-materials { border-color: rgba(215, 185, 133, 0.7); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 10px rgba(215,185,133,.18); }
+
+/* Impact flash on the topbar resource when tokens land */
+.res-impact-burst {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,246,214,0.9) 0%, rgba(243,217,143,0.5) 40%, transparent 72%);
+  animation: resBurst 0.42s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes resBurst {
+  0%   { transform: translate(-50%,-50%) scale(0.3); opacity: 1; }
+  60%  { transform: translate(-50%,-50%) scale(1.5); opacity: 0.6; }
+  100% { transform: translate(-50%,-50%) scale(2.2); opacity: 0; }
+}
+
+/* Topbar resource element bump when a token lands */
+@keyframes resBump {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.18); }
+  65%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.res-bump {
+  animation: resBump 0.32s cubic-bezier(.2,1.5,.4,1) forwards;
+}

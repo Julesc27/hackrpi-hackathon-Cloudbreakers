@@ -125,6 +125,29 @@
 .delta.up { color: var(--up); }
 .delta.down { color: var(--down); }
 .delta.zero { color: var(--dim); }
+/* Temporary "+X" badge that pops up when you gain a resource */
+.res-num, .res-big { position: relative; }
+.gain-flash {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff6d6;
+  text-shadow: 0 1px 4px rgba(10, 16, 48, 0.9), 0 0 8px rgba(243, 217, 143, 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: gainFloat 1.6s cubic-bezier(.2,.8,.3,1) forwards;
+  z-index: 20;
+}
+@keyframes gainFloat {
+  0%   { opacity: 0;   transform: translateX(-50%) translateY(4px)  scale(0.7); }
+  12%  { opacity: 1;   transform: translateX(-50%) translateY(-2px) scale(1.18); }
+  55%  { opacity: 1;   transform: translateX(-50%) translateY(-10px) scale(1); }
+  100% { opacity: 0;   transform: translateX(-50%) translateY(-26px) scale(0.9); }
+}
 
 /* ---------- Level badge ---------- */
 .level-badge { display: flex; align-items: center; flex: none; }
@@ -398,7 +421,7 @@
   .logo-plaque { padding: 4px 10px; }
   .game-title { font-size: 16px; letter-spacing: 0.06em; }
   .town-ribbon { display: none; }
-  .topbar { order: 3; width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); padding: 2px; }
+  .topbar { order: 3; width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; }
   .res { padding: 5px 8px; gap: 6px; }
   .res + .res::before { display: none; }
   .res-label { font-size: 9px; letter-spacing: 0.04em; }
