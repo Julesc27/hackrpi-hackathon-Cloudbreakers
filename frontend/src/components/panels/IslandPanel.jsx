@@ -58,7 +58,12 @@ export default function IslandPanel() {
           </ul>
           <div className="action-stack">
             {id === 'newHaven' && (
-              <button className="btn-action" disabled={noActions} onClick={() => dispatch({ type: 'GATHER_WOOD' })}>
+              <button
+                className="btn-action"
+                disabled={noActions}
+                onClick={() => dispatch({ type: 'GATHER_WOOD' })}
+                data-tutorial="gather-wood-btn"
+              >
                 <span>Gather wood</span><small>1 action · +{GATHER_AMOUNT} wood</small>
               </button>
             )}

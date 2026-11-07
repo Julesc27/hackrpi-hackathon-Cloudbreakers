@@ -8,7 +8,8 @@ import { BottomNav, TurnControls, SettingsButton, ObjectiveRibbon, PlacingHint }
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
-import { JournalModal, StorageModal, MapModal, SettingsModal, TurnReport, IntroModal, Toasts } from './components/panels/Modals.jsx'
+import { JournalModal, StorageModal, MapModal, SettingsModal, TurnReport, Toasts } from './components/panels/Modals.jsx'
+import Tutorial from './components/tutorial/Tutorial.jsx'
 
 function GameScreen() {
   const { state } = useGame()
@@ -54,7 +55,7 @@ function GameScreen() {
       {ui.panel === 'settings' && <SettingsModal />}
       {ui.bridgeRoute && <BridgeModal />}
       <TurnReport />
-      {!state.seenIntro && <IntroModal />}
+      <Tutorial />
       <Toasts />
     </div>
   )

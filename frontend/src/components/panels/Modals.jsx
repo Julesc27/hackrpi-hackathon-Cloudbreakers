@@ -38,7 +38,7 @@ export function StorageModal() {
   const rows = ['wood', 'water', 'food', 'energy', 'coins']
   return (
     <Modal title="Storehouse" kicker="Stock and flow next turn" onClose={() => ui.setPanel(null)}>
-      <table className="table">
+      <table className="table" data-tutorial="storage-table">
         <thead><tr><th>Resource</th><th>Stock</th><th>In</th><th>Out</th><th>Net</th></tr></thead>
         <tbody>
           {rows.map((k) => {
@@ -143,6 +143,18 @@ export function SettingsModal() {
   return (
     <Modal title="Settings" onClose={() => ui.setPanel(null)} size="sm">
       <p className="muted">Your town saves automatically in this browser.</p>
+      <button
+        className="btn-gold"
+        style={{ width: '100%', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+        onClick={() => {
+          ui.setPanel(null)
+          ui.startTutorial()
+        }}
+        data-tutorial="how-to-play-btn"
+      >
+        <ArtIcon name="cloud" size={24} />
+        <span>How to Play</span>
+      </button>
       {confirm ? (
         <div className="confirm">
           <p>Start over? All progress in this browser will be lost.</p>
@@ -176,7 +188,7 @@ export function TurnReport() {
       kicker={`${w.name} — ${w.text}`}
       onClose={close}
       size="lg"
-      footer={<button className="btn-gold" onClick={close} autoFocus>Begin turn {r.turn + 1}</button>}
+      footer={<button className="btn-gold" onClick={close} autoFocus data-tutorial="report-continue-btn">Begin turn {r.turn + 1}</button>}
     >
       {r.shortages.length > 0 && <div className="alert">Shortage: {r.shortages.join(', ')}. Happiness fell and residents may leave.</div>}
       <div className="report-grid">
@@ -268,4 +280,3 @@ export function Toasts() {
     </div>
   )
 }
-

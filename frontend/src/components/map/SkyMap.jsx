@@ -147,7 +147,15 @@ export default function SkyMap() {
         const lw = label ? label.length * 8.4 + 34 : 0
         return (
           <g key={id} className={`isle-hit isle-hit-${st2}`}>
-            <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="transparent" onClick={() => !ui.placing && ui.openIsland(id)} />
+            <ellipse
+              cx={cx}
+              cy={cy}
+              rx={rx}
+              ry={ry}
+              fill="transparent"
+              onClick={() => !ui.placing && ui.openIsland(id)}
+              data-tutorial={id === 'newHaven' ? 'island-newHaven' : undefined}
+            />
             {selected && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#f3d98f" strokeWidth="2.5" strokeDasharray="8 8" className="select-ring" pointerEvents="none" />}
             {label && st2 !== 'connected' && (
               <g className="isle-label" transform={`translate(${cx} ${cy - ry * 0.15})`} onClick={() => !ui.placing && ui.openIsland(id)}>
@@ -166,19 +174,30 @@ export default function SkyMap() {
       })}
 
       {/* plots while placing a building */}
-      {placingDef && ids.map((id) => {
-        if (statusOf(id) !== 'connected' || !access[id]) return null
-        if (placingDef.homeOnly && id !== 'newHaven') return null
-        return ISLANDS[id].plots.map(([x, y], i) => {
-          if (state.buildings.some((b) => b.island === id && b.slot === i)) return null
-          return (
-            <g key={`${id}-${i}`} transform={`translate(${x} ${y})`} className="slot" onClick={() => place(id, i)}>
-              <polygon points="0,-12 24,0 0,12 -24,0" fill="rgba(243,217,143,.35)" stroke="#fff1c4" strokeWidth="1.8" />
-              <path d="M-6 0h12M0 -6v12" stroke="#fff6d6" strokeWidth="2.2" strokeLinecap="round" transform="translate(0 -22)" />
-            </g>
-          )
+      {placingDef && (() => {
+        let firstPlotMarked = false
+        return ids.map((id) => {
+          if (statusOf(id) !== 'connected' || !access[id]) return null
+          if (placingDef.homeOnly && id !== 'newHaven') return null
+          return ISLANDS[id].plots.map(([x, y], i) => {
+            if (state.buildings.some((b) => b.island === id && b.slot === i)) return null
+            const isTutorialPlot = id === 'newHaven' && !firstPlotMarked
+            if (isTutorialPlot) firstPlotMarked = true
+            return (
+              <g
+                key={`${id}-${i}`}
+                transform={`translate(${x} ${y})`}
+                className="slot"
+                onClick={() => place(id, i)}
+                data-tutorial={isTutorialPlot ? 'plot-newHaven' : undefined}
+              >
+                <polygon points="0,-12 24,0 0,12 -24,0" fill="rgba(243,217,143,.35)" stroke="#fff1c4" strokeWidth="1.8" />
+                <path d="M-6 0h12M0 -6v12" stroke="#fff6d6" strokeWidth="2.2" strokeLinecap="round" transform="translate(0 -22)" />
+              </g>
+            )
+          })
         })
-      })}
+      })()}
     </svg>
     </div>
   )

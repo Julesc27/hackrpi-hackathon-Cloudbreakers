@@ -71,7 +71,11 @@ export function QuestBook() {
               const featured = isActive && m === active[0]
               const [v, g] = m.progress(state)
               return (
-                <li key={m.id} className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}>
+                <li
+                  key={m.id}
+                  className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}
+                  data-tutorial={featured || i === 0 ? 'quest-featured' : undefined}
+                >
                   <div className="qnum">{i + 1}</div>
                   <div className="qbody">
                     <div className="qtitle">{m.name}</div>
@@ -139,7 +143,7 @@ export function BuildPanel() {
             if (def.energyCap) fx.push(`+${def.energyCap} energy storage`)
             if (def.happiness) fx.push(`${def.happiness > 0 ? '+' : ''}${def.happiness} happiness`)
             return (
-              <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`}>
+              <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`} data-tutorial={`build-card-${key}`}>
                 <div className="ws-name">{def.name}</div>
                 <img className="ws-art" src={`/art/build-${key}.webp`} alt="" />
                 <p className="ws-desc">{def.desc}</p>
@@ -154,6 +158,7 @@ export function BuildPanel() {
                 <button
                   className="gold-plus"
                   disabled={disabled}
+                  data-tutorial={`build-btn-${key}`}
                   title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : noActions ? 'No actions left' : `Build ${def.name}`}
                   onClick={() => { ui.setPlacing(key); ui.setPanel(null) }}
                 >

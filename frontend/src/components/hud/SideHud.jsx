@@ -32,7 +32,11 @@ export function LeftRail() {
       {items.map(({ id, label, icon, badge }, i) => (
         <span key={id} className="rail-item">
           {i > 0 && <span className="rail-sep">✦</span>}
-          <button className={`rail-btn panel${ui.panel === id ? ' is-active' : ''}`} onClick={() => ui.toggle(id)}>
+          <button
+            className={`rail-btn panel${ui.panel === id ? ' is-active' : ''}`}
+            onClick={() => ui.toggle(id)}
+            data-tutorial={`rail-${id}`}
+          >
             {badge && <span className="badge">!</span>}
             <ArtIcon name={icon} size={50} />
             <span>{label}</span>
@@ -65,7 +69,7 @@ export function WeatherCard() {
   const canForecast = state.connected.includes('mistral')
   const f = WEATHER[state.forecast]
   return (
-    <div className="weather-card panel orn">
+    <div className="weather-card panel orn" data-tutorial="hud-weather">
       <div className="weather-head">
         {w.icon === 'sun' ? <ArtIcon name="sun" size={52} /> : <WeatherIcon kind={w.icon} size={46} />}
         <div>
