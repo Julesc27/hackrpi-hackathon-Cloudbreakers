@@ -2,16 +2,31 @@ import { useEffect } from 'react'
 import { GameProvider, UIProvider, useGame, useUI } from './game/GameContext.jsx'
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import { SyncProvider } from './game/CloudSync.jsx'
+
 import AuthModal from './components/panels/AuthModal.jsx'
 import Backdrop from './components/map/Backdrop.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
+import {
+  BottomNav,
+  ProgressionCard,
+  SettingsButton,
+  ObjectiveRibbon,
+  PlacingHint,
+} from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
-import { JournalModal, StorageModal, MapModal, SettingsModal, IntroModal, Toasts } from './components/panels/Modals.jsx'
+import {
+  JournalModal,
+  StorageModal,
+  MapModal,
+  SettingsModal,
+  IntroModal,
+  Toasts,
+} from './components/panels/Modals.jsx'
+import Tutorial from './components/tutorial/Tutorial.jsx'
 
 function GameScreen() {
   const { state } = useGame()
@@ -21,9 +36,14 @@ function GameScreen() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return
-      if (ui.placing) ui.setPlacing(null)
-      else if (['quests', 'build', 'advisor', 'island'].includes(ui.panel)) ui.setPanel(null)
+
+      if (ui.placing) {
+        ui.setPlacing(null)
+      } else if (['quests', 'build', 'advisor', 'island'].includes(ui.panel)) {
+        ui.setPanel(null)
+      }
     }
+
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [ui])
@@ -39,6 +59,7 @@ function GameScreen() {
           <TopBar />
           <LevelBadge />
         </header>
+
         <ObjectiveRibbon />
         <WeatherCard />
         <LeftRail />
@@ -56,9 +77,19 @@ function GameScreen() {
       {ui.panel === 'storage' && <StorageModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
+
       {ui.bridgeRoute && <BridgeModal />}
+
       {auth.loginOpen && <AuthModal />}
-      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && <IntroModal />}
+
+      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && (
+        <IntroModal />
+      )}
+
+      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && (
+        <Tutorial />
+      )}
+
       <Toasts />
     </div>
   )

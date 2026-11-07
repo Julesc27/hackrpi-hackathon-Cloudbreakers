@@ -29,6 +29,7 @@ export function QuestBook() {
   useEsc(close)
   const active = activeMissions(state)
   const activeIds = active.map((m) => m.id).join()
+
   useEffect(() => {
     ui.setSeenQuests((seen) => [...new Set([...seen, ...activeIds.split(',')])])
   }, [activeIds]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -39,6 +40,7 @@ export function QuestBook() {
     ...MISSIONS.filter((m) => !state.completed.includes(m.id) && !active.includes(m)),
     ...MISSIONS.filter((m) => state.completed.includes(m.id)),
   ]
+
   const go = (m) => {
     const id = m.id
     if (['firstSteps', 'anchor', 'keepLightsOn'].includes(id)) ui.setPanel('build')
@@ -46,6 +48,12 @@ export function QuestBook() {
     else if (id === 'beaconWakes') ui.openIsland('newHaven')
     else if (id === 'balancedTown') ui.setPanel('storage')
     else ui.setPanel(null)
+
+    // If the tutorial is on the quest-book step, clicking Continue Quest should advance it
+    if (ui.tutorialStep === 6) {
+      ui.setPanel(null)
+      ui.setTutorialStep(7)
+    }
   }
 
   return (
@@ -70,8 +78,13 @@ export function QuestBook() {
               const isActive = active.includes(m)
               const featured = isActive && m === active[0]
               const [v, g] = m.progress(state)
+
               return (
-                <li key={m.id} className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}>
+                <li
+                  key={m.id}
+                  className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}
+                  data-tutorial={featured || i === 0 ? 'quest-featured' : undefined}
+                >
                   <div className="qnum">{i + 1}</div>
                   <div className="qbody">
                     <div className="qtitle">{m.name}</div>
@@ -116,6 +129,7 @@ export function BuildPanel() {
   const ui = useUI()
   const close = () => ui.setPanel(null)
   useEsc(close)
+
   return (
     <aside className="workshop" role="dialog" aria-label="Town Workshop">
       <div className="workshop-inner parchment">
@@ -133,12 +147,14 @@ export function BuildPanel() {
             const built = def.unique && countType(state, key) > 0
             const disabled = !unlocked || !affordable || built
             const fx = []
+
             if (def.housing) fx.push(`Houses ${def.housing}`)
             if (def.capBonus) fx.push(`+${def.capBonus} storage`)
             if (def.energyCap) fx.push(`+${def.energyCap} energy storage`)
             if (def.happiness) fx.push(`${def.happiness > 0 ? '+' : ''}${def.happiness} happiness`)
+
             return (
-              <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`}>
+              <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`} data-tutorial={`build-card-${key}`}>
                 <div className="ws-name">{def.name}</div>
                 <img className="ws-art" src={`/art/build-${key}.webp`} alt="" />
                 <p className="ws-desc">{def.desc}</p>
@@ -153,6 +169,7 @@ export function BuildPanel() {
                 <button
                   className="gold-plus"
                   disabled={disabled}
+                  data-tutorial={`build-btn-${key}`}
                   title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
                   onClick={() => { ui.setPlacing(key); ui.setPanel(null) }}
                 >
@@ -176,6 +193,7 @@ export function AdvisorPanel() {
   const [n, setN] = useState(0)
   const all = getAdvice(state)
   const a = all[n % all.length]
+
   return (
     <aside className="notes" role="dialog" aria-label="Cloud's Notes">
       <img className="notes-header" src="/art/advisor-header.webp" alt="Cloud's Notes — here for a brighter tomorrow" />
