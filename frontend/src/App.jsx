@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
 import { GameProvider, UIProvider, useGame, useUI } from './game/GameContext.jsx'
+import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
+import { SyncProvider } from './game/CloudSync.jsx'
+import AuthModal from './components/panels/AuthModal.jsx'
 import Backdrop from './components/map/Backdrop.jsx'
 import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
@@ -13,6 +16,7 @@ import { JournalModal, StorageModal, MapModal, SettingsModal, TurnReport, IntroM
 function GameScreen() {
   const { state } = useGame()
   const ui = useUI()
+  const auth = useAuth()
 
   useEffect(() => {
     const onKey = (e) => {
@@ -54,7 +58,8 @@ function GameScreen() {
       {ui.panel === 'settings' && <SettingsModal />}
       {ui.bridgeRoute && <BridgeModal />}
       <TurnReport />
-      {!state.seenIntro && <IntroModal />}
+      {auth.loginOpen && <AuthModal />}
+      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && <IntroModal />}
       <Toasts />
     </div>
   )
@@ -62,10 +67,14 @@ function GameScreen() {
 
 export default function App() {
   return (
-    <GameProvider>
-      <UIProvider>
-        <GameScreen />
-      </UIProvider>
-    </GameProvider>
+    <AuthProvider>
+      <GameProvider>
+        <SyncProvider>
+          <UIProvider>
+            <GameScreen />
+          </UIProvider>
+        </SyncProvider>
+      </GameProvider>
+    </AuthProvider>
   )
 }

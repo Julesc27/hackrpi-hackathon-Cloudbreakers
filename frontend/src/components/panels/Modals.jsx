@@ -4,8 +4,47 @@ import { ISLANDS, MISSIONS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../.
 import { caps, projectTurn, housing, islandAccess, bridgeLabel } from '../../game/engine.js'
 import { Modal, YieldChips, Progress } from './Panel.jsx'
 import { RES_ICON, WeatherIcon, People, Leaf, Smile, Check, Star } from '../icons.jsx'
+import { useAuth } from '../../auth/AuthContext.jsx'
+import { useSync } from '../../game/CloudSync.jsx'
 
 const sign = (v) => (v > 0 ? `+${v}` : `${v}`)
+
+function syncText(sync) {
+  switch (sync.status) {
+    case 'loading': return 'Loading your town…'
+    case 'saving': return 'Saving…'
+    case 'error': return `Couldn’t save: ${sync.error}. Will retry.`
+    case 'saved': return sync.savedAt ? `Saved to the cloud at ${new Date(sync.savedAt).toLocaleTimeString()}` : 'Saved to the cloud'
+    default: return 'Changes save to the cloud every 30 seconds.'
+  }
+}
+
+function AccountBox() {
+  const auth = useAuth()
+  const sync = useSync()
+  const ui = useUI()
+  if (!auth.backend) return <p className="muted">Your town saves automatically in this browser.</p>
+  if (auth.status === 'authed') {
+    return (
+      <div className="account-box">
+        <div>Logged in as <strong>{auth.player.username}</strong></div>
+        <div className={`sync-line ${sync.status === 'error' ? 'error' : ''}`}>{syncText(sync)}</div>
+        <div className="row-btns">
+          <button className="btn-ghost" onClick={sync.saveNow} disabled={sync.status === 'saving' || sync.status === 'loading'}>Save now</button>
+          <button className="btn-ghost" onClick={() => { ui.closeAll(); sync.logout() }}>Log out</button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="account-box">
+      <div>Playing as a <strong>guest</strong>. Your town is only saved in this browser.</div>
+      <div className="row-btns">
+        <button className="btn-gold" onClick={() => { ui.closeAll(); auth.openLogin() }}>Log in to save</button>
+      </div>
+    </div>
+  )
+}
 
 export function JournalModal() {
   const { state, dispatch } = useGame()
@@ -109,10 +148,10 @@ export function SettingsModal() {
   const [confirm, setConfirm] = useState(false)
   return (
     <Modal title="Settings" onClose={() => ui.setPanel(null)} size="sm">
-      <p className="muted">Your town saves automatically in this browser.</p>
+      <AccountBox />
       {confirm ? (
         <div className="confirm">
-          <p>Start over? All progress in this browser will be lost.</p>
+          <p>Start over? All progress on this town will be lost.</p>
           <div className="row-btns">
             <button className="btn-danger" onClick={() => { dispatch({ type: 'NEW_GAME' }); ui.closeAll() }}>Yes, start a new game</button>
             <button className="btn-ghost" onClick={() => setConfirm(false)}>Cancel</button>

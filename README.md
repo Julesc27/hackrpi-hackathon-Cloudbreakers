@@ -49,9 +49,14 @@ API runs at http://localhost:8000 (docs at http://localhost:8000/docs).
 |---|---|---|---|
 | POST | `/auth/register` | — | `{username, password}` → `{access_token, player}` |
 | POST | `/auth/login` | — | `{username, password}` → `{access_token, player}` |
-| GET | `/me` | Bearer | your player |
-| PATCH | `/me` | Bearer | update `experience` / `coins` / `food` / `completion` (completion is merged) |
+| GET | `/me` | Bearer | your player (summary) |
+| GET | `/town` | Bearer | your full saved game → `{town, saved_at}` |
+| PUT | `/town` | Bearer | save your full game (the frontend does this automatically) |
 | GET | `/players/{username}` | — | public profile |
 
 Send the token as `Authorization: Bearer <access_token>`. Tokens last 7 days.
 Backend needs `JWT_SECRET` in `backend/.env` (and in Railway variables).
+
+The frontend saves to localStorage on every change and, when logged in, uploads to
+`PUT /town` every 30s, after each turn, and when the tab closes (`frontend/src/game/CloudSync.jsx`).
+It needs `VITE_API_URL` (set in docker-compose; on Railway set it on the frontend service).

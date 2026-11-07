@@ -1,0 +1,79 @@
+/* Login / account UI. Reuses the game's panel, button and color tokens. */
+
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.auth-tabs button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  color: var(--muted);
+  cursor: pointer;
+}
+.auth-tabs button.on {
+  color: var(--text);
+  background: rgba(227, 194, 122, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(227, 194, 122, 0.5);
+}
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.auth-form input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(227, 194, 122, 0.35);
+  background: rgba(4, 8, 30, 0.55);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+.auth-form input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+.auth-error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--down);
+  background: rgba(255, 122, 91, 0.12);
+  font-size: 13.5px;
+}
+.auth-notice {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(227, 194, 122, 0.12);
+  font-size: 13.5px;
+}
+.auth-sub { font-size: 13px; margin: 14px 0 0; }
+.auth-guest { width: 100%; justify-content: center; margin-top: 10px; }
+
+/* Account block inside Settings */
+.account-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid rgba(227, 194, 122, 0.18);
+}
+.account-box .row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.sync-line { font-size: 13px; color: var(--muted); }
+.sync-line.error { color: var(--down); }

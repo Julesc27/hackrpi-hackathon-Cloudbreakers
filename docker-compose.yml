@@ -10,6 +10,7 @@ services:
       - /app/node_modules   # keep container's node_modules separate from your machine's
     environment:
       - CHOKIDAR_USEPOLLING=true   # reliable hot reload on Windows bind mounts
+      - VITE_API_URL=http://localhost:8000   # the browser calls the backend on your machine
 
   backend:
     build: ./backend
