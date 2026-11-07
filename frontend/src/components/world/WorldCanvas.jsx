@@ -6,9 +6,9 @@ import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
 import { TWINKLE_STARS } from '../map/Backdrop.jsx'
 import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
-import { PAINTED_ISLANDS, BUILDING_CELLS, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
+import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
-import { drawIslandBase, animIslandBase, islandBounds, cloudPuff, cloudBank } from './island.js'
+import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
 import { bridgeCurve } from './people.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
@@ -121,25 +121,6 @@ function propBounds(p) {
 }
 const propKey = (p) => `${p.type}:${Math.round(p.x)}:${Math.round(p.y)}:${p.pts ? p.pts.flat().join(',') : ''}`
 
-/* ---------------- far islets (procedural, hazy) ---------------- */
-function drawIslet(ctx, x, y, s, seed) {
-  const r = rng(seed)
-  const rx = 42 * s, ry = 18 * s
-  const g = ctx.createLinearGradient(0, y, 0, y + 70 * s)
-  g.addColorStop(0, col(PAL.rock)); g.addColorStop(1, col(PAL.rockDark, 0.2))
-  ctx.beginPath(); ctx.moveTo(x - rx, y)
-  for (let i = 0; i <= 8; i++) { const t = i / 8; ctx.lineTo(x - rx + t * rx * 2, y + Math.sin(t * Math.PI) * 62 * s * (i % 2 ? 1 : 0.7)) }
-  ctx.lineTo(x + rx, y); ctx.closePath(); ctx.fillStyle = g; ctx.fill()
-  ellipse(ctx, x, y + 3, rx, ry, col(PAL.grassEdge)); ellipse(ctx, x, y, rx, ry, col(PAL.grass))
-  for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; cloudPuff(ctx, x + Math.cos(a) * rx, y + Math.sin(a) * ry + 4, (6 + r() * 6) * s, 1) }
-  // a tiny hazy shrine, warm enough to read as a distant town
-  const tx = x + (r() - 0.5) * rx * 0.5, ty = y - 2
-  ctx.fillStyle = col('#f4ead4'); ctx.fillRect(tx - 9 * s, ty - 10 * s, 18 * s, 10 * s)
-  poly(ctx, [[tx - 12 * s, ty - 10 * s], [tx + 12 * s, ty - 10 * s], [tx, ty - 22 * s]], col(PAL.roofBlue))
-  circle(ctx, tx, ty - 16 * s, 2.2 * s, col(PAL.goldLight))
-  for (let i = 0; i < 4; i++) { const px = x + (r() - 0.5) * rx * 1.4, py = y + (r() - 0.5) * ry; circle(ctx, px, py - 7 * s, 4.2 * s, col(PAL.leaf)) }
-}
-
 /* ---------------- bridges ---------------- */
 function drawBridge(ctx, b, t, lights = null, progress = 1) {
   const pts = bridgeCurve(b.route, 20).reverse()
@@ -231,7 +212,6 @@ export default function WorldCanvas({ hoverRef }) {
     const cv = canvasRef.current
     const ctx = cv.getContext('2d')
     const atlases = Object.fromEntries(Object.keys(PAINTED_ATLASES).map((sheet) => [sheet, getPaintedAtlas(sheet)]))
-    const buildingsAtlas = atlases.buildings
     const appeared = new Map()
     const bridgeAppeared = new Map(stateRef.current.bridges.map((b) => [b.route, -1000]))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -357,10 +337,18 @@ export default function WorldCanvas({ hoverRef }) {
         const sp = cache.current.get(`bank${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, true))
         blit(sp, Math.sin(t * c.sp + c.ph) * 36, 0, c.a)
       }
-      FAR_ISLETS.forEach(([x, y, s], i) => {
-        const b = { x: x - 70 * s, y: y - 36 * s, w: 140 * s, h: 120 * s }
-        const sp = cache.current.get(`islet${i}`, b, 'locked', (cx) => drawIslet(cx, x, y, s, i + 1))
-        blit(sp, 0, Math.sin(t * 0.55 + i) * 3.5, i < 5 ? 0.72 : 0.42)
+      FAR_ISLETS.forEach(({ x, y, width, cell, opacity }, i) => {
+        const atlas = atlases.background
+        if (!atlas.ready) return
+        const bounds = atlas.cells[cell]
+        const height = width * bounds[3] / bounds[2]
+        const bob = reducedMotion.matches ? 0 : Math.sin(t * (.19 + i % 3 * .035) + i * 1.7) * Math.min(3, width * .015)
+        const box = { x: x - width / 2, y: y - height * .4 + bob, w: width, h: height }
+        if (!visible(box)) return
+        ctx.save()
+        ctx.globalAlpha = opacity
+        atlas.draw(ctx, cell, box.x, box.y, width, height)
+        ctx.restore()
       })
       for (const c of backClouds) {
         if (!c.mid) continue
@@ -469,19 +457,21 @@ export default function WorldCanvas({ hoverRef }) {
         if (!def) continue
         const b = propBounds(p)
         if (!visible({ ...b, y: b.y + it.bob })) continue
-        if (it.buildingType && buildingsAtlas.ready && BUILDING_CELLS[it.buildingType] != null) {
+        const sprite = it.buildingType ? buildingSprite(it.buildingType, it.slot) : null
+        const buildingAtlas = sprite ? atlases[sprite.sheet] : null
+        if (buildingAtlas?.ready && sprite.cell != null) {
           if (!appeared.has(it.fresh)) appeared.set(it.fresh, originalBuildings.current.has(it.fresh) ? now - 1000 : now)
           const progress = reducedMotion.matches ? 1 : Math.min(1, (now - appeared.get(it.fresh)) / 650)
           const scale = 1 - (1 - progress) ** 3
-          const cell = BUILDING_CELLS[it.buildingType]
-          const footprint = buildingLayout(it.buildingType, it.island, it.slot, buildingsAtlas.cells[cell])
+          const cell = sprite.cell
+          const footprint = buildingLayout(it.buildingType, it.island, it.slot, buildingAtlas.cells[cell])
           const gw = footprint.groundWidth, gd = footprint.groundDepth
           const x0 = Math.min(footprint.x, -gw - 5), y0 = Math.min(footprint.y, 1 - gd - 5)
           const x1 = Math.max(footprint.x + footprint.width, gw + 5), y1 = Math.max(footprint.y + footprint.height, 1 + gd + 5)
           const bnd = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
-          const src = buildingsAtlas.cells[cell]
+          const src = buildingAtlas.cells[cell]
           const srcScale = src ? src[2] / footprint.width : 1
-          const key = `${it.buildingType}:${it.island}:${it.slot}`
+          const key = `${sprite.sheet}:${cell}:${it.island}:${it.slot}:${footprint.width}:${footprint.height}`
           // The soft ground shadow needs a blur, so it is rendered once and reused.
           const shadow = cache.current.get(`bshadow:${key}`, bnd, 'plain', (cx) => {
             cx.filter = 'blur(2px)'
@@ -492,22 +482,24 @@ export default function WorldCanvas({ hoverRef }) {
           if (v.s * dpr >= srcScale * 0.95) {
             // zoomed in past the sprite's resolution: draw from the source (sharper, and cheap when enlarging)
             ctx.imageSmoothingQuality = 'high'
-            buildingsAtlas.draw(ctx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
+            buildingAtlas.draw(ctx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
           } else {
             const fb = { x: footprint.x, y: footprint.y, w: footprint.width, h: footprint.height }
             const sp = cache.current.get(`bld:${key}`, fb, 'plain', (cx) => {
-              buildingsAtlas.draw(cx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
+              buildingAtlas.draw(cx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
             }, srcScale)
             if (sp) ctx.drawImage(sp.cv, fb.x, fb.y, fb.w, fb.h)
           }
           ctx.restore()
         } else if (b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
-        if (def.anim && it.mode !== 'hidden' && !(it.buildingType && buildingsAtlas.ready)) {
+        if (def.anim && it.mode !== 'hidden' && !buildingAtlas?.ready) {
           setMode(it.mode)
           ctx.save(); ctx.translate(0, it.bob); def.anim(ctx, p, t, { beacon: st.beaconRestored }); ctx.restore()
           setMode('lit')
         }
-        if (it.mode === 'lit' && def.lights) for (const l of def.lights(p)) lights.push([l[0], l[1] + it.bob, l[2]])
+        // Painted windows already contain their light. Procedural house lights are
+        // much lower than the painted windows and otherwise put a yellow halo under the walls.
+        if (it.mode === 'lit' && def.lights && !buildingAtlas?.ready) for (const l of def.lights(p)) lights.push([l[0], l[1] + it.bob, l[2]])
       }
 
       for (const isl of order) {
@@ -561,7 +553,7 @@ export default function WorldCanvas({ hoverRef }) {
       {
         const kk = ((t / 110) + 0.27) % 1
         const [x, y] = along([[2300, 30], [1200, 70], [400, 10], [-700, -20]], kk)
-        PROPS.airship.anim(ctx, { x, y: y, base: y + 70 }, t)
+        PROPS.airship.anim(ctx, { x, y, width: 104 }, t)
       }
 
       // 7. cloud sea in front of the island roots, then a soft navy vignette in screen space

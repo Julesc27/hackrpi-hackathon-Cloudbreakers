@@ -55,3 +55,30 @@ The built-in image generation tool produced two independent transparent sprites,
 - `prism-shelf.webp`: isolate the reference's lower-right crystal island; tiered pale stone shelves, luminous blue energy crystals, gold/brass pylons, component workshop, four clear building pads and upper-left bridge landing. Preserve the reference style and palette; no people, sky, UI, words or off-island bridges.
 
 Both are game sprites with true alpha transparency. The resource loop uses the expanded starter island, forest, water island and crystal shelf. The hospital (Mercy Rise) and village (Hearthside) are also active destinations, restored from the original civic and settlement atlases. Older atlas assets remain available as reference material.
+
+
+## Distant background islands
+
+`background-islands.png` is a transparent 3-column, 2-row atlas generated with the built-in image tool using the supplied Stormfront, Cloudroot, Ancient Ruins, Skyport and Voidreach paintings as visual references. Cells: Stormfront, Cloudroot, Ancient Ruins; Skyport, Voidreach, a small ruined shrine. The original reference panoramas are not drawn as rectangular backdrops.
+
+Generation brief: six complete, isolated mini floating islands in equal cells with transparent gutters; painterly isometric cream stone, cobalt/gold details, lavender cliffs, soft cloud wisps and waterfalls; simplify the reference motifs for 80–130 pixel scenery. No people, UI, words, sky background or off-island bridges. Stormfront has a dome and turbine; Cloudroot has luminous roots and a great tree; Ancient Ruins has broken astronomical arches; Skyport has a lighthouse and airship dock; Voidreach has violet crystals and a contained portal; the sixth island has three mossy pillars.
+
+`PAINTED_ATLASES.background` stores premeasured alpha bounds. The canvas varies the sprites across `FAR_ISLETS`, preserves their proportions and uses low opacity for distance. Gentle bobbing follows reduced-motion preferences. These remain decorative scenery and do not add destinations, routes or buildable plots.
+
+Scenery positions are composed as uneven satellite groups rather than evenly spaced repeats. Each `FAR_ISLETS` entry specifies its theme cell, width and opacity: small companions range from 68–96 world units, while larger outer landmarks range from 150–240. Larger shapes frame the outer sky and leave playable terrain and bridge corridors clear.
+
+
+## Painted airship
+
+`airship-painted.png` replaces the simple canvas blimp with a transparent painted sprite generated using the built-in image tool. Its references are the supplied Skyport painting and the background-island atlas.
+
+Generation brief: one complete left-facing airship in a gently elevated three-quarter view, matching the islands' gouache textures; ivory canvas envelope with cobalt panels and brass ribs, timber boat-shaped gondola, cobalt cabin roof, gold rails, rope rigging, amber windows and a lantern. No people, text, sky, island or dock; true transparency and clear margins. The alpha bounds are premeasured in `PAINTED_ATLASES.airship`.
+
+The existing flight path remains live. Slow bobbing and a small rocking motion animate the craft, while docked fallback ships retain their mooring ropes. Reduced-motion preferences freeze ambient movement.
+
+
+## Grounded shelter variants
+
+`shelters-grounded.png` is a two-column transparent atlas generated with the built-in image tool from the starter island and original construction atlas references. The brief replaces the shelter's bright tile pedestal with walls meeting the paving, a narrow worn doorstep, irregular ivy and tiny plant tufts. Two modest cream-stone, weathered-terracotta cottages share the island's camera angle and softer palette; their porch, chimney and ivy differ subtly. No square platform, raised plinth, surrounding ground, people or text.
+
+`buildingSprite(type, slot)` selects the same shelter variant in the canvas and placement preview. The workshop uses the first variant. Shelters use a smaller footprint, a tighter contact shadow and a ground anchor at 93% of the cropped image height. Stable saved plot indexes are preserved; the upper pair is staggered along the paving. Procedural window glows are omitted on painted structures so they no longer create a misplaced yellow halo at the foundations.

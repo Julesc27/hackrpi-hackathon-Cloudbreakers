@@ -9,7 +9,7 @@ import Backdrop from './Backdrop.jsx'
 import { CloudDefs, Cloud } from './Life.jsx'
 import { FxLayer, useWorldEvents } from './Fx.jsx'
 import WorldCanvas from '../world/WorldCanvas.jsx'
-import { BUILDING_CELLS, PAINTED_ATLASES } from '../world/paintedArt.js'
+import { buildingSprite, PAINTED_ATLASES } from '../world/paintedArt.js'
 import { buildingLayout } from '../world/buildingLayout.js'
 import { usePaintedAtlas } from '../PaintedSprite.jsx'
 import { bridgeCurve } from '../world/people.js'
@@ -25,7 +25,11 @@ export default function SkyMap() {
   const anchor = hasAnchor(state)
   const placingDef = ui.placing ? BUILDINGS[ui.placing] : null
   const buildingsAtlas = usePaintedAtlas('buildings')
-  const footprint = (type, island, slot) => buildingLayout(type, island, slot, buildingsAtlas?.cells[BUILDING_CELLS[type]])
+  const sheltersAtlas = usePaintedAtlas('shelters')
+  const footprint = (type, island, slot) => {
+    const { sheet, cell } = buildingSprite(type, slot)
+    return buildingLayout(type, island, slot, PAINTED_ATLASES[sheet].cells[cell])
+  }
   const [hover, setHover] = useState(null)
   const hoverRef = useRef(null)
   hoverRef.current = hover
@@ -177,13 +181,15 @@ export default function SkyMap() {
           return ISLANDS[id].plots.map(([x, y], i) => {
             if (occupied(i)) return null
             const shape = footprint(ui.placing, id, i)
+            const sprite = buildingSprite(ui.placing, i)
+            const atlas = sprite.sheet === 'shelters' ? sheltersAtlas : buildingsAtlas
             return (
               <g key={`${id}-${i}`} transform={`translate(${x} ${y})`} className="slot" data-tutorial={id === 'newHaven' && i === firstFreePlot ? 'plot-newHaven' : undefined} role="button" tabIndex="0" aria-label={`Place ${placingDef.name} on ${ISLANDS[id].name} plot ${i + 1}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); place(id, i) } }} onClick={() => place(id, i)}>
                 <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill="transparent" />
                 <polygon points={`0,${-shape.groundDepth} ${shape.groundWidth},0 0,${shape.groundDepth} ${-shape.groundWidth},0`} fill="rgba(243,217,143,.28)" stroke="#fff1c4" strokeWidth="1.5" />
-                {buildingsAtlas?.cells[BUILDING_CELLS[ui.placing]] && <>
-                  <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x={shape.x} y={shape.y} width={shape.width} height={shape.height} viewBox={buildingsAtlas.cells[BUILDING_CELLS[ui.placing]].join(' ')}>
-                    <image href={PAINTED_ATLASES.buildings.src} width={buildingsAtlas.image.naturalWidth} height={buildingsAtlas.image.naturalHeight} />
+                {atlas?.cells[sprite.cell] && <>
+                  <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x={shape.x} y={shape.y} width={shape.width} height={shape.height} viewBox={atlas.cells[sprite.cell].join(' ')}>
+                    <image href={PAINTED_ATLASES[sprite.sheet].src} width={atlas.image.naturalWidth} height={atlas.image.naturalHeight} />
                   </pattern></defs>
                   <rect className="plot-preview" x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={`url(#preview-${id}-${i})`} pointerEvents="none" />
                 </>}

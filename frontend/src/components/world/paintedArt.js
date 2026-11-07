@@ -1,5 +1,11 @@
 // Independent, transparent sprites: the reference painting is never used as a map backdrop.
 export const PAINTED_ATLASES = {
+  shelters: { src: '/art/shelters-grounded.png', columns: 2, rows: 1, cells: [[101, 100, 728, 715], [963, 163, 761, 654]] },
+  airship: { src: '/art/airship-painted.png', columns: 1, rows: 1, cells: [[139, 76, 1264, 867]] },
+  background: {
+    src: '/art/background-islands.png', columns: 3, rows: 2,
+    cells: [[73, 30, 391, 451], [550, 28, 423, 456], [1041, 50, 463, 435], [44, 524, 423, 463], [565, 543, 408, 440], [1080, 547, 402, 439]],
+  },
   starter: { cells: [[29, 22, 1204, 1211]], src: '/art/starter-island-expanded.webp', columns: 1, rows: 1 },
   forest: { cells: [[24, 26, 1204, 1169]], src: '/art/verdant-forest.webp', columns: 1, rows: 1 },
   prism: { cells: [[15, 38, 1229, 1185]], src: '/art/prism-shelf.webp', columns: 1, rows: 1 },
@@ -21,6 +27,13 @@ export const BUILDING_CELLS = {
   shelter: 0, bridgeAnchor: 1, garden: 2, waterCollector: 3,
   storageHouse: 4, solarFarm: 5, market: 6, clinic: 7,
   communityHall: 8, windTurbine: 9, battery: 10, greenhouse: 11,
+}
+
+// Shelter variants have no decorative tile plinth and sit directly on the terrain.
+export function buildingSprite(type, slot = 0) {
+  return type === 'shelter'
+    ? { sheet: 'shelters', cell: Math.max(0, slot) % 2 }
+    : { sheet: 'buildings', cell: BUILDING_CELLS[type] }
 }
 
 // Each cell's alpha bounds are measured ahead of time (they used to be found by scanning

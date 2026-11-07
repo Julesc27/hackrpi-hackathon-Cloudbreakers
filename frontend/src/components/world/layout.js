@@ -303,9 +303,27 @@ for (const [id, isl] of Object.entries(WORLD_ISLANDS)) {
   isl.props = [...isl.props, ...scatterTrees(id, isl)]
 }
 
-/* ---------------- far-away islets for the wider sky ---------------- */
+/* ---------------- distant island groups ---------------- */
+// Uneven satellite clusters frame the town and leave the playable islands and bridge
+// corridors clear. Width and haze express distance independently of the island theme.
+// Atlas cells: stormfront, cloudroot, ancient ruins, skyport, voidreach, ruined shrine.
 export const FAR_ISLETS = [
-  [1186, 262, 1], [1420, 350, 0.9], [668, 150, 0.85], [200, 700, 1.05], [205, 215, 0.7],
-  [-330, -150, 1.2], [-420, 330, 0.8], [-300, 880, 1.25], [290, -240, 0.75], [860, -280, 1.05],
-  [1500, -220, 0.85], [1880, 160, 1.1], [1930, 640, 0.9], [1760, 980, 1.15], [420, 1000, 1.2], [1090, 1020, 0.8], [2010, -140, 0.7],
+  // Small, hazier companions sit behind the larger landmarks.
+  { x: -385, y: 70, width: 76, cell: 1, opacity: .26 },
+  { x: 610, y: -245, width: 68, cell: 5, opacity: .25 },
+  { x: 930, y: -205, width: 88, cell: 2, opacity: .32 },
+  { x: 1485, y: -255, width: 72, cell: 0, opacity: .24 },
+  { x: 1865, y: 105, width: 94, cell: 0, opacity: .30 },
+  { x: 2095, y: 730, width: 78, cell: 3, opacity: .27 },
+  { x: 2025, y: 1045, width: 72, cell: 4, opacity: .23 },
+  { x: 355, y: 930, width: 96, cell: 5, opacity: .34 },
+  { x: 825, y: 75, width: 82, cell: 5, opacity: .30 },
+  // Larger silhouettes anchor the outer sky at different elevations.
+  { x: -180, y: 205, width: 210, cell: 1, opacity: .54 },
+  { x: 755, y: -100, width: 185, cell: 2, opacity: .50 },
+  { x: 1645, y: -55, width: 215, cell: 0, opacity: .48 },
+  { x: 1845, y: 555, width: 240, cell: 3, opacity: .60 },
+  { x: 1760, y: 1120, width: 205, cell: 4, opacity: .44 },
+  { x: 735, y: 1030, width: 195, cell: 1, opacity: .57 },
+  { x: 105, y: 810, width: 150, cell: 3, opacity: .51 },
 ]
