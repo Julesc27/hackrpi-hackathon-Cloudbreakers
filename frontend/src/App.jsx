@@ -43,7 +43,7 @@ function GameScreen() {
   }, [ui])
 
   return (
-    <div className="game">
+    <div className={`game${ui.panel || ui.bridgeRoute ? ' has-panel' : ''}`}>
       <SkyMap />
 
       <div className="hud">

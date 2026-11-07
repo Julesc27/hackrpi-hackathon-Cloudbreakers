@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { getLevelInfo, housing, activeMissions } from '../../game/engine.js'
 import { getAdvice } from '../../game/advisor.js'
@@ -74,9 +75,32 @@ export function WeatherCard() {
   const ui = useUI()
   const w = WEATHER[state.weather]
   const advice = getAdvice(state)[0]
+  // The advisor can fold down to a small cloud so it doesn't cover islands.
+  // It starts folded on smaller screens; the player's choice is remembered.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cb-advisor-collapsed')
+      if (saved !== null) return saved === '1'
+    } catch { /* storage unavailable */ }
+    return window.innerWidth < 1150
+  })
+  useEffect(() => {
+    try { localStorage.setItem('cb-advisor-collapsed', collapsed ? '1' : '0') } catch { /* ignore */ }
+  }, [collapsed])
   return (
-    <aside className="cloud-advisor panel">
-      <div className="advisor-kicker"><CloudIcon size={23} /> AI advisor <span>✧</span></div>
+    <aside className={`cloud-advisor panel${collapsed ? ' is-collapsed' : ''}`} aria-label="Cloud, your AI advisor">
+      <div className="advisor-kicker">
+        <CloudIcon size={23} /> <span className="advisor-kicker-text">AI advisor</span>
+        <button
+          className="advisor-fold"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? 'Show Cloud’s advice' : 'Fold Cloud away'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Show advice' : 'Fold away'}
+        >
+          {collapsed ? '+' : '–'}
+        </button>
+      </div>
       <button className="cloud-portrait" aria-label="Open Cloud’s advice" onClick={() => ui.setPanel('advisor')}>
         <span className="cloud-orbit orbit-one" /><span className="cloud-orbit orbit-two" />
         <svg className="advisor-cloud" viewBox="0 0 240 160" aria-hidden="true">
