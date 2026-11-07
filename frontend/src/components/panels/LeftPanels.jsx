@@ -46,6 +46,11 @@ export function QuestBook() {
     else if (id === 'beaconWakes') ui.openIsland('newHaven')
     else if (id === 'balancedTown') ui.setPanel('storage')
     else ui.setPanel(null)
+    // If the tutorial is on the quest-book step, clicking Continue Quest should advance it
+    if (ui.tutorialStep === 6) {
+      ui.setPanel(null)
+      ui.setTutorialStep(7)
+    }
   }
 
   return (

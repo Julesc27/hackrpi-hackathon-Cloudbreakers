@@ -28,6 +28,7 @@ export default function Tutorial() {
       actionsLeft: state.actionsLeft,
       turn: state.turn,
       shelters: state.buildings.filter((b) => b.type === 'shelter').length,
+      wasInQuests: false,
     }
   }, [tutorialStep])
 
@@ -214,6 +215,25 @@ export default function Tutorial() {
         }, 350)
         return () => clearTimeout(timer)
       }
+    }
+
+    // Step 6b: If the quest panel was open (we were on 6b) and the user closes it via X
+    // or any other means, advance to step 7. This catches the case where "Continue Quest"
+    // navigates away from quests, or the user clicks the close button.
+    if (tutorialStep === 6 && ui.panel !== 'quests') {
+      // Only advance if we were previously on the 6b sub-step (quests was open).
+      // We track this via the stepSnapshot — if it had `wasInQuests` set.
+      if (stepSnapshot.current.wasInQuests) {
+        const timer = setTimeout(() => {
+          ui.setPanel(null)
+          setTutorialStep(7)
+        }, 150)
+        return () => clearTimeout(timer)
+      }
+    }
+    // Track that quests panel opened during step 6 (marks we entered 6b)
+    if (tutorialStep === 6 && ui.panel === 'quests') {
+      stepSnapshot.current.wasInQuests = true
     }
 
     // Step 9: When in 9 and turn report closes after advancing turn
@@ -431,17 +451,19 @@ export default function Tutorial() {
       tLeft = targetRect.right + arrowDist
       tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
     }
+    // Items near the bottom (End Turn, BottomNav, storage button): place tooltip above.
+    // Check this BEFORE the right-side check so bottom-right elements (e.g. Storage nav tab)
+    // get a tooltip above them rather than to their left.
+    else if (targetRect.bottom + tooltipHeight + margin > viewHeight) {
+      placement = 'top'
+      tTop = targetRect.top - tooltipHeight - arrowDist
+      tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
+    }
     // Items on the right side of the screen (IslandPanel or WeatherCard): place tooltip to the left
     else if (targetRect.left > viewWidth - 380) {
       placement = 'left'
       tLeft = targetRect.left - tooltipWidth - arrowDist
       tTop = targetRect.top + targetRect.height / 2 - tooltipHeight / 2
-    }
-    // Items near the bottom (End Turn, BottomNav, Shelter card + button): place tooltip above
-    else if (targetRect.bottom + tooltipHeight + margin > viewHeight) {
-      placement = 'top'
-      tTop = targetRect.top - tooltipHeight - arrowDist
-      tLeft = targetRect.left + targetRect.width / 2 - tooltipWidth / 2
     }
     // Default: place below
     else {
