@@ -183,6 +183,33 @@ test('every bridge span stays attached to both independently floating islands', 
 })
 
 
+test('the full network has separated decks and walkable eastern dock exits', async () => {
+  const { bridgeCurve, buildGraph } = await import('../components/world/people.js')
+  const { WORLD_ISLANDS } = await import('../components/world/layout.js')
+  const islands = Object.values(WORLD_ISLANDS), oldBobs = islands.map(i => i._bob)
+  try {
+    for (const phase of [0, 1, -1]) {
+      islands.forEach((island, i) => { island._bob = phase * (i % 2 ? 2.2 : -2.2) })
+      const curves = ROUTES.map(route => bridgeCurve(route.id, 100))
+      for (let a = 0; a < curves.length; a++) for (let b = a + 1; b < curves.length; b++) {
+        const clearance = Math.min(...curves[a].flatMap(p => curves[b].map(q => Math.hypot(p[0]-q[0], p[1]-q[1]))))
+        assert.ok(clearance > 32, `${ROUTES[a].id} overlaps ${ROUTES[b].id}`)
+      }
+    }
+  } finally { islands.forEach((island, i) => { island._bob = oldBobs[i] }) }
+  const initial = createInitialState()
+  const fresh = buildGraph(initial, { newHaven: true })
+  assert.equal(fresh.nodes.has('newHaven:eastDock'), false)
+  const state = { ...initial, bridges: ROUTES.map(r => ({ route: r.id, condition: 100 })) }
+  const graph = buildGraph(state, Object.fromEntries(['newHaven', 'verdant', 'rain', 'prism', 'mercy', 'hearth'].map(id => [id, true])))
+  const visited = new Set(['newHaven:n1']), queue = ['newHaven:n1']
+  for (let i = 0; i < queue.length; i++) for (const next of graph.adj.get(queue[i]) || []) {
+    if (!visited.has(next)) { visited.add(next); queue.push(next) }
+  }
+  assert.ok(visited.has('prism:e_newHaven'))
+  assert.ok(visited.has('hearth:e_newHaven'))
+})
+
 test('bridge access is a one-time workshop upgrade that does not require a free plot', () => {
   const initial = createInitialState()
   const full = { ...initial, resources: { ...initial.resources, wood: 100, stone: 100 },

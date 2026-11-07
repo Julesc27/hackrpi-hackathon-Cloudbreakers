@@ -1,5 +1,5 @@
 import { bridgeCurve } from './people.js'
-import { BRIDGE_APPROACHES, BRIDGE_ENDS, WORLD_ISLANDS } from './layout.js'
+import { BRIDGE_APPROACHES, BRIDGE_ENDS, EASTERN_DOCK, WORLD_ISLANDS } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
 
@@ -56,6 +56,45 @@ function drawApproach(ctx, route, end, progress) {
   ctx.restore()
 }
 
+// One shore structure serves two distinct exits; neither span is drawn over the other.
+export function drawEasternDock(ctx, bridges, progress = 1) {
+  const routes = new Set(bridges.map(b => b.route))
+  if (progress <= 0 || !Object.keys(EASTERN_DOCK.exits).some(r => routes.has(r))) return
+  const materials = getPaintedAtlas('bridge')
+  const corners = EASTERN_DOCK.corners
+  ctx.save()
+  ctx.translate(0, WORLD_ISLANDS.newHaven._bob || 0)
+  ctx.globalAlpha = Math.min(1, progress * 5)
+  const rim = corners.slice(1)
+  poly(ctx, [...rim, ...rim.map(([x, y]) => [x, y + 5]).reverse()], col('#795536'))
+  const at = (u, v) => [1040 + 120 * u - 20 * v, 495 + 12 * u + 80 * v]
+  ctx.save()
+  ctx.beginPath(); corners.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.closePath(); ctx.clip()
+  for (let i = 0; i < 16; i++) {
+    if (materials.ready) paintedPlank(ctx, materials, i, at(0, i/16), at(1, i/16), at(0, (i+1)/16))
+    else poly(ctx, [at(0, i/16), at(1, i/16), at(1, (i+1)/16), at(0, (i+1)/16)], col(i%2 ? '#bf935f' : '#cba46f'))
+  }
+  ctx.restore()
+  // The eastern edge has two gates, separated by a short stretch of railing.
+  const railing = (a,b) => {
+    for (const p of [a,b]) {
+      line(ctx,p[0],p[1],p[0],p[1]-13,col('#86613c'),2.5)
+      circle(ctx,p[0],p[1]-13,1.5,col('#d2ae61'))
+    }
+    const topA=[a[0],a[1]-12], topB=[b[0],b[1]-12]
+    if(materials.ready) paintedRail(ctx,materials,topA,topB,2.5)
+    else line(ctx,...topA,...topB,col('#ba945c'),2)
+    line(ctx,a[0],a[1]-6,b[0],b[1]-6,col('#9f7a4c'),1.2)
+  }
+  railing(corners[0], corners[1])
+  railing(corners[2], corners[3])
+  railing(corners[4], corners[5])
+  if (!routes.has('hearth-haven')) railing(corners[1], corners[2])
+  if (!routes.has('prism-haven')) railing(corners[3], corners[4])
+  ctx.restore()
+  drawApproach(ctx,'hearth-haven','b',progress*5)
+}
+
 export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const materials = getPaintedAtlas('bridge')
   const points = bridgeCurve(bridge.route, 48).reverse()
@@ -85,7 +124,7 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
 
   // The crossing continues along actual paving on both shores. These paths bob
   // with their own island and leave a clear entrance beyond the bridge rails.
-  drawApproach(ctx, bridge.route, 'b', progress * 5)
+  if (!EASTERN_DOCK.exits[bridge.route]) drawApproach(ctx, bridge.route, 'b', progress * 5)
   drawApproach(ctx, bridge.route, 'a', Math.max(0, (progress - .88) / .12))
   ctx.save()
   // Reveal every layer together from home, including the landings and handrails.
@@ -97,11 +136,12 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   }
 
   ctx.globalAlpha = .14
-  trace(points.map(([x, y]) => [x, y + 13]), '#141d38', halfWidth * 1.3)
+  trace(points.slice(3, -3).map(([x, y]) => [x, y + 13]), '#141d38', halfWidth * 1.3)
   ctx.globalAlpha = 1
   // Solid near fascia gives the deck thickness, with a continuous supporting stringer.
   const front = edge(near)
-  poly(ctx, [...front, ...front.map(([x, y]) => [x, y + 5]).reverse()], col('#755336'))
+  const depth = t => Math.min(1, t * length / 20, (1-t) * length / 20)
+  poly(ctx, [...front, ...front.map(([x, y],i) => [x, y + 5 * depth(i/(front.length-1))]).reverse()], col('#755336'))
   trace(edge(-near), '#88633e', 2.2)
 
   // Deck boards follow the route, but their width follows the island's ground projection.
@@ -115,19 +155,10 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   // Keep the bracing inside a continuous timber frame, rather than a zigzag silhouette.
   for (let i = 0; i < postCount; i++) {
     const a = sample(i / postCount, near), b = sample((i + 1) / postCount, near)
-    line(ctx, a[0], a[1] + 2, b[0], b[1] + 8, col(stone ? '#aa9a82' : '#88643e'), 1.7)
-    line(ctx, a[0], a[1] + 8, b[0], b[1] + 2, col('#9f7a4c'), 1)
+    line(ctx, a[0], a[1] + 2*depth(i/postCount), b[0], b[1] + 8*depth((i+1)/postCount), col(stone ? '#aa9a82' : '#88643e'), 1.7)
+    line(ctx, a[0], a[1] + 8*depth(i/postCount), b[0], b[1] + 2*depth((i+1)/postCount), col('#9f7a4c'), 1)
   }
-  trace(front.map(([x, y]) => [x, y + 8]), '#7c5936', 2.2)
-
-  // Flush thresholds join the approach paving. No legs or raised slabs on the path.
-  for (const [point, direction] of [[start, 1], [end, -1]]) {
-    const corner = (along, side, width) => [point[0] + tangent[0] * along * direction + cross[0] * side * width,
-      point[1] + tangent[1] * along * direction + cross[1] * side * width]
-    const top = [corner(-11, -1, halfWidth * 1.35), corner(12, -1, halfWidth), corner(12, 1, halfWidth), corner(-11, 1, halfWidth * 1.35)]
-    poly(ctx, top, col('#ba8a55'), col('#927047'), .7)
-    for (const at of [-6, 0, 6]) line(ctx, ...corner(at, -1, halfWidth), ...corner(at, 1, halfWidth), col('#dec08c'), .65)
-  }
+  trace(front.map(([x, y],i) => [x, y + 8*depth(i/(front.length-1))]), '#7c5936', 2.2)
 
   const drawRail = (side) => {
     for (let i = 0; i <= postCount; i++) {
@@ -147,8 +178,6 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
         if (lights && (side === near) && (i === 0 || progress >= .98)) lights.push([x, y - 10, 6])
       }
       if (i === postCount) continue
-      // Leave the inside of the eastern fork open for the village/crystal paths.
-      if (i === 0 && ((bridge.route === 'prism-haven' && side === -near) || (bridge.route === 'hearth-haven' && side === near))) continue
       const cable = []
       for (let j = 0; j <= 8; j++) {
         const u = j / 8, p = sample((i + u) / postCount, side)

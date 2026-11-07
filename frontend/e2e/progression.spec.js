@@ -23,6 +23,28 @@ async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page))).toBeTruthy()
 }
 
+test('the complete bridge network renders and both eastern crossings can be managed', async ({ page }, testInfo) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await startAt(page, 'all-bridges')
+  await expect(page.locator('.skymap .bridge')).toHaveCount(5)
+  await page.getByRole('button', { name: 'Fold Cloud away' }).click()
+  await page.waitForFunction(() => [...document.images].every(image => image.complete))
+  await page.screenshot({ path: testInfo.outputPath('complete-network.png') })
+  for (const island of ['Hearthside', 'Prism Shelf']) {
+    const crossing = page.getByRole('button', { name: `Manage New Haven ↔ ${island} bridge`, exact: true })
+    await crossing.focus()
+    await crossing.press('Enter')
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.keyboard.press('Escape')
+  }
+  await page.mouse.move(915, 480)
+  await page.mouse.wheel(0, -400)
+  await page.screenshot({ path: testInfo.outputPath('eastern-landings.png') })
+  expect(errors).toEqual([])
+})
+
 test('the tutorial advances through gathering, building and the quest book', async ({ page }) => {
   const fresh = checkpoint('new-town')
   await page.addInitScript(({ key, state }) => {

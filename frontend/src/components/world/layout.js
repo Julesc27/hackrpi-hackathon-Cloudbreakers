@@ -233,7 +233,7 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
   e_mistral: [579, 370], e_rain: [915, 365], e_mercy: [490, 526],
-  e_hearth: [1080, 520], e_verdant: [579, 370], e_prism: [1080, 520], e_gardens: [1005, 695],
+  e_hearth: [1140, 519], e_verdant: [579, 370], e_prism: [1125, 558], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
 
@@ -247,19 +247,36 @@ export const BRIDGE_ENDS = {
 }
 // Land on the walking surface inside the dock posts, not on its outer corner.
 WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = shiftIslandPoint('verdant', [535, 239])
-WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1184, 230]
+WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1200, 225]
 WORLD_ISLANDS.prism.nav.nodes.e_newHaven = shiftIslandPoint('prism', [1191, 882])
-WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [312, 525]
-WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1305, 491]
+WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [300, 525]
+WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1321, 498]
+
+// One shore-connected dock, with two separated exits. It is drawn once even when
+// both eastern crossings exist, so their decks and railings never stack at the gate.
+export const EASTERN_DOCK = {
+  gate: [1080, 520],
+  corners: [[1068, 504], [1137, 512.4], [1143, 525.6], [1134.5, 553.3], [1115.5, 562.7], [1050, 550]],
+  exits: { 'hearth-haven': [1140, 519], 'prism-haven': [1125, 558] },
+}
+Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
+  eastPath: [1037, 533], eastThreshold: [1060, 520], eastGate: EASTERN_DOCK.gate,
+  eastDock: [1104, 537],
+})
+WORLD_ISLANDS.newHaven.nav.edges = WORLD_ISLANDS.newHaven.nav.edges.filter(([, b]) => b !== 'e_hearth')
+WORLD_ISLANDS.newHaven.nav.edges.push(
+  ['n8', 'eastPath'], ['eastPath', 'eastThreshold'], ['eastThreshold', 'eastGate'],
+  ['eastGate', 'eastDock'], ['eastDock', 'e_hearth'], ['eastDock', 'e_prism'],
+)
 
 // Continuous, on-island approaches: first point is the bridge landing, last point
 // joins the existing painted path. They are constructed only with the crossing.
 export const BRIDGE_APPROACHES = {
   'verdant-haven': { a: [[535, 239], [518, 225], [496, 214]], b: [[579, 370], [596, 381], [616, 390]] },
-  'rain-haven': { a: [[1184, 230], [1174, 215], [1160, 207]], b: [[915, 365], [897, 377], [883, 391]] },
+  'rain-haven': { a: [[1200, 225], [1215, 220]], b: [[915, 365], [897, 377], [883, 391]] },
   'prism-haven': { a: [[1191, 882], [1214, 890], [1238, 892]], b: [[1080, 520], [1060, 520], [1037, 533]] },
-  'mercy-haven': { a: [[312, 525], [296, 514], [279, 509]], b: [[490, 526], [508, 527], [531, 539]] },
-  'hearth-haven': { a: [[1305, 491], [1335, 495], [1358, 480]], b: [[1080, 520], [1060, 520], [1037, 533]] },
+  'mercy-haven': { a: [[300, 525], [284, 519], [272, 512]], b: [[490, 526], [508, 527], [531, 539]] },
+  'hearth-haven': { a: [[1321, 498], [1335, 495], [1358, 480]], b: [[1080, 520], [1060, 520], [1037, 533]] },
 }
 for (const [route, id] of [['verdant-haven', 'verdant'], ['prism-haven', 'prism']]) {
   BRIDGE_APPROACHES[route].a = BRIDGE_APPROACHES[route].a.map((point) => shiftIslandPoint(id, point))

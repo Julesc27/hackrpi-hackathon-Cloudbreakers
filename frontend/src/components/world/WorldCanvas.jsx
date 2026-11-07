@@ -9,7 +9,7 @@ import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
 import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
-import { drawBridge } from './bridge.js'
+import { drawBridge, drawEasternDock } from './bridge.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
@@ -341,9 +341,15 @@ export default function WorldCanvas({ hoverRef }) {
 
       // 3. Only player-built spans. Route buttons live in the interaction layer.
       const bridgeLights = []
-      for (const b of st.bridges) {
+      const spans = st.bridges.map(b => {
         if (!bridgeAppeared.has(b.route)) bridgeAppeared.set(b.route, now)
         const progress = reducedMotion.matches ? 1 : Math.min(1, (now - bridgeAppeared.get(b.route)) / 1300)
+        return { b, progress }
+      })
+      setMode('lit')
+      const eastern = spans.filter(({ b }) => b.route === 'hearth-haven' || b.route === 'prism-haven')
+      drawEasternDock(ctx, st.bridges, Math.max(0, ...eastern.map(s => s.progress)))
+      for (const { b, progress } of spans) {
         setMode(b.condition <= 0 ? 'locked' : 'lit')
         drawBridge(ctx, b, t, bridgeLights, progress)
       }

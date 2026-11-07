@@ -30,9 +30,17 @@ export function buildGraph(state, access) {
   const adj = new Map()
   const add = (k, x, y, island, tag) => { nodes.set(k, { k, x, y, island, tag }); adj.set(k, []) }
   const link = (a, b) => { if (nodes.has(a) && nodes.has(b)) { adj.get(a).push(b); adj.get(b).push(a) } }
+  const easternRoutes = new Set(state.bridges.map(b => b.route).filter(r => r === 'hearth-haven' || r === 'prism-haven'))
   for (const [id, isl] of Object.entries(WORLD_ISLANDS)) {
     if (!access[id]) continue
-    for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) add(`${id}:${nid}`, x, y, id, tag)
+    for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) {
+      if (id === 'newHaven') {
+        if (nid.startsWith('east') && !easternRoutes.size) continue
+        if (nid === 'e_hearth' && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'e_prism' && !easternRoutes.has('prism-haven')) continue
+      }
+      add(`${id}:${nid}`, x, y, id, tag)
+    }
     for (const [a, b] of isl.nav.edges) link(`${id}:${a}`, `${id}:${b}`)
   }
   for (const b of state.bridges) {
