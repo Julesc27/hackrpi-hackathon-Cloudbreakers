@@ -1,7 +1,7 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { getLevelInfo, housing, activeMissions } from '../../game/engine.js'
 import { WEATHER } from '../../game/data.js'
-import { CloudIcon, Scroll, Hammer, WeatherIcon, People, Leaf } from '../icons.jsx'
+import { CloudIcon, WeatherIcon, People, Leaf, ArtIcon } from '../icons.jsx'
 
 export function TitleBlock() {
   const { state } = useGame()
@@ -23,18 +23,21 @@ export function LeftRail() {
   const ui = useUI()
   const hasNewMission = activeMissions(state).some((m) => !ui.seenQuests.includes(m.id))
   const items = [
-    { id: 'quests', label: 'Quest Book', Icon: Scroll, badge: hasNewMission },
-    { id: 'build', label: 'Build', Icon: Hammer },
-    { id: 'advisor', label: 'Cloud', Icon: CloudIcon },
+    { id: 'quests', label: 'Quest Book', icon: 'quest', badge: hasNewMission },
+    { id: 'build', label: 'Build', icon: 'build' },
+    { id: 'advisor', label: 'Cloud', icon: 'cloud' },
   ]
   return (
     <nav className="left-rail" aria-label="Main actions">
-      {items.map(({ id, label, Icon, badge }) => (
-        <button key={id} className={`rail-btn panel${ui.panel === id ? ' is-active' : ''}`} onClick={() => ui.toggle(id)}>
-          {badge && <span className="badge">!</span>}
-          <Icon size={44} />
-          <span>{label}</span>
-        </button>
+      {items.map(({ id, label, icon, badge }, i) => (
+        <span key={id} className="rail-item">
+          {i > 0 && <span className="rail-sep">✦</span>}
+          <button className={`rail-btn panel${ui.panel === id ? ' is-active' : ''}`} onClick={() => ui.toggle(id)}>
+            {badge && <span className="badge">!</span>}
+            <ArtIcon name={icon} size={50} />
+            <span>{label}</span>
+          </button>
+        </span>
       ))}
     </nav>
   )
@@ -59,12 +62,12 @@ export function LevelBadge() {
 export function WeatherCard() {
   const { state } = useGame()
   const w = WEATHER[state.weather]
-  const canForecast = state.connected.includes('observatory')
+  const canForecast = state.connected.includes('mistral')
   const f = WEATHER[state.forecast]
   return (
     <div className="weather-card panel orn">
       <div className="weather-head">
-        <WeatherIcon kind={w.icon} size={40} />
+        {w.icon === 'sun' ? <ArtIcon name="sun" size={52} /> : <WeatherIcon kind={w.icon} size={46} />}
         <div>
           <div className="weather-kicker">This turn</div>
           <div className="weather-name">{w.name}</div>
@@ -75,7 +78,7 @@ export function WeatherCard() {
         {canForecast ? (
           <><WeatherIcon kind={f.icon} size={18} /> Next turn: <strong>{f.name}</strong></>
         ) : (
-          <span className="muted">Forecasts need the Quiet Observatory</span>
+          <span className="muted">Forecasts need Mistral Heights</span>
         )}
       </div>
     </div>

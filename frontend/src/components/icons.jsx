@@ -90,4 +90,16 @@ export const WeatherIcon = ({ kind, ...p }) => {
   }
 }
 
-export const RES_ICON = { energy: Bolt, water: Drop, food: Wheat, wood: Log, coins: Coin, happiness: Smile }
+// Painted icons cut from the concept art (public/art/icon-*.webp)
+export const ArtIcon = ({ name, size = 24, className = '', style, ...p }) => (
+  <img src={`/art/icon-${name}.webp`} width={size} height={size} alt="" aria-hidden="true" draggable="false"
+    className={`art-icon ${className}`} style={{ objectFit: 'contain', ...style }} {...p} />
+)
+const art = (name) => (p) => <ArtIcon name={name} {...p} />
+export const EnergyArt = art('energy')
+export const WaterArt = art('water')
+export const HappyArt = art('happiness')
+export const WoodArt = art('wood')
+export const CoinArt = art('coins')
+
+export const RES_ICON = { energy: EnergyArt, water: WaterArt, food: Wheat, wood: WoodArt, coins: CoinArt, happiness: HappyArt }

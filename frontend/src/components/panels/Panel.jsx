@@ -1,22 +1,50 @@
 import { useEffect } from 'react'
 import { Close, RES_ICON } from '../icons.jsx'
 
+function SealClose({ onClose }) {
+  return (
+    <button className="seal-close" onClick={onClose} aria-label="Close">
+      <Close size={20} />
+    </button>
+  )
+}
+
+// Gold metal corner caps, as on the concept art's parchment panels
+export function Corners() {
+  return (
+    <>
+      {['tl', 'tr', 'bl', 'br'].map((c) => (
+        <svg key={c} className={`corner corner-${c}`} viewBox="0 0 60 60" aria-hidden="true">
+          <defs>
+            <linearGradient id={`cg-${c}`} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#fff0c0" /><stop offset=".45" stopColor="#d9a94c" /><stop offset="1" stopColor="#8a6424" />
+            </linearGradient>
+          </defs>
+          <path d="M0 0H58L0 58Z" fill={`url(#cg-${c})`} stroke="#6b4a18" strokeWidth="1" />
+          <path d="M7 7H40L7 40Z" fill="none" stroke="#fff3cf" strokeOpacity=".7" strokeWidth="1.2" />
+          <path d="M14 14l5 -2 2 5 -5 2z" fill="#fff6d8" />
+        </svg>
+      ))}
+    </>
+  )
+}
+
 export function Drawer({ side = 'left', title, kicker, onClose, children, className = '' }) {
   return (
-    <aside className={`drawer drawer-${side} panel ${className}`} role="dialog" aria-label={title}>
-      <header className="drawer-head">
-        <div>
-          {kicker && <div className="kicker">{kicker}</div>}
-          <h2>{title}</h2>
-        </div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close"><Close size={20} /></button>
+    <aside className={`drawer drawer-${side} parchment ${className}`} role="dialog" aria-label={title}>
+      <Corners />
+      <header className="p-head">
+        {kicker && <div className="p-kicker">{kicker}</div>}
+        <h2 className="p-title">{title}</h2>
       </header>
+      <SealClose onClose={onClose} />
       <div className="drawer-body">{children}</div>
     </aside>
   )
 }
 
-export function Modal({ title, kicker, onClose, children, footer, size = 'md', dismissable = true }) {
+// Parchment modal, modelled on "The Skyway Chart"
+export function Modal({ title, kicker, onClose, children, footer, size = 'md', dismissable = true, crest = true, className = '' }) {
   useEffect(() => {
     if (!dismissable) return
     const onKey = (e) => e.key === 'Escape' && onClose?.()
@@ -25,13 +53,13 @@ export function Modal({ title, kicker, onClose, children, footer, size = 'md', d
   }, [onClose, dismissable])
   return (
     <div className="modal-backdrop" onMouseDown={(e) => dismissable && e.target === e.currentTarget && onClose?.()}>
-      <div className={`modal modal-${size} panel orn`} role="dialog" aria-label={title}>
-        <header className="modal-head">
-          <div>
-            {kicker && <div className="kicker">{kicker}</div>}
-            <h2>{title}</h2>
-          </div>
-          {dismissable && <button className="icon-btn" onClick={onClose} aria-label="Close"><Close size={20} /></button>}
+      <div className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
+        <Corners />
+        {crest && <div className="crest"><img src="/art/compass.webp" alt="" /></div>}
+        {dismissable && <SealClose onClose={onClose} />}
+        <header className="p-head">
+          <h2 className="p-title"><span className="spark">✦</span>{title}<span className="spark">✦</span></h2>
+          {kicker && <div className="p-sub">{kicker}</div>}
         </header>
         <div className="modal-body">{children}</div>
         {footer && <footer className="modal-foot">{footer}</footer>}
