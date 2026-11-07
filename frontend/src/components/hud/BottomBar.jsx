@@ -21,6 +21,7 @@ export function BottomNav() {
           <button
             className={`nav-btn panel${isActive(id) ? ' is-active' : ''}`}
             onClick={() => (id === null ? ui.closeAll() : ui.toggle(id))}
+            data-tutorial={id ? `nav-${id}` : 'nav-town'}
           >
             {badge && <span className="badge">!</span>}
             <Icon size={44} />
@@ -51,7 +52,12 @@ export function ProgressionCard() {
 export function SettingsButton() {
   const ui = useUI()
   return (
-    <button className="gear-btn panel" aria-label="Settings" onClick={() => ui.toggle('settings')}>
+    <button
+      className="gear-btn panel"
+      aria-label="Settings"
+      onClick={() => ui.toggle('settings')}
+      data-tutorial="settings-btn"
+    >
       <ArtIcon name="gear" size={38} />
     </button>
   )
