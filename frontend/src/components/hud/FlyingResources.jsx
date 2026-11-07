@@ -4,15 +4,21 @@ import { INTERACTION_POINTS } from '../../game/mapLayout.js'
 import { WORLD } from '../map/Camera.jsx'
 import { useUI } from '../../game/GameContext.jsx'
 
+// Resources that have a tile in the TopBar. Everything else flies to the storage box.
+const TOP_BAR_RESOURCES = new Set(['energy', 'water', 'happiness', 'food', 'wood', 'stone', 'coins'])
+
 function ResIcon({ res, size = 20 }) {
   const Icon = RES_ICON[res]
   return Icon ? <Icon size={size} /> : null
 }
 
+/** Returns the screen-space centre of the site icon (start of the flight). */
 function getSiteScreenPos(siteId, worldX, worldY, cam) {
-  // 1. Try finding matching DOM element
+  // Try a tagged DOM element first
   if (siteId) {
-    const el = document.querySelector(`[data-site-id="${siteId}"]`) || document.querySelector(`[data-site-action="${siteId}"]`)
+    const el =
+      document.querySelector(`[data-site-id="${siteId}"]`) ||
+      document.querySelector(`[data-site-action="${siteId}"]`)
     if (el) {
       const r = el.getBoundingClientRect()
       if (r.width > 0 && r.height > 0) {
@@ -21,8 +27,13 @@ function getSiteScreenPos(siteId, worldX, worldY, cam) {
     }
   }
 
-  // 2. Camera conversion if world coordinates are provided
-  const pt = (worldX != null && worldY != null) ? [worldX, worldY] : (siteId ? INTERACTION_POINTS[siteId] : null)
+  // Convert world coordinates via camera transform
+  const pt =
+    worldX != null && worldY != null
+      ? [worldX, worldY]
+      : siteId
+      ? INTERACTION_POINTS[siteId]
+      : null
   if (pt && cam) {
     const c = cam.view?.() || cam
     const camEl = document.querySelector('.camera')
@@ -33,17 +44,47 @@ function getSiteScreenPos(siteId, worldX, worldY, cam) {
     }
   }
 
-  // Fallback: screen center
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 }
 
+/**
+ * Returns the screen-space centre of the destination for this resource:
+ *   • TopBar tile  → if the resource is shown in the top bar
+ *   • Storage button (bottom nav) → for all other resources (seeds, crystals, fish, materials…)
+ *
+ * Also returns `inTopBar` so callers can arc tokens in the right direction.
+ */
 function getResourceTargetPos(res) {
-  const el = document.querySelector(`[data-resource="${res}"]`) || document.querySelector('.topbar')
-  if (el) {
-    const r = el.getBoundingClientRect()
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  if (TOP_BAR_RESOURCES.has(res)) {
+    const el = document.querySelector(`[data-resource="${res}"]`)
+    if (el) {
+      const r = el.getBoundingClientRect()
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, inTopBar: true }
+    }
   }
-  return { x: window.innerWidth / 2, y: 35 }
+
+  // Not in the top bar — target the Storage nav button at the bottom
+  const storageEl =
+    document.querySelector('[data-tutorial="nav-storage"]') ||
+    document.querySelector('.bottom-nav')
+  if (storageEl) {
+    const r = storageEl.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, inTopBar: false }
+  }
+
+  return { x: window.innerWidth / 2, y: window.innerHeight - 60, inTopBar: false }
+}
+
+/** Returns the DOM element that should receive the bump animation on token landing. */
+function getBumpTarget(res) {
+  if (TOP_BAR_RESOURCES.has(res)) {
+    const el = document.querySelector(`[data-resource="${res}"]`)
+    if (el) return el
+  }
+  return (
+    document.querySelector('[data-tutorial="nav-storage"]') ||
+    document.querySelector('.bottom-nav')
+  )
 }
 
 export default function FlyingResources() {
@@ -56,34 +97,43 @@ export default function FlyingResources() {
   const nextId = useRef(1)
 
   const triggerArrival = useCallback((p) => {
-    // 1. Spawn impact flash
+    // 1. Impact flash at landing position
     const impactId = nextId.current++
-    setImpacts((prev) => [...prev, { id: impactId, x: p.targetX, y: p.targetY, res: p.res }])
+    setImpacts((prev) => [
+      ...prev,
+      { id: impactId, x: p.targetX, y: p.targetY, res: p.res },
+    ])
     setTimeout(() => {
       setImpacts((prev) => prev.filter((x) => x.id !== impactId))
     }, 450)
 
-    // 2. Bump target element in DOM
-    const targetEl = document.querySelector(`[data-resource="${p.res}"]`) || document.querySelector('.topbar')
+    // 2. Bounce the target element (top bar tile or storage button)
+    const targetEl = getBumpTarget(p.res)
     if (targetEl) {
       targetEl.classList.remove('res-bump')
-      void targetEl.offsetWidth
+      void targetEl.offsetWidth // force reflow to restart animation
       targetEl.classList.add('res-bump')
     }
 
-    // 3. Dispatch arrival notification for TopBar
+    // 3. Notify other components (TopBar gain flash, etc.)
     window.dispatchEvent(
       new CustomEvent('cloudbreakers:resource-token-arrive', {
-        detail: { res: p.res, amount: p.amount, isLast: p.isLast },
+        detail: {
+          res: p.res,
+          amount: p.amount,
+          isLast: p.isLast,
+          fromBubble: p.fromBubble,
+          totalAmount: p.totalAmount,
+        },
       })
     )
 
-    // 4. Remove particle from active list
+    // 4. Remove this particle
     particleRefs.current.delete(p.id)
     setParticles((prev) => prev.filter((item) => item.id !== p.id))
   }, [])
 
-  // Listen to flight trigger events
+  // Listen for fly-resource events fired by Fx.jsx after each gather or bubble tap
   useEffect(() => {
     const onFly = (e) => {
       const detail = e.detail || {}
@@ -98,11 +148,10 @@ export default function FlyingResources() {
         startPos = getSiteScreenPos(detail.siteId, detail.worldX, detail.worldY, cam)
       }
 
-      const targetPos = getResourceTargetPos(res)
+      const { x: targetX, y: targetY, inTopBar } = getResourceTargetPos(res)
 
-      // Determine number of tokens to fly (2 to 5)
+      // 2–5 tokens per resource, staggered
       const count = Math.min(5, Math.max(2, Math.round(totalAmount / 1.5)))
-      // Split amount across tokens
       const portion = Math.max(1, Math.floor(totalAmount / count))
       const remainder = totalAmount - portion * count
 
@@ -116,31 +165,38 @@ export default function FlyingResources() {
         const delay = delayOffset + i * 70
         const duration = 680 + (i % 2) * 40
 
-        // Spread out at launch
-        const fan = (i - (count - 1) / 2)
+        // Fan-out burst from the origin icon
+        const fan = i - (count - 1) / 2
         const burstAngle = -Math.PI / 2 + fan * 0.45
         const burstDist = 32 + (i % 2) * 14
         const burstX = Math.cos(burstAngle) * burstDist
         const burstY = Math.sin(burstAngle) * burstDist
 
-        // Control point creates a natural arc towards the top
-        const midX = (startPos.x + targetPos.x) / 2
+        // Bézier control point:
+        //   • Top-bar targets  → arc peaks above both endpoints (tokens arc upward)
+        //   • Storage targets  → arc peaks above the start point (tokens lob downward)
+        const midX = (startPos.x + targetX) / 2
         const controlX = midX + fan * 50
-        const controlY = Math.min(startPos.y, targetPos.y) - 50 - Math.abs(startPos.x - targetPos.x) * 0.08
+        const controlY = inTopBar
+          ? Math.min(startPos.y, targetY) - 55 - Math.abs(startPos.x - targetX) * 0.08
+          : startPos.y - 70 - Math.abs(startPos.x - targetX) * 0.04
 
         newParticles.push({
           id,
           res,
           amount: tokenAmount,
+          totalAmount,
+          fromBubble: detail.fromBubble,
           isLast: i === count - 1,
+          inTopBar,
           startX: startPos.x,
           startY: startPos.y,
           burstX,
           burstY,
           controlX,
           controlY,
-          targetX: targetPos.x,
-          targetY: targetPos.y,
+          targetX,
+          targetY,
           startTime: now + delay,
           duration,
         })
@@ -153,7 +209,7 @@ export default function FlyingResources() {
     return () => window.removeEventListener('cloudbreakers:fly-resource', onFly)
   }, [ui.camera])
 
-  // RAF loop driving smooth 60fps positions without re-rendering JSX
+  // RAF loop — drives smooth motion without per-frame React re-renders
   useEffect(() => {
     let animId
 
@@ -172,11 +228,10 @@ export default function FlyingResources() {
         }
 
         const t = Math.min(1, elapsed / p.duration)
-
         let curX, curY, scale, opacity
 
         if (t < 0.16) {
-          // Pop outward from harvest site
+          // Phase 1: pop outward from the harvest site / building
           const k = t / 0.16
           const popEase = Math.sin((k * Math.PI) / 2)
           curX = p.startX + p.burstX * popEase
@@ -184,16 +239,14 @@ export default function FlyingResources() {
           scale = 0.5 + 0.65 * popEase
           opacity = Math.min(1, k * 1.8)
         } else {
-          // Arc towards top bar with acceleration
+          // Phase 2: arc to destination
           const k = (t - 0.16) / 0.84
-          const easeK = k * k * (3 - 2 * k) // smooth ease-in-out
-          const burstStartX = p.startX + p.burstX
-          const burstStartY = p.startY + p.burstY
-
-          const oneMinusK = 1 - easeK
-          curX = oneMinusK * oneMinusK * burstStartX + 2 * oneMinusK * easeK * p.controlX + easeK * easeK * p.targetX
-          curY = oneMinusK * oneMinusK * burstStartY + 2 * oneMinusK * easeK * p.controlY + easeK * easeK * p.targetY
-
+          const easeK = k * k * (3 - 2 * k) // smoothstep
+          const bx = p.startX + p.burstX
+          const by = p.startY + p.burstY
+          const mk = 1 - easeK
+          curX = mk * mk * bx + 2 * mk * easeK * p.controlX + easeK * easeK * p.targetX
+          curY = mk * mk * by + 2 * mk * easeK * p.controlY + easeK * easeK * p.targetY
           scale = 1.15 - 0.45 * easeK
           opacity = k > 0.85 ? Math.max(0.2, (1 - k) / 0.15) : 1
         }
@@ -201,9 +254,7 @@ export default function FlyingResources() {
         el.style.opacity = String(opacity)
         el.style.transform = `translate3d(${curX - 19}px, ${curY - 19}px, 0) scale(${scale})`
 
-        if (t >= 1) {
-          triggerArrival(p)
-        }
+        if (t >= 1) triggerArrival(p)
       }
 
       if (particlesRef.current.length > 0) {
@@ -211,13 +262,8 @@ export default function FlyingResources() {
       }
     }
 
-    if (particles.length > 0) {
-      animId = requestAnimationFrame(step)
-    }
-
-    return () => {
-      if (animId) cancelAnimationFrame(animId)
-    }
+    if (particles.length > 0) animId = requestAnimationFrame(step)
+    return () => { if (animId) cancelAnimationFrame(animId) }
   }, [particles.length, triggerArrival])
 
   if (particles.length === 0 && impacts.length === 0) return null

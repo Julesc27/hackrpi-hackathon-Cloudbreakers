@@ -12,6 +12,32 @@ function ResIcon({ res, size = 26 }) {
   return Icon ? <g transform={`translate(${-size / 2} ${-size / 2})`}><Icon size={size} /></g> : null
 }
 
+/** Converts a world-space point to screen pixels using the live camera transform. */
+function worldToScreen(wx, wy, cam) {
+  const camEl = document.querySelector('.camera')
+  const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
+  const { x: camX, y: camY, s } = cam?.view?.() || { x: 0, y: 0, s: 1 }
+  return {
+    x: cr.left + (wx - WORLD.x) * s + camX,
+    y: cr.top + (wy - WORLD.y) * s + camY,
+  }
+}
+
+/** Determines what resource bubble a newly constructed building displays above it. */
+function getBuildingYield(type) {
+  const def = BUILDINGS[type]
+  if (!def) return null
+  if (def.prod) {
+    const entries = Object.entries(def.prod)
+    if (entries.length > 0) return { res: entries[0][0], amount: entries[0][1] }
+  }
+  if (def.happiness) return { res: 'happiness', amount: def.happiness }
+  if (def.housing) return { res: 'happiness', amount: def.housing }
+  if (def.energyCap) return { res: 'energy', amount: 5 }
+  if (def.capBonus) return { res: 'materials', amount: 5 }
+  return { res: 'coins', amount: 5 }
+}
+
 /** Renders floating numbers, sparkle bursts and tap-to-collect bubbles (world coordinates). */
 export function FxLayer() {
   const ui = useUI()
@@ -56,6 +82,13 @@ export function FxLayer() {
           const collect = () => {
             ui.clearFx(f.id)
             ui.emitFx({ kind: 'float', x: f.x, y: f.y - 10, text: `+${f.amount}`, res: f.res, ttl: 1400 })
+
+            // Fire flying tokens from the bubble's screen position to the correct target
+            const cam = ui.camera?.current
+            const { x: screenX, y: screenY } = worldToScreen(f.x, f.y, cam)
+            window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
+              detail: { res: f.res, amount: f.amount, startX: screenX, startY: screenY, fromBubble: true },
+            }))
           }
           return (
             <g key={f.id} transform={`translate(${f.x} ${f.y})`} onClick={collect}>
@@ -80,8 +113,10 @@ export function FxLayer() {
 
 /**
  * Watches game state and turns changes into world effects:
- * new building → burst · new bridge → burst + fly to island · end of turn → collect bubbles ·
- * gathered wood → floating number · beacon restored → big glow.
+ * new building → burst + label + building collectible bubble ·
+ * new bridge → burst + fly to island ·
+ * gathered resource → floating number + flying tokens ·
+ * beacon restored → big glow.
  */
 export function useWorldEvents() {
   const { state } = useGame()
@@ -95,13 +130,27 @@ export function useWorldEvents() {
     const cam = ui.camera.current
     const out = []
 
-    // new buildings
+    // When new buildings are built, spawn burst, label, and a collectible bubble above the correct building
     if (state.buildings.length > p.buildings.length) {
       for (const b of state.buildings.slice(p.buildings.length)) {
         const plot = ISLANDS[b.island]?.plots?.[b.slot]
         if (!plot) continue
+        const def = BUILDINGS[b.type]
         out.push({ kind: 'burst', x: plot[0], y: plot[1] - 10, ttl: 900 })
-        out.push({ kind: 'float', x: plot[0], y: plot[1] - 40, text: BUILDINGS[b.type].name, ttl: 1500 })
+        out.push({ kind: 'float', x: plot[0], y: plot[1] - 40, text: def.name, ttl: 1500 })
+
+        // Bubble appears directly above the newly built building
+        const bubble = getBuildingYield(b.type)
+        if (bubble) {
+          out.push({
+            kind: 'bubble',
+            x: plot[0],
+            y: plot[1] - 52,
+            res: bubble.res,
+            amount: bubble.amount,
+            ttl: 0, // Stays above building until collected by player
+          })
+        }
       }
     }
 
@@ -118,7 +167,7 @@ export function useWorldEvents() {
       }
     }
 
-    // Direct interaction receipts use the validated reward, so rejected clicks never animate gains.
+    // Direct interaction receipts from clicking harvest sites — rejected clicks never animate gains.
     const interaction = state.lastInteraction
     if (interaction && interaction.id !== p.lastInteraction?.id) {
       const point = INTERACTION_POINTS[interaction.siteId]
@@ -127,13 +176,8 @@ export function useWorldEvents() {
         Object.entries(interaction.reward).filter(([, value]) => value > 0).forEach(([res, amount], i) => {
           out.push({ kind: 'float', x: point[0] + i * 26, y: point[1] - 35 - i * 26, res, text: `+${amount}`, ttl: 1450 })
 
-          // Convert world coordinates to screen coordinates and fire flying tokens
-          const camEl = document.querySelector('.camera')
-          const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
-          const camState = cam?.view?.() || { x: 0, y: 0, s: 1 }
-          const { x: camX, y: camY, s } = camState
-          const screenX = cr.left + (point[0] - WORLD.x) * s + camX
-          const screenY = cr.top + (point[1] - WORLD.y) * s + camY
+          // Convert world → screen and fire the flying token
+          const { x: screenX, y: screenY } = worldToScreen(point[0], point[1], cam)
           window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
             detail: { res, amount, startX: screenX, startY: screenY, delayOffset: i * 120 },
           }))
@@ -145,26 +189,6 @@ export function useWorldEvents() {
     if (state.beaconRestored && !p.beaconRestored) {
       out.push({ kind: 'burst', x: STARTER_BEACON[0], y: STARTER_BEACON[1], ttl: 1200 }, { kind: 'float', x: STARTER_BEACON[0], y: STARTER_BEACON[1] - 45, text: 'The beacon wakes!', ttl: 2400 })
       cam?.flyTo(STARTER_BEACON[0], STARTER_BEACON[1] + 80, cam.fitScale * 1.4, { duration: 900 })
-    }
-
-    // every action moves the settlement forward (the engine awards XP and applies production):
-    // show what each island produced as resource bubbles you can tap
-    if (state.xp > p.xp) {
-      const access = islandAccess(p)
-      for (const id of Object.keys(access)) {
-        const isl = ISLANDS[id]
-        const [cx, cy, rx, ry] = isl.hit
-        const yields = { ...(isl.yields || {}) }
-        for (const b of p.buildings.filter((x) => x.island === id)) {
-          for (const [k, v] of Object.entries(BUILDINGS[b.type].prod || {})) yields[k] = (yields[k] || 0) + v
-        }
-        const entries = Object.entries(yields).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 2)
-        entries.forEach(([res, v], i) => {
-          const amount = Math.max(1, Math.round(v * access[id]))
-          const spread = (i - (entries.length - 1) / 2) * 56
-          out.push({ kind: 'bubble', x: cx + spread + (id === 'newHaven' ? -rx * 0.45 : 0), y: cy - ry * 0.55, res, amount, ttl: 2400 })
-        })
-      }
     }
 
     if (out.length) ui.emitFx(out)
