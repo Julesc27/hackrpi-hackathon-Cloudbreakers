@@ -43,10 +43,11 @@ export function col(hex, a = 1) {
   if (v) return v
   let [r, g, b] = hexToRgb(hex)
   if (MODE === 'locked') {
+    // Night, but the neighborhood colors still read: purple roofs, blue water, white stone.
     const l = 0.3 * r + 0.59 * g + 0.11 * b
-    r = (r * 0.3 + l * 0.7) * 0.5 + 24
-    g = (g * 0.3 + l * 0.7) * 0.54 + 30
-    b = (b * 0.3 + l * 0.7) * 0.66 + 78
+    r = r * 0.62 + l * 0.18 + 14
+    g = g * 0.66 + l * 0.16 + 20
+    b = b * 0.78 + l * 0.12 + 42
   } else if (MODE === 'hidden') {
     const l = 0.3 * r + 0.59 * g + 0.11 * b
     r = l * 0.16 + 26
@@ -61,20 +62,20 @@ export const lit = () => MODE === 'lit'
 
 /* ---------------- palette (sampled from the concept art) ---------------- */
 export const PAL = {
-  grass: '#79b062', grassDark: '#5a9452', grassLight: '#9ccc78', grassEdge: '#4e7e48',
-  path: '#efe0bf', pathEdge: '#d7c39b', stone: '#e8dcc4', stoneSide: '#cbbb9c', stoneDark: '#a99a7e',
-  rock: '#5b5fa8', rockMid: '#43478f', rockDark: '#2b2f6a', rockLight: '#8b8fd0',
-  cloud: '#ffffff', cloudMid: '#e9e4fb', cloudShade: '#b9b2e6', cloudDeep: '#8f89c9',
-  wall: '#f3e6c6', wallShade: '#d4c09a', wallDark: '#b8a37c', timber: '#7a4b2a',
-  roofBlue: '#3e5bb0', roofBlueDark: '#2c4182', roofRed: '#c0603e', roofRedDark: '#8f3f27',
-  roofPurple: '#6a5ac8', roofPurpleDark: '#4a3d96', roofTeal: '#3f8f9a', roofTealDark: '#2b6670',
-  wood: '#a8743f', woodDark: '#6b4426', woodLight: '#c99a5e',
-  gold: '#e3c27a', goldDark: '#a8792a', goldLight: '#fff0c0',
-  water: '#4ea8ec', waterLight: '#bfe6ff', waterDeep: '#2a6fc0',
-  glow: '#ffd66b', window: '#ffd97a', windowOff: '#59608a',
-  leaf: '#3f8a5c', leafDark: '#2c5e46', leafLight: '#5aa86a', pine: '#2f6a4a', pineLight: '#46885a',
-  banner: '#2c4fb0', bannerLight: '#3f68cf', white: '#ffffff', red: '#d23a3a',
-  glass: '#bfe3ff', panel: '#2a4db5', panelLight: '#7fa2ff',
+  grass: '#6fbf6a', grassDark: '#3f8a48', grassLight: '#b6e38a', grassEdge: '#3d7a40',
+  path: '#f6ead0', pathEdge: '#c9ae78', stone: '#f4ead4', stoneSide: '#d9c7a4', stoneDark: '#b49a74',
+  rock: '#6a6ec8', rockMid: '#454a96', rockDark: '#2a2e68', rockLight: '#b4b8ee',
+  cloud: '#ffffff', cloudMid: '#f3efff', cloudShade: '#c9c2f0', cloudDeep: '#9b93d4',
+  wall: '#fbf3e2', wallShade: '#e4d2b0', wallDark: '#cbb892', timber: '#7a4b2a',
+  roofBlue: '#3a62c4', roofBlueDark: '#243e86', roofRed: '#d15a3a', roofRedDark: '#8d3824',
+  roofPurple: '#8a6ad8', roofPurpleDark: '#5a429e', roofTeal: '#3f9aaa', roofTealDark: '#246878',
+  wood: '#c48a4a', woodDark: '#6b3e22', woodLight: '#e8c48a',
+  gold: '#f0d48a', goldDark: '#a8792a', goldLight: '#fff6d0',
+  water: '#3ec6ea', waterLight: '#d8f7ff', waterDeep: '#1f78c4',
+  glow: '#ffd66b', window: '#ffe7a0', windowOff: '#59608a',
+  leaf: '#3f9a5c', leafDark: '#246044', leafLight: '#7ed48a', pine: '#2a6848', pineLight: '#4e9460',
+  banner: '#2c4fb0', bannerLight: '#5a86e8', white: '#ffffff', red: '#e04545',
+  glass: '#d7f3ff', panel: '#2456c8', panelLight: '#9ec0ff',
 }
 
 /* ---------------- primitive shapes ---------------- */

@@ -6,7 +6,7 @@
   overflow: hidden;
   touch-action: none;
   cursor: grab;
-  background: #0d164a;
+  background: #070b24;
 }
 .camera.is-dragging { cursor: grabbing; }
 .cam-layer { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
@@ -102,6 +102,7 @@
 .pop-in { transform-box: fill-box; transform-origin: 50% 100%; animation: popIn 0.6s cubic-bezier(.2,1.6,.4,1); }
 @keyframes popIn { from { transform: scale(0); opacity: 0; } }
 .building { pointer-events: none; }
+.building-hit { cursor: pointer; }
 .slot { cursor: pointer; animation: slotGlow 1.2s ease-in-out infinite; }
 .slot:hover polygon { fill: rgba(243, 217, 143, 0.7); }
 @keyframes slotGlow { 50% { opacity: 0.6; } }

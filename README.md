@@ -67,12 +67,12 @@ frontend/src/
 - `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
 - `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
 - `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
-- `people.js`: residents walk the walkway graph, cross bridges once built, chat, sit on benches and tend crops.
+- `people.js`: bridge curves. The town has a population count, but no characters are drawn.
 - `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
 
 Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
 
-**Art:** `frontend/public/art/` now only holds the HUD icons and the card pictures used in panels, cut from the concept art by the scripts in `tools/art/`.
+**Art:** the client does not paint with picture files. Icons, panel scenes, islands and buildings are drawn in code. `concepts/` is reference only. `tools/art/` can still cut source paintings, but those files are not loaded by the game.
 
 **Connecting to the backend:** the game saves locally and syncs logged-in towns to the cloud. Set `VITE_API_URL` for the frontend service to enable login and cloud saves. The game state shape is the `createInitialState()` object in `engine.js`. The reducer is deterministic, so the server can replay or validate actions. Existing version 2 saves migrate automatically with their XP and town progress preserved.
 
@@ -99,3 +99,24 @@ Backend needs `JWT_SECRET` in `backend/.env` (and in Railway variables).
 The frontend saves to localStorage on every change and, when logged in, uploads to
 `PUT /town` every 30s, after each successful gameplay action, and when the tab closes (`frontend/src/game/CloudSync.jsx`).
 It needs `VITE_API_URL` (set in docker-compose; on Railway set it on the frontend service).
+
+
+## Current island chapter
+
+- **New Haven**: eight shelter/building plots, a finite grove (36 harvestable wood), finite stone (18), a starter garden, collector, workshop and bridge anchors.
+- **Verdant Reach**: renewable wood, food, seeds and building materials.
+- **Rain Island**: fresh water, fishing, irrigation supplies and stone for infrastructure.
+- **Prism Shelf**: energy crystals, power, stone and advanced building materials. Solar farms, batteries and wind turbines consume these resources.
+- **Mercy Rise**: the hospital island improves resident happiness and supports community buildings.
+- **Hearthside**: the village provides eight additional homes and a small food supply.
+
+Click the resource landmarks to gather. Leaves, stone chips, water splashes and crystal sparkles show successful interactions; rewards appear over the source. Depleted starter deposits reject further harvesting. Gardens consume seeds, so expansion supplies a sustainable crop cycle. The workshop opens building placement, structures appear on their selected plots, and new bridges animate into place. Reduced-motion preferences are respected.
+
+The progression remains XP-based, with no End Turn control. Save version 5 migrates older towns into the current island chapter, retaining resources, XP, missions and structures; buildings from retired island layouts relocate to available plots on the corresponding resource island.
+
+Storm Island, Cloudroot Island, Ancient Ruins, Skyport Island and Void Island are future chapter ideas and are not active destinations in this map.
+
+
+New towns start with no bridges. Route buttons offer construction choices, but no bridge geometry appears until a valid build action pays its cost. A new bridge reveals its entire deck, posts and rails together from New Haven toward the destination. Its endpoints follow both islands’ floating motion, and built spans can be selected along their full length.
+
+Bridge access is a one-time workshop upgrade. It does not place a decorative bridge on the island or consume a shelter plot. Existing anchor buildings migrate to the plot-free upgrade. Use **Manage bridges** in the workshop to plan, reinforce or repair crossings.

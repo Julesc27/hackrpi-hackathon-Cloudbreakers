@@ -1,3 +1,5 @@
+import { ISLAND_OFFSETS, STARTER_PLOTS } from './mapLayout.js'
+
 // Static game content: islands, routes, buildings, levels, missions, weather.
 // Everything here is plain data so the backend can later serve the same shapes.
 
@@ -11,107 +13,91 @@ export const RESOURCES = {
   food: { label: 'Food', color: 'var(--food)' },
   wood: { label: 'Wood', color: 'var(--wood)' },
   coins: { label: 'Coins', color: 'var(--coin)' },
+  stone: { label: 'Stone', color: '#b3c5d9' },
+  seeds: { label: 'Seeds', color: '#c7d879' },
+  crystals: { label: 'Energy crystals', color: '#8ee8ff' },
+  materials: { label: 'Building materials', color: '#d7b985' },
+  fish: { label: 'Fish', color: '#8fcddf' },
 }
 
-// Islands are painted cut-outs from the concept art (public/art/island-*.webp).
+// Islands use independent painted sprites (components/world). These records are gameplay data only.
 // Map coordinates use the concept art's 1600 x 900 frame. `hit` is the clickable
 // ellipse [cx, cy, rx, ry]; `plots` are building spots in the same frame.
 export const ISLANDS = {
   newHaven: {
-    name: 'New Haven',
-    kind: 'Home Island',
-    hit: [765, 450, 230, 150],
-    yields: {},
-    desc: 'What remains of a small outpost: a gathering plaza, a fountain and a dormant navigation beacon.',
-    question: 'New Haven is small, but it is still here.',
-    plots: [[590, 500], [650, 560], [935, 498], [900, 552], [812, 372]],
+    name: 'New Haven', kind: 'Starter Island', hit: [775, 510, 340, 220], yields: {},
+    desc: 'Open residential terraces, a small wood grove, stone deposits, a starter garden, a basic collector and a workshop. Local timber and stone are finite: build outward for a lasting supply.',
+    question: 'Give the first families a home, then choose which resource island to connect.',
+    plots: STARTER_PLOTS,
   },
   verdant: {
-    name: 'Verdant Reach',
-    kind: 'Market Grove',
-    hit: [500, 680, 190, 95],
-    yields: { wood: 5, coins: 2 },
-    badge: 'wood',
-    desc: 'Pine groves around an old trading post. The easiest island to reach and the fastest way to build.',
-    question: 'How much of the forest should the town harvest, and how much should it protect?',
-    plots: [[560, 725], [455, 725]],
+    name: 'Verdant Reach', kind: 'Forest Island', hit: [500, 680, 225, 130],
+    yields: { wood: 5, food: 4, seeds: 1, materials: 1 }, badge: 'wood',
+    desc: 'A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows.',
+    question: 'A healthy forest can support a growing town. What will you plant next?',
+    plots: [[440, 720], [500, 737], [560, 750], [400, 755], [460, 775], [525, 790]],
   },
   rain: {
-    name: 'Rain Island',
-    kind: 'Water Island',
-    hit: [930, 225, 205, 115],
-    yields: { water: 6 },
-    badge: 'drop',
-    desc: 'Crystal reservoirs and endless waterfalls. The sky\'s lifeblood flows here.',
-    question: 'Redirect the water now for growth, or restore the natural collection system first?',
-    plots: [[845, 268], [1055, 282]],
+    name: 'Rain Island', kind: 'Water Island', hit: [930, 225, 215, 125],
+    yields: { water: 8, fish: 1, stone: 1 }, badge: 'drop',
+    desc: 'Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town.',
+    question: 'Clean water links the homes, gardens and workshops of the settlement.',
+    plots: [[825, 270], [885, 288], [1010, 285], [1070, 303]],
   },
-  mistral: {
-    name: 'Mistral Heights',
-    kind: 'Wind & Sun Island',
-    hit: [410, 235, 215, 120],
-    yields: { energy: 6 },
-    special: 'forecast',
-    badge: 'energy',
-    desc: 'Old turbines and solar rows on an exposed ridge. Reliable power, and a good view of the weather.',
-    question: 'Is the town willing to accept noisy machinery in exchange for reliable energy?',
-    plots: [[345, 315], [505, 305]],
+  prism: {
+    name: 'Prism Shelf', kind: 'Crystal Island', hit: [410, 235, 225, 140],
+    yields: { energy: 6, crystals: 2, materials: 2, stone: 2 }, badge: 'energy',
+    desc: 'Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings.',
+    question: 'Turn the shelf’s energy into a cleaner, more resilient settlement.',
+    plots: [[330, 290], [395, 310], [460, 310], [520, 335]],
   },
   mercy: {
-    name: 'Mercy Rise',
-    kind: 'Clinic Island',
-    hit: [320, 470, 175, 120],
-    yields: {},
-    happiness: 2,
-    badge: 'happiness',
-    desc: 'A white stone clinic and an airship pad. Healthy residents are happy residents.',
-    question: 'Who gets care first when supplies run short?',
+    name: 'Mercy Rise', kind: 'Hospital Island', hit: [320, 470, 175, 120], yields: {}, happiness: 4,
+    desc: 'The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings.',
+    question: 'A growing settlement needs care as well as supplies.',
     plots: [[440, 505], [480, 478]],
   },
   hearth: {
-    name: 'Hearthside',
-    kind: 'Village Island',
-    hit: [1220, 450, 200, 125],
-    yields: { food: 1 },
-    housing: 8,
-    badge: 'town',
-    desc: 'Cottages and lantern-lit lanes, ready for new families. Adds homes for 8 residents.',
-    question: 'Grow quickly, or keep the town small enough that everyone knows each other?',
+    name: 'Hearthside', kind: 'Village Island', hit: [1220, 450, 200, 125], yields: { food: 1 }, housing: 8,
+    desc: 'Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow.',
+    question: 'Welcome new families while keeping everyone fed and supplied with water.',
     plots: [[1110, 490], [1250, 548]],
   },
-  gardens: {
-    name: 'The Glass Gardens',
-    kind: 'Greenhouse Island',
-    hit: [1040, 690, 210, 100],
-    yields: { food: 6 },
-    badge: 'leaf',
-    desc: 'A greenhouse, a windmill and tidy crop rows left by a vanished community.',
-    question: 'Preserve the old seeds as a library, or plant them now to solve shortages?',
-    plots: [[900, 700], [1175, 735]],
-  },
-  skyport: {
-    name: 'Skyport',
-    kind: 'Airship Dock',
-    hit: [1470, 640, 120, 120],
-    yields: { coins: 6 },
-    badge: 'coins',
-    desc: 'A timber dock where trade airships tie up. Brings cloud coins from distant towns.',
-    question: 'Who should New Haven trade with — and what should it never sell?',
-    plots: [[1450, 668]],
-  },
+}
+for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
+  const island = ISLANDS[id]
+  island.hit = [island.hit[0] + dx, island.hit[1] + dy, ...island.hit.slice(2)]
+  island.plots = island.plots.map(([x, y]) => [x + dx, y + dy])
 }
 
-// Route ids match the bridge anchors in components/world/layout.js.
+// Actual clearings in the painted forest and crystal shelf, in world coordinates.
+ISLANDS.verdant.hit = [355, 215, 240, 155]
+ISLANDS.verdant.plots = [[280, 213], [340, 227], [400, 241], [300, 245], [360, 259], [420, 273]]
+ISLANDS.prism.hit = [1355, 945, 230, 160]
+ISLANDS.prism.plots = [[1278, 879], [1474, 924], [1292, 975], [1445, 1002]]
+
 export const ROUTES = [
-  { id: 'verdant-haven', a: 'newHaven', b: 'verdant', wood: 14, note: 'A short stair down to the grove.' },
-  { id: 'mistral-haven', a: 'newHaven', b: 'mistral', wood: 18, note: 'A long boardwalk. Gusty, but well anchored.' },
-  { id: 'rain-haven', a: 'newHaven', b: 'rain', wood: 20, note: 'Close enough to see, far enough to be expensive.' },
-  { id: 'gardens-haven', a: 'newHaven', b: 'gardens', wood: 20, note: 'Steep steps, sheltered from the wind.' },
-  { id: 'mercy-haven', a: 'newHaven', b: 'mercy', wood: 22, note: 'A railed span over a long drop.' },
-  { id: 'hearth-haven', a: 'newHaven', b: 'hearth', wood: 22, note: 'The village has been waiting for this one.' },
-  { id: 'hearth-skyport', a: 'hearth', b: 'skyport', wood: 26, note: 'A trestle out to the airship dock.' },
+  { id: 'verdant-haven', a: 'newHaven', b: 'verdant', wood: 14, note: 'Timber, crops and seeds for a growing town.' },
+  { id: 'rain-haven', a: 'newHaven', b: 'rain', wood: 20, note: 'A steady source of fresh water and aquatic supplies.' },
+  { id: 'prism-haven', a: 'newHaven', b: 'prism', wood: 18, note: 'Energy crystals and advanced building materials.' },
+  { id: 'mercy-haven', a: 'newHaven', b: 'mercy', wood: 22, note: 'A crossing to the hospital and airship landing.' },
+  { id: 'hearth-haven', a: 'newHaven', b: 'hearth', wood: 22, note: 'Connect the village and welcome new families.' },
 ]
 export const ROUTE_MAP = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
+export const STARTER_DEPOSITS = { wood: 36, stone: 18 }
+export const GATHER_SITES = {
+  grove: { island: 'newHaven', label: 'Gather wood', kind: 'wood', deposit: 'wood', reward: { wood: 6 } },
+  stone: { island: 'newHaven', label: 'Mine stone', kind: 'stone', deposit: 'stone', reward: { stone: 3 } },
+  garden: { island: 'newHaven', label: 'Tend the garden', kind: 'garden', cost: { seeds: 1 }, reward: { food: 5 } },
+  collector: { island: 'newHaven', label: 'Collect fresh water', kind: 'water', reward: { water: 5 } },
+  forest: { island: 'verdant', label: 'Harvest timber', kind: 'wood', reward: { wood: 8 } },
+  forage: { island: 'verdant', label: 'Forage & collect seeds', kind: 'garden', reward: { food: 5, seeds: 2 } },
+  lumber: { island: 'verdant', label: 'Prepare building materials', kind: 'stone', reward: { materials: 3 } },
+  falls: { island: 'rain', label: 'Collect waterfall water', kind: 'water', reward: { water: 8 } },
+  fishing: { island: 'rain', label: 'Fish the pools', kind: 'water', reward: { fish: 2, food: 3 } },
+  crystals: { island: 'prism', label: 'Mine energy crystals', kind: 'crystal', reward: { crystals: 3, energy: 2 } },
+  salvage: { island: 'prism', label: 'Recover power components', kind: 'crystal', reward: { materials: 3, stone: 2 } },
+}
 
 export const BRIDGE_TYPES = {
   rope: {
@@ -130,6 +116,7 @@ export const BRIDGE_TYPES = {
     yieldMult: 1.25,
     woodMult: 1.4,
     coins: 20,
+    stone: 8,
     desc: 'Costs more, but keeps routes open and carries 25% more goods.',
   },
 }
@@ -141,31 +128,31 @@ export const HARVEST = { wood: 10, sustainability: 3 }
 // prod / upkeep are per action. happiness is an adjustment after each action.
 export const BUILDINGS = {
   shelter: {
-    name: 'Shelter', category: 'Survival', cost: { wood: 10 }, housing: 4,
+    name: 'Shelter', category: 'Survival', cost: { wood: 10, stone: 2 }, housing: 4,
     desc: 'Timber and canvas homes. Houses 4 residents.',
   },
   bridgeAnchor: {
-    name: 'Bridge Anchor', category: 'Exploration', cost: { wood: 8 }, unique: true, homeOnly: true,
-    desc: 'A braced timber anchor. Needed before any bridge can be built.',
+    name: 'Bridge Anchor', category: 'Exploration', cost: { wood: 8, stone: 4 }, unique: true, homeOnly: true, infrastructure: true,
+    desc: 'A workshop upgrade that unlocks bridges without using a shelter plot. Open bridge routes here to build, reinforce or repair crossings.',
   },
   waterCollector: {
     name: 'Water Collector', category: 'Survival', cost: { wood: 8 }, prod: { water: 4 },
     desc: 'Canvas funnels and barrels that catch cloud moisture.',
   },
   garden: {
-    name: 'Food Garden', category: 'Survival', cost: { wood: 6 }, prod: { food: 4 }, upkeep: { water: 1 },
+    name: 'Food Garden', category: 'Survival', cost: { wood: 6, seeds: 1 }, prod: { food: 4 }, upkeep: { water: 1 },
     desc: 'Raised beds of greens and roots.',
   },
   storageHouse: {
-    name: 'Storage House', category: 'Survival', cost: { wood: 12 }, capBonus: 25,
+    name: 'Storage House', category: 'Survival', cost: { wood: 12, stone: 4 }, capBonus: 25,
     desc: 'Raises water, food and energy storage by 25.',
   },
   solarFarm: {
-    name: 'Solar Farm', category: 'Renewable', cost: { wood: 12, coins: 30 }, prod: { energy: 5 }, renewable: true,
+    name: 'Solar Farm', category: 'Renewable', cost: { wood: 12, coins: 30, crystals: 3, materials: 2 }, prod: { energy: 5 }, renewable: true,
     desc: 'Rows of recycled panels. Weak during solar storms.',
   },
   market: {
-    name: 'Market', category: 'Community', cost: { wood: 15, coins: 20 }, prod: { coins: 6 }, upkeep: { energy: 1 }, happiness: 1,
+    name: 'Market', category: 'Community', cost: { wood: 15, coins: 20, materials: 2 }, prod: { coins: 6 }, upkeep: { energy: 1 }, happiness: 1,
     desc: 'Stalls, gossip and trade. Earns cloud coins.',
   },
   clinic: {
@@ -173,7 +160,7 @@ export const BUILDINGS = {
     desc: 'Keeps residents healthy. Needs steady power.',
   },
   battery: {
-    name: 'Crystal Battery', category: 'Renewable', cost: { wood: 10, coins: 35 }, energyCap: 40,
+    name: 'Crystal Battery', category: 'Renewable', cost: { wood: 10, coins: 35, crystals: 5, materials: 3 }, energyCap: 40,
     desc: 'Stores surplus renewable energy (+40 energy storage).',
   },
   communityHall: {
@@ -181,7 +168,7 @@ export const BUILDINGS = {
     desc: 'Meetings, music and the occasional festival.',
   },
   windTurbine: {
-    name: 'Wind Turbine', category: 'Renewable', cost: { wood: 14, coins: 25 }, prod: { energy: 7 }, happiness: -1, renewable: true,
+    name: 'Wind Turbine', category: 'Renewable', cost: { wood: 14, coins: 25, crystals: 4, materials: 4 }, prod: { energy: 7 }, happiness: -1, renewable: true,
     desc: 'Strong renewable power. Residents say it hums at night.',
   },
   // Pre-placed, not buildable
@@ -214,7 +201,7 @@ export const MISSIONS = [
   },
   {
     id: 'anchor', name: 'Hold Fast', chapter: 1,
-    objective: 'Build a bridge anchor on New Haven.',
+    objective: 'Unlock bridge construction in the workshop.',
     reward: { xp: 30 }, rewardText: '30 XP · bridges unlocked',
     progress: (s) => [s.buildings.filter((b) => b.type === 'bridgeAnchor').length, 1],
   },
@@ -249,6 +236,12 @@ export const MISSIONS = [
     progress: (s) => [Math.min(s.counters.energyStreak, 5), 5],
   },
   {
+    id: 'prismPower', name: 'From Crystal to Current', chapter: 2, requires: ['firstBridge'],
+    objective: 'Connect Prism Shelf and build a Solar Farm.',
+    reward: { xp: 100, coins: 30 }, rewardText: '100 XP · 30 coins · clean power',
+    progress: (s) => [Number(s.connected.includes('prism')) + Number(s.buildings.some((b) => b.type === 'solarFarm')), 2],
+  },
+  {
     id: 'longSpan', name: 'The Long Span', chapter: 3, requires: ['firstBridge'],
     objective: 'Have a bridge with stability above 70%.',
     reward: { xp: 80, flag: 'stormBracing' }, rewardText: '80 XP · Storm Bracing (halves bridge damage)',
@@ -256,9 +249,9 @@ export const MISSIONS = [
   },
   {
     id: 'cleanRoute', name: 'The Clean Route', chapter: 3, requires: ['firstBridge'],
-    objective: 'Connect three islands to New Haven.',
+    objective: 'Connect Verdant Reach, Rain Island and Prism Shelf to New Haven.',
     reward: { xp: 250 }, rewardText: '250 XP · clean transit badge',
-    progress: (s) => [Math.min(s.connected.length - 1, 3), 3],
+    progress: (s) => [['verdant', 'rain', 'prism'].filter((id) => s.connected.includes(id)).length, 3],
   },
   {
     id: 'balancedTown', name: 'Higher Tomorrows', chapter: 3, requires: ['cleanRoute'], final: true,
@@ -278,11 +271,11 @@ export const WEATHER = {
   heavyRain: { name: 'Heavy Rain', text: 'Collectors overflow. Rope bridges creak.', icon: 'rain', gain: { water: 5 }, bridgeDamage: 1, weight: 2 },
   heatWave: { name: 'Heat Wave', text: 'Thirsty crops, thirsty people.', icon: 'heat', gain: { food: -2 }, use: { water: 3 }, weight: 1.5 },
   crosswind: { name: 'Crosswind', text: 'Bridges sway. Turbines sing.', icon: 'wind', gain: { energy: 2 }, bridgeDamage: 0.7, weight: 2 },
-  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { mistral: 0.5 }, weight: 1 },
+  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { prism: 0.5 }, weight: 1 },
   cloudDrought: { name: 'Cloud Drought', text: 'The clouds are holding on to their water.', icon: 'drought', gain: { water: -3 }, weight: 1.5 },
 }
 
 export const INTRO = {
   speaker: 'Mara Vale, settlement coordinator',
-  text: 'New Haven is small, but it is still here. The beacon is dark, the pantry is nearly empty, and the nearest islands are beyond the broken bridge. We have enough material for one useful beginning. Choose carefully.',
+  text: 'New Haven has room for homes, but only a small reserve of wood and stone. The beacon is dark, the pantry is nearly empty, and the nearest islands are beyond the broken bridge. We have enough material for one useful beginning. Choose carefully.',
 }

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../../game/data.js'
 import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
-import { islandCardArt, ISLAND_BADGE } from '../artPaths.js'
+import { ISLAND_BADGE } from '../artPaths.js'
+import IslandArt from '../IslandArt.jsx'
+import Vignette from '../vignettes.jsx'
 import { Modal, YieldChips, Progress, CostChips } from './Panel.jsx'
 import { RES_ICON, People, Leaf, Smile, Check, Star, ArtIcon } from '../icons.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
@@ -74,7 +76,7 @@ export function StorageModal() {
   const ui = useUI()
   const cap = caps(state)
   const { gain, use, net } = projectProduction(state)
-  const rows = ['wood', 'water', 'food', 'energy', 'coins']
+  const rows = Object.keys(RESOURCES)
   return (
     <Modal title="Storehouse" kicker="Stock and flow next action" onClose={() => ui.setPanel(null)}>
       <table className="table">
@@ -106,8 +108,7 @@ export function StorageModal() {
 
 function IslandBadge({ id }) {
   const b = ISLAND_BADGE[id] || {}
-  if (b.img) return <img className="card-badge" src={b.img} alt="" />
-  return <span className="card-badge ring" style={{ background: b.ring }}><ArtIcon name={b.icon} size={30} /></span>
+  return <span className="card-badge ring" style={{ background: b.ring || '#1f2a5a' }}><ArtIcon name={b.icon || 'cloud'} size={30} /></span>
 }
 
 // "The Skyway Chart — choose your next horizon"
@@ -131,7 +132,7 @@ export function MapModal() {
           return (
             <article key={id} className={`chart-card is-${status}`}>
               <IslandBadge id={id} />
-              <div className="cc-art"><img src={islandCardArt(id)} alt="" /></div>
+              <div className="cc-art">{hidden ? <Vignette kind="uncharted" /> : <IslandArt id={id} />}</div>
               <h3>{hidden ? 'Uncharted' : d.name}</h3>
               <p className="cc-desc">{hidden ? 'Something drifts beyond the clouds. Connect a neighbour to chart it.' : d.desc}</p>
               {!hidden && (
@@ -208,8 +209,8 @@ export function IntroModal() {
       <blockquote className="intro-quote">“{INTRO.text}”<cite>— {INTRO.speaker}</cite></blockquote>
       <ol className="steps">
         <li>Build a <strong>Shelter</strong> and a <strong>Bridge Anchor</strong> from the Build menu.</li>
-        <li>Click New Haven to <strong>gather wood</strong>.</li>
-        <li>Click a glowing <strong>+</strong> between islands to build your first bridge.</li>
+        <li>Tap the grove, stone deposits, garden or collector on New Haven. <strong>Starter timber and stone are limited.</strong></li>
+        <li>Build a bridge to <strong>Verdant Reach</strong> for timber and crops, <strong>Rain Island</strong> for water, or <strong>Prism Shelf</strong> for crystals.</li>
         <li>Earn <strong>10 XP per action</strong> and bonus XP from quests. <strong>Level up</strong> to unlock buildings and bridges. Resources update automatically after each action.</li>
       </ol>
     </Modal>

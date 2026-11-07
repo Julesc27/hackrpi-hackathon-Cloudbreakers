@@ -1,18 +1,20 @@
 // Deterministic, action-driven game rules with XP and level unlocks.
 import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS,
-  GATHER_AMOUNT, HARVEST, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
+  GATHER_AMOUNT, HARVEST, GATHER_SITES, STARTER_DEPOSITS, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
 
 export const METERS = ['energy', 'water', 'food']
-const ALL_RES = ['wood', 'water', 'food', 'energy', 'coins']
+const ALL_RES = Object.keys(RESOURCES)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 export function createInitialState() {
   return {
-    version: 3,
+    version: 5,
     townName: 'New Haven',
-    resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40 },
+    resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
+    deposits: { ...STARTER_DEPOSITS },
+    lastInteraction: null,
     happiness: 62,
     population: 6,
     sustainability: 40,
@@ -26,7 +28,7 @@ export function createInitialState() {
     ],
     beaconRestored: false,
     connected: ['newHaven'],
-    discovered: ['newHaven', 'verdant', 'rain', 'mistral', 'gardens', 'mercy', 'hearth'],
+    discovered: Object.keys(ISLANDS),
     bridges: [],
     weather: 'clear',
     forecast: 'clear',
@@ -87,6 +89,7 @@ export function bridgeCost(route, type) {
   const t = BRIDGE_TYPES[type]
   const cost = { wood: Math.round(route.wood * t.woodMult) }
   if (t.coins) cost.coins = t.coins
+  if (t.stone) cost.stone = t.stone
   return cost
 }
 
@@ -101,6 +104,7 @@ export function islandAccess(state) {
     changed = false
     for (const b of state.bridges) {
       const r = ROUTE_MAP[b.route]
+      if (!r) continue
       const ef = edgeFactor(b)
       for (const [u, v] of [[r.a, r.b], [r.b, r.a]]) {
         if (f[u] == null) continue
@@ -260,8 +264,7 @@ function progressSettlement(state, xp) {
   const res = { ...state.resources }
   const shortages = []
 
-  res.wood += proj.net.wood
-  res.coins += proj.net.coins
+  for (const key of ALL_RES) if (!METERS.includes(key)) res[key] = Math.max(0, (res[key] || 0) + proj.net[key])
   for (const k of METERS) {
     res[k] += proj.net[k]
     if (res[k] < 0) { shortages.push(k); res[k] = 0 }
@@ -295,7 +298,7 @@ function progressSettlement(state, xp) {
   const bridgeNotes = []
   const bridges = state.bridges.map((b) => {
     if (!w.bridgeDamage) return b
-    let dmg = Math.round(w.bridgeDamage * (100 - BRIDGE_TYPES[b.type].stability) * 0.5)
+    let dmg = Math.round(w.bridgeDamage * (100 - BRIDGE_TYPES[b.type].stability) * 0.05)
     if (state.flags.stormBracing) dmg = Math.round(dmg / 2)
     if (dmg <= 0) return b
     const condition = Math.max(0, b.condition - dmg)
@@ -357,26 +360,49 @@ export const bridgeLabel = (routeId) => {
   return `${ISLANDS[r.a].name} ↔ ${ISLANDS[r.b].name}`
 }
 
+export function gatherAvailability(state, siteId) {
+  const site = GATHER_SITES[siteId]
+  if (!site) return 'Unknown resource site'
+  if (!islandAccess(state)[site.island]) return `Connect ${ISLANDS[site.island].name} first`
+  if (site.deposit && (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit]) <= 0) return 'Deposit depleted — expand to a resource island'
+  if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
+  const cap = caps(state)
+  if (!Object.keys(site.reward).some((key) => (state.resources[key] || 0) < (cap[key] ?? Infinity))) return 'Storage is full'
+  return null
+}
+
+function gatherAtSite(state, siteId) {
+  const reason = gatherAvailability(state, siteId)
+  if (reason) return toast(state, 'warn', reason)
+  const site = GATHER_SITES[siteId]
+  const resources = pay(state.resources, site.cost)
+  const deposits = { ...STARTER_DEPOSITS, ...state.deposits }
+  const reward = {}
+  const cap = caps(state)
+  for (const [key, value] of Object.entries(site.reward)) {
+    const amount = Math.min(value, site.deposit ? deposits[site.deposit] : Infinity, (cap[key] ?? Infinity) - (resources[key] || 0))
+    resources[key] = (resources[key] || 0) + amount
+    reward[key] = amount
+    if (site.deposit) deposits[site.deposit] -= amount
+  }
+  let s = { ...state, resources, deposits, nextId: state.nextId + 1,
+    lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward },
+  }
+  s = progressSettlement(s, 10)
+  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
+  return s
+}
+
 /* ---------- reducer ---------- */
 
 export function gameReducer(state, action) {
   switch (action.type) {
-    case 'GATHER_WOOD': {
-      let s = { ...state, resources: { ...state.resources, wood: state.resources.wood + GATHER_AMOUNT } }
-      s = toast(s, 'gain', `+${GATHER_AMOUNT} wood gathered on New Haven`)
-      return progressSettlement(s, 10)
-    }
-
-    case 'HARVEST_FOREST': {  // Verdant Reach
-      if (!islandAccess(state).verdant) return toast(state, 'warn', 'Verdant Reach is not reachable.')
-      let s = {
-        ...state,
-        resources: { ...state.resources, wood: state.resources.wood + HARVEST.wood },
-        sustainPenalty: state.sustainPenalty + HARVEST.sustainability,
-      }
-      s = toast(s, 'gain', `+${HARVEST.wood} wood from Verdant Reach — the forest will need time to recover`)
-      return progressSettlement(s, 10)
-    }
+    case 'GATHER_WOOD':
+      return gatherAtSite(state, 'grove')
+    case 'HARVEST_FOREST':
+      return gatherAtSite(state, 'forest')
+    case 'GATHER_AT_SITE':
+      return gatherAtSite(state, action.siteId)
 
     case 'BUILD': {
       const { buildingType, island, slot } = action
@@ -384,14 +410,16 @@ export function gameReducer(state, action) {
       if (!def || def.buildable === false) return state
       if (!isUnlocked(state, buildingType)) return toast(state, 'warn', `${def.name} unlocks at level ${unlockLevel(buildingType)}.`)
       if (def.unique && countType(state, buildingType)) return toast(state, 'warn', `You already have a ${def.name}.`)
+      if (!ISLANDS[island]) return toast(state, 'warn', 'Unknown island.')
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
+      if (!islandAccess(state)[island]) return toast(state, 'warn', `Connect ${ISLANDS[island]?.name || 'that island'} before building there.`)
       if (!canAfford(state.resources, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
-      if (slot < 0 || slot >= (ISLANDS[island].plots || []).length) return state
-      if (state.buildings.some((b) => b.island === island && b.slot === slot)) return state
+      if (!def.infrastructure && (!Number.isInteger(slot) || slot < 0 || slot >= ISLANDS[island].plots.length)) return state
+      if (!def.infrastructure && state.buildings.some((b) => !BUILDINGS[b.type].infrastructure && b.island === island && b.slot === slot)) return state
       let s = {
         ...state,
         resources: pay(state.resources, def.cost),
-        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot, builtLevel: getLevelInfo(state.xp).level }],
+        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot: def.infrastructure ? -3 : slot, builtLevel: getLevelInfo(state.xp).level }],
         nextId: state.nextId + 1,
       }
       s = toast(s, 'build', `${def.name} built on ${ISLANDS[island].name}`)
@@ -424,7 +452,7 @@ export function gameReducer(state, action) {
       if (!b || b.type === 'reinforced') return state
       if (!isUnlocked(state, 'reinforced')) return toast(state, 'warn', `Reinforced bridges unlock at level ${unlockLevel('reinforced')}.`)
       const full = bridgeCost(ROUTE_MAP[b.route], 'reinforced')
-      const cost = { wood: Math.ceil(full.wood / 2), coins: full.coins }
+      const cost = { wood: Math.ceil(full.wood / 2), coins: full.coins, stone: full.stone }
       if (!canAfford(state.resources, cost)) return toast(state, 'warn', 'Not enough resources to reinforce.')
       let s = {
         ...state,
@@ -472,14 +500,47 @@ export function gameReducer(state, action) {
   }
 }
 
-// Keep towns from the turn-based version, including their existing XP and unlocks.
+// Map the older eight-island town into the current chapter without losing buildings.
 export function migrateSave(saved) {
-  if (!saved || ![2, 3].includes(saved.version)) return createInitialState()
+  if (!saved || ![2, 3, 4, 5].includes(saved.version)) return createInitialState()
   const { turn, actionsLeft, report, showReport, ...rest } = saved
+  const islandMap = { mistral: 'prism', gardens: 'verdant', skyport: 'prism' }
+  const remap = (id) => islandMap[id] || id
+  const routeMap = { 'mistral-haven': 'prism-haven', 'gardens-haven': 'verdant-haven', 'hearth-skyport': 'prism-haven' }
+  const occupied = new Set()
+  // Give existing slots on retained islands priority, then find space for relocated structures.
+  const originals = saved.buildings || []
+  const buildings = new Map()
+  const ordered = [...originals.filter((b) => remap(b.island) === b.island), ...originals.filter((b) => remap(b.island) !== b.island)]
+  for (const { builtTurn, ...building } of ordered) {
+    const island = remap(building.island)
+    if (!ISLANDS[island] || !BUILDINGS[building.type]) continue
+    let slot = BUILDINGS[building.type].infrastructure ? -3 : building.slot
+    if (slot >= 0 && (slot >= ISLANDS[island].plots.length || occupied.has(`${island}:${slot}`))) {
+      slot = ISLANDS[island].plots.findIndex((_, i) => !occupied.has(`${island}:${i}`))
+    }
+    if (building.slot >= 0 && slot < 0 && !BUILDINGS[building.type].infrastructure) continue
+    occupied.add(`${island}:${slot}`)
+    buildings.set(building.id, { builtLevel: 1, ...building, island, slot })
+  }
+  const bridges = new Map()
+  for (const { builtTurn, ...b } of saved.bridges || []) {
+    const route = routeMap[b.route] || b.route
+    if (!ROUTE_MAP[route]) continue
+    const prior = bridges.get(route)
+    bridges.set(route, { builtLevel: 1, ...b, route,
+      type: prior?.type === 'reinforced' ? 'reinforced' : b.type,
+      condition: Math.max(prior?.condition || 0, b.condition),
+    })
+  }
   return {
-    ...createInitialState(), ...rest, version: 3, toasts: [],
-    buildings: saved.buildings.map(({ builtTurn, ...b }) => ({ builtLevel: 1, ...b })),
-    bridges: saved.bridges.map(({ builtTurn, ...b }) => ({ builtLevel: 1, ...b })),
-    journal: saved.journal.map(({ turn, ...entry }) => ({ level: 1, ...entry })),
+    ...createInitialState(), ...rest, version: 5, toasts: [],
+    resources: { ...createInitialState().resources, ...saved.resources },
+    deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
+    connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),
+    discovered: Object.keys(ISLANDS),
+    buildings: originals.map((b) => buildings.get(b.id)).filter(Boolean),
+    bridges: [...bridges.values()],
+    journal: (saved.journal || []).map(({ turn, ...entry }) => ({ level: 1, ...entry })),
   }
 }

@@ -3,8 +3,8 @@ import { ISLANDS } from '../../game/data.js'
 
 // The playable world is larger than the painted art: the 1600x900 concept frame sits in
 // the middle of a WORLD-sized sky the player can pan around, like Dragon City / Homescapes.
-export const WORLD = { x: -520, y: -380, w: 2640, h: 1460 }
-const HOME = { x: 790, y: 470 }
+export const WORLD = { x: -520, y: -380, w: 2840, h: 1660 }
+const HOME = { x: 810, y: 540 }
 const DRAG_THRESHOLD = 6
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
@@ -104,7 +104,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     // leave room for the HUD bars; aim to show the whole painted archipelago
     const usableH = Math.max(200, h - (w < 900 ? 300 : 170))
     const cover = Math.max(w / WORLD.w, h / WORLD.h) // never zoom out past the edge of the sky
-    const f = Math.max(Math.min(w / 1560, usableH / 820), cover * 1.05)
+    const f = Math.max(Math.min(w / 2040, usableH / 1170), cover * 1.05)
     limits.current = { fit: f, min: Math.max(f * 0.7, cover), max: Math.max(f * 2.8, 1.5) }
     return f
   }, [])
@@ -258,7 +258,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
 
     const onDbl = (e) => {
       const p = local(e)
-      if (e.target.closest?.('.no-dblzoom')) return
+      if (e.target.closest?.('.no-dblzoom, [role=button], button, a, input, select, textarea')) return
       stop()
       const c = cam.current
       const factor = c.s > limits.current.fit * 1.9 ? limits.current.fit / c.s : 1.6

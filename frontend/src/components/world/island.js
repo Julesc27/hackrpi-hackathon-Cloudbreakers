@@ -27,27 +27,53 @@ export function islandBounds(isl) {
 }
 
 export function cloudPuff(ctx, x, y, r, shade = 1) {
-  const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.45, r * 0.1, x, y, r)
-  g.addColorStop(0, col(PAL.cloud))
-  g.addColorStop(0.55, col(PAL.cloudMid))
-  g.addColorStop(1, col(shade > 0.5 ? PAL.cloudShade : PAL.cloudDeep))
-  ctx.fillStyle = g
-  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill()
+  // Overlapping soft lobes so a puff reads as a cloud, not a single disc.
+  const lobes = [
+    [0, 0, 1, 1],
+    [-0.46, 0.1, 0.64, 0.95],
+    [0.48, 0.12, 0.6, 0.92],
+    [-0.12, -0.42, 0.55, 0.96],
+    [0.28, -0.34, 0.46, 0.9],
+  ]
+  for (const [ox, oy, s, a] of lobes) {
+    const rr = r * s
+    const px = x + ox * r
+    const py = y + oy * r * 0.7
+    const g = ctx.createRadialGradient(px - rr * 0.32, py - rr * 0.4, rr * 0.05, px, py + rr * 0.08, rr)
+    if (shade > 0.5) {
+      g.addColorStop(0, col('#ffffff', a))
+      g.addColorStop(0.42, col('#f7f4ff', a * 0.96))
+      g.addColorStop(0.75, col(PAL.cloudShade, a * 0.85))
+      g.addColorStop(1, col(PAL.cloudDeep, 0))
+    } else {
+      g.addColorStop(0, col('#e4dff8', a * 0.85))
+      g.addColorStop(0.55, col('#a79ed4', a * 0.7))
+      g.addColorStop(1, col('#6a66a4', 0))
+    }
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.ellipse(px, py, rr, rr * 0.78, 0, 0, TAU)
+    ctx.fill()
+  }
 }
 
 /** A drifting cloud bank made of puffs. */
 export function cloudBank(ctx, x, y, w, seed = 1, dim = false) {
   const r = rng(seed)
-  const n = 6 + Math.floor(r() * 4)
+  const n = 8 + Math.floor(r() * 4)
   const g = ctx.createRadialGradient(x, y, 1, x, y, w * 0.6)
-  ellipse(ctx, x, y + w * 0.06, w * 0.52, w * 0.12, col(dim ? PAL.cloudDeep : PAL.cloudShade))
+  // lavender belly under the sunlit tops
+  ellipse(ctx, x, y + w * 0.1, w * 0.58, w * 0.16, col(dim ? '#6d69aa' : PAL.cloudDeep, dim ? 0.55 : 0.72))
+  ellipse(ctx, x, y + w * 0.05, w * 0.46, w * 0.1, col(dim ? PAL.cloudDeep : PAL.cloudShade, 0.85))
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1)
     const arch = Math.sin(t * Math.PI)
-    const px = x + (t - 0.5) * w * 0.85
-    const py = y - arch * w * 0.16 + r() * w * 0.04
-    cloudPuff(ctx, px, py, w * (0.13 + arch * 0.12 + r() * 0.05), dim ? 0 : 1)
+    const px = x + (t - 0.5) * w * 0.92
+    const py = y - arch * w * 0.2 + (r() - 0.5) * w * 0.05
+    cloudPuff(ctx, px, py, w * (0.12 + arch * 0.14 + r() * 0.05), dim ? 0 : 1)
   }
+  // a bright crest so the bank catches the moon
+  ellipse(ctx, x - w * 0.08, y - w * 0.08, w * 0.22, w * 0.06, col('#ffffff', dim ? 0.12 : 0.28))
   return g
 }
 
@@ -80,7 +106,7 @@ function rockBody(ctx, isl, r) {
       const t = i / n
       const x = cx - rx + t * rx * 2
       const env = Math.sin(t * Math.PI) ** 0.8
-      const base = cy + 3 + env * depth * (0.55 + 0.45 * (1 - Math.abs(x - tipX) / rx))
+      const base = cy + 3 + env * depth * (0.78 + 0.22 * (1 - Math.abs(x - tipX) / rx))
       const spike = i % 2 ? base : base - depth * (0.12 + r() * 0.1) * env
       ctx.lineTo(x, spike)
     }
@@ -88,16 +114,28 @@ function rockBody(ctx, isl, r) {
     ctx.ellipse(cx, cy + 3, rx, ry, 0, 0, Math.PI, false)
     ctx.closePath()
     ctx.fillStyle = g; ctx.fill()
-    // lit left facets + cracks
+    // lit left facets, crystal chips, and cracks
     ctx.save(); ctx.clip()
-    const lg = ctx.createLinearGradient(cx - rx, 0, cx, 0)
-    lg.addColorStop(0, col('#a8acec', 0.45)); lg.addColorStop(1, col('#a8acec', 0))
-    ctx.fillStyle = lg; ctx.fillRect(cx - rx, cy, rx, depth)
-    for (let i = 0; i < rx / 12; i++) {
-      const x = cx - rx + r() * rx * 2, y = cy + ry * 0.6 + r() * depth * 0.6
-      line(ctx, x, y, x + (r() - 0.5) * 6, y + 8 + r() * 18, col(PAL.rockDark, 0.6), 0.8)
+    const lg = ctx.createLinearGradient(cx - rx, 0, cx + rx * 0.2, 0)
+    lg.addColorStop(0, col('#d5d8ff', 0.42)); lg.addColorStop(0.45, col('#8e93e0', 0.12)); lg.addColorStop(1, col('#1a1e4a', 0.28))
+    ctx.fillStyle = lg; ctx.fillRect(cx - rx, cy, rx * 2, depth)
+    for (let i = 0; i < rx / 28; i++) {
+      const x = cx - rx * 0.7 + r() * rx * 1.3
+      const y = cy + ry * 0.4 + r() * depth * 0.55
+      const hw = 4 + r() * 7
+      poly(ctx, [[x, y - hw], [x + hw * 0.7, y + hw * 0.2], [x, y + hw * 0.35], [x - hw * 0.55, y]], col(r() < 0.5 ? '#c8ccf6' : '#7d82c4', 0.35))
+    }
+    for (let i = 0; i < rx / 10; i++) {
+      const x = cx - rx + r() * rx * 2, y = cy + ry * 0.5 + r() * depth * 0.65
+      line(ctx, x, y, x + (r() - 0.5) * 8, y + 10 + r() * 22, col(PAL.rockDark, 0.55), 0.9)
     }
     ctx.restore()
+    // mossy lip where grass meets rock
+    ctx.beginPath()
+    ctx.ellipse(cx, cy + 4, rx * 0.98, ry * 0.92, 0, 0.15, Math.PI - 0.15)
+    ctx.strokeStyle = col('#3d8a46', 0.55)
+    ctx.lineWidth = 3.2
+    ctx.stroke()
   }
 }
 
@@ -144,7 +182,7 @@ function paved(ctx, p, r) {
     ctx.fillStyle = g; ctx.fill()
     // stone blocks
     for (let k = 0; k < 28; k++) { const a = k / 28 * Math.PI; const x = p.x + Math.cos(a) * p.rx, y = p.y + Math.sin(a) * p.ry; line(ctx, x, y, x, y - h, col('#b8aa8c', 0.6), 0.5) }
-    ellipse(ctx, p.x, p.y - h, p.rx, p.ry, col(PAL.stone), col('#c9b894'), 0.6)
+    ellipse(ctx, p.x, p.y - h, p.rx, p.ry, col(PAL.stone), col(PAL.gold, 0.85), 1.1)
     ctx.save(); ctx.beginPath(); ctx.ellipse(p.x, p.y - h, p.rx, p.ry, 0, 0, TAU); ctx.clip()
     ctx.strokeStyle = col('#cdbd99', 0.55); ctx.lineWidth = 0.5
     for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.ellipse(p.x, p.y - h, p.rx * k / 4, p.ry * k / 4, 0, 0, TAU); ctx.stroke() }
@@ -203,6 +241,49 @@ function paved(ctx, p, r) {
   }
 }
 
+/** A coastline with capes and coves, so the island is not a flat ellipse. */
+function organicEllipse(ctx, cx, cy, rx, ry, rand, fill) {
+  const n = Math.max(28, Math.round((rx + ry) / 4))
+  ctx.beginPath()
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * TAU
+    const wobble = 1 + Math.sin(a * 3.0 + cx * 0.01) * 0.07 + Math.sin(a * 7.0 + cy * 0.02) * 0.045 + (rand() - 0.5) * 0.035
+    const x = cx + Math.cos(a) * rx * wobble
+    const y = cy + Math.sin(a) * ry * wobble
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = fill
+  ctx.fill()
+}
+
+function meadowBlooms(ctx, isl, r) {
+  const colors = ['#ffe07a', '#ff8eae', '#ffffff', '#c9a6ff', '#ffb067']
+  const n = Math.max(4, Math.round(isl.ground[0][2] / 22))
+  for (let i = 0; i < n; i++) {
+    const g = isl.ground[Math.floor(r() * isl.ground.length)]
+    const a = r() * TAU
+    const d = 0.62 + r() * 0.28
+    const x = g[0] + Math.cos(a) * g[2] * d
+    const y = g[1] + Math.sin(a) * g[3] * d
+    if (!isl.ground.some((e) => inside(e, x, y, 0.86))) continue
+    const blocked = (isl.paved || []).some((p) => {
+      if (p.type === 'path') return false
+      const rx = (p.rx || p.a || 16) + 6
+      const ry = (p.ry || (p.b || 12) / 2) + 4
+      return Math.hypot((x - p.x) / rx, (y - p.y) / ry) < 1
+    })
+    if (blocked) continue
+    for (let k = 0; k < 5; k++) {
+      const bx = x + (r() - 0.5) * 8
+      const by = y + (r() - 0.5) * 3.2
+      circle(ctx, bx, by - 1.4, 1.35, col(colors[(i + k) % colors.length]))
+      circle(ctx, bx - 0.4, by - 1.9, 0.55, col('#ffffff', 0.7))
+    }
+  }
+}
+
 /** Static body of the island, cached as a bitmap by the renderer. */
 export function drawIslandBase(ctx, isl) {
   const r = rng(isl.seed || 7)
@@ -221,35 +302,54 @@ export function drawIslandBase(ctx, isl) {
       cloudPuff(ctx, cx + (r() - 0.5) * rx * 1.6, cy + ry * 0.8 + isl.depth * (0.35 + r() * 0.45), (12 + r() * 16) * scale, 0)
     }
   }
-  // 3. waterfall sheets (animated streaks are drawn on top every frame)
+  // 3. waterfall sheets pouring off the rim into the sky (streaks animate on top)
   for (const w of isl.falls || []) {
     const y0 = groundEdgeY(isl, w.x) - 3
     const g = ctx.createLinearGradient(0, y0, 0, y0 + w.len)
-    g.addColorStop(0, col('#d6f0ff', 0.95)); g.addColorStop(0.5, col('#7cc3ff', 0.8)); g.addColorStop(1, col('#7cc3ff', 0))
+    g.addColorStop(0, col('#f4fbff', 0.95)); g.addColorStop(0.35, col('#8fd4ff', 0.82)); g.addColorStop(1, col('#7ec8ff', 0))
     ctx.fillStyle = g
-    ctx.beginPath(); ctx.moveTo(w.x - w.w / 2, y0); ctx.lineTo(w.x + w.w / 2, y0); ctx.lineTo(w.x + w.w / 2 + 3, y0 + w.len); ctx.lineTo(w.x - w.w / 2 - 3, y0 + w.len); ctx.closePath(); ctx.fill()
+    ctx.beginPath(); ctx.moveTo(w.x - w.w / 2, y0); ctx.lineTo(w.x + w.w / 2, y0); ctx.lineTo(w.x + w.w / 2 + 4, y0 + w.len); ctx.lineTo(w.x - w.w / 2 - 4, y0 + w.len); ctx.closePath(); ctx.fill()
+    // bright core
+    const core = ctx.createLinearGradient(0, y0, 0, y0 + w.len * 0.85)
+    core.addColorStop(0, col('#ffffff', 0.9)); core.addColorStop(1, col('#ffffff', 0))
+    ctx.fillStyle = core
+    ctx.fillRect(w.x - w.w * 0.18, y0, w.w * 0.36, w.len * 0.85)
+    cloudPuff(ctx, w.x, y0 + w.len - 4, w.w * 0.85, 1)
   }
-  // 4. ground: an earthy lip, then grass
-  for (const [cx, cy, rx, ry] of isl.ground) ellipse(ctx, cx, cy + 5, rx, ry, col(isl.material === 'stone' ? PAL.stoneDark : PAL.grassEdge))
+  // 4. ground: a soil lip, then an irregular meadow (not a perfect oval)
+  const [gLight, gMid, gDark] = isl.biome || [PAL.grassLight, PAL.grass, PAL.grassDark]
+  for (const [cx, cy, rx, ry] of isl.ground) organicEllipse(ctx, cx, cy + 6, rx * 1.04, ry * 1.08, r, col(isl.material === 'stone' ? PAL.stoneDark : PAL.grassEdge))
   for (const [cx, cy, rx, ry] of isl.ground) {
-    const g = ctx.createRadialGradient(cx - rx * 0.2, cy - ry * 0.3, 2, cx, cy, rx)
-    g.addColorStop(0, col(PAL.grassLight)); g.addColorStop(0.6, col(PAL.grass)); g.addColorStop(1, col(PAL.grassDark))
-    ellipse(ctx, cx, cy, rx, ry, g)
+    const g = ctx.createRadialGradient(cx - rx * 0.25, cy - ry * 0.35, 2, cx, cy, rx)
+    g.addColorStop(0, col(gLight)); g.addColorStop(0.55, col(gMid)); g.addColorStop(1, col(gDark))
+    organicEllipse(ctx, cx, cy, rx, ry, r, g)
+    // a cliff shelf so the top reads as a terrace, not a disc
+    ctx.save()
+    ctx.globalAlpha = 0.35
+    organicEllipse(ctx, cx, cy + ry * 0.15, rx * 0.72, ry * 0.55, r, col(gDark))
+    ctx.restore()
   }
-  // grass texture
+  // sunlit crown + grass blades, so the meadow reads even from far away
+  for (const [cx, cy, rx, ry] of isl.ground) {
+    const sun = ctx.createRadialGradient(cx - rx * 0.28, cy - ry * 0.35, 2, cx, cy, rx)
+    sun.addColorStop(0, col('#e7f6c4', 0.28))
+    sun.addColorStop(0.45, col('#ffffff', 0))
+    ellipse(ctx, cx, cy, rx, ry, sun)
+  }
   ctx.save()
   ctx.beginPath(); for (const [cx, cy, rx, ry] of isl.ground) { ctx.moveTo(cx + rx, cy); ctx.ellipse(cx, cy, rx, ry, 0, 0, TAU) }
   ctx.clip()
   const [bx, by, bw, bh] = (() => { const b = islandBounds(isl); return [b.x, b.y, b.w, b.h] })()
-  for (let i = 0; i < (bw * bh) / 90; i++) {
+  for (let i = 0; i < (bw * bh) / 70; i++) {
     const x = bx + r() * bw, y = by + r() * bh
-    if (!isl.ground.some((e) => inside(e, x, y, 0.92))) continue
+    if (!isl.ground.some((e) => inside(e, x, y, 0.9))) continue
     const k = r()
-    if (k < 0.55) { line(ctx, x, y, x - 1, y - 2.4, col(PAL.grassDark, 0.8), 0.6); line(ctx, x, y, x + 1, y - 2.2, col(PAL.grassDark, 0.8), 0.6) }
-    else if (k < 0.85) circle(ctx, x, y, 0.8, col(PAL.grassLight, 0.8))
-    else circle(ctx, x, y, 0.7, col(['#ffd66b', '#ffffff', '#ff9ab0'][Math.floor(r() * 3)], 0.9))
+    if (k < 0.5) { line(ctx, x, y, x - 1.1, y - 2.8, col(PAL.grassDark, 0.75), 0.7); line(ctx, x, y, x + 1.2, y - 2.4, col('#8ed56a', 0.8), 0.6) }
+    else if (k < 0.82) circle(ctx, x, y, 0.9, col(PAL.grassLight, 0.75))
+    else circle(ctx, x, y, 1.15, col(['#ffe07a', '#ffffff', '#ff9ab0', '#d7b4ff'][Math.floor(r() * 4)], 0.95))
   }
   ctx.restore()
+  meadowBlooms(ctx, isl, r)
 
   // 5. paving, paths, fields, pools, decks
   for (const p of isl.paved || []) paved(ctx, p, r)
@@ -280,11 +380,13 @@ export function animIslandBase(ctx, isl, t) {
         line(ctx, x + ph * 2, y, x + ph * 2, y + w.len * 0.12, `rgba(255,255,255,${0.75 * (1 - ph)})`, Math.max(0.8, w.w * 0.08))
       }
     }
-    // spray at the lip
+    // spray at the lip and a drifting mist where the fall meets the sky
     for (let k = 0; k < 3; k++) {
       const ph = (t * 1.2 + k / 3) % 1
-      circle(ctx, w.x + (k - 1) * w.w * 0.3, y0 + 2 - ph * 3, 1.2 + ph * 2, `rgba(255,255,255,${0.5 * (1 - ph)})`)
+      circle(ctx, w.x + (k - 1) * w.w * 0.3, y0 + 2 - ph * 3, 1.2 + ph * 2, `rgba(255,255,255,${0.55 * (1 - ph)})`)
     }
+    const mist = (t * 0.35 + w.x * 0.01) % 1
+    circle(ctx, w.x + Math.sin(t + w.x) * 3, y0 + w.len - 2, w.w * (0.7 + mist * 0.35), `rgba(255,255,255,${0.18 + mist * 0.08})`)
   }
   for (const p of isl.paved || []) {
     if (p.type !== 'pool') continue
