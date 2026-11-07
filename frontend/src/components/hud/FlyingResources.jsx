@@ -4,7 +4,7 @@ import { INTERACTION_POINTS } from '../../game/mapLayout.js'
 import { WORLD } from '../map/Camera.jsx'
 import { useUI } from '../../game/GameContext.jsx'
 
-// Resources that have a tile in the TopBar. Everything else flies to the storage button.
+// Resources that have a tile in the TopBar. Everything else flies to the storage box.
 const TOP_BAR_RESOURCES = new Set(['energy', 'water', 'happiness', 'food', 'wood', 'stone', 'coins'])
 
 function ResIcon({ res, size = 20 }) {
@@ -118,7 +118,13 @@ export default function FlyingResources() {
     // 3. Notify other components (TopBar gain flash, etc.)
     window.dispatchEvent(
       new CustomEvent('cloudbreakers:resource-token-arrive', {
-        detail: { res: p.res, amount: p.amount, isLast: p.isLast },
+        detail: {
+          res: p.res,
+          amount: p.amount,
+          isLast: p.isLast,
+          fromBubble: p.fromBubble,
+          totalAmount: p.totalAmount,
+        },
       })
     )
 
@@ -127,7 +133,7 @@ export default function FlyingResources() {
     setParticles((prev) => prev.filter((item) => item.id !== p.id))
   }, [])
 
-  // Listen for fly-resource events fired by Fx.jsx after each gather
+  // Listen for fly-resource events fired by Fx.jsx after each gather or bubble tap
   useEffect(() => {
     const onFly = (e) => {
       const detail = e.detail || {}
@@ -159,7 +165,7 @@ export default function FlyingResources() {
         const delay = delayOffset + i * 70
         const duration = 680 + (i % 2) * 40
 
-        // Fan-out burst from the site icon
+        // Fan-out burst from the origin icon
         const fan = i - (count - 1) / 2
         const burstAngle = -Math.PI / 2 + fan * 0.45
         const burstDist = 32 + (i % 2) * 14
@@ -179,6 +185,8 @@ export default function FlyingResources() {
           id,
           res,
           amount: tokenAmount,
+          totalAmount,
+          fromBubble: detail.fromBubble,
           isLast: i === count - 1,
           inTopBar,
           startX: startPos.x,
@@ -223,7 +231,7 @@ export default function FlyingResources() {
         let curX, curY, scale, opacity
 
         if (t < 0.16) {
-          // Phase 1: pop outward from the harvest site
+          // Phase 1: pop outward from the harvest site / building
           const k = t / 0.16
           const popEase = Math.sin((k * Math.PI) / 2)
           curX = p.startX + p.burstX * popEase

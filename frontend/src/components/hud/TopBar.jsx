@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { caps, projectProduction } from '../../game/engine.js'
 import { RES_ICON } from '../icons.jsx'
@@ -78,12 +78,28 @@ export default function TopBar() {
   const { net } = projectProduction(state)
   const r = state.resources
 
-  // gains: { [res]: { amount, epoch } }  — only tracks the explicit harvest reward,
-  // NOT passive production, so only the clicked resource(s) flash.
+  // gains: { [res]: { amount, epoch } } — only tracks explicit rewards & tapped bubbles,
+  // NOT passive background production.
   const prevInteractionRef = useRef(state.lastInteraction)
   const gainTimers = useRef({})
   const epochRef = useRef(0)
   const [gains, setGains] = useState({})
+
+  const triggerGain = useCallback((key, diff) => {
+    const epoch = ++epochRef.current
+    setGains((g) => ({
+      ...g,
+      [key]: { amount: (g[key]?.amount || 0) + diff, epoch },
+    }))
+    clearTimeout(gainTimers.current[key])
+    gainTimers.current[key] = setTimeout(() => {
+      setGains((g) => {
+        const next = { ...g }
+        delete next[key]
+        return next
+      })
+    }, 1600)
+  }, [])
 
   useEffect(() => {
     const prev = prevInteractionRef.current
@@ -96,27 +112,19 @@ export default function TopBar() {
     const gained = Object.entries(reward).filter(([, v]) => v > 0)
     if (gained.length === 0) return
 
-    const epoch = ++epochRef.current
-
-    setGains((g) => {
-      const next = { ...g }
-      for (const [key, diff] of gained) {
-        next[key] = { amount: (g[key]?.amount || 0) + diff, epoch }
-      }
-      return next
-    })
-
-    for (const [key] of gained) {
-      clearTimeout(gainTimers.current[key])
-      gainTimers.current[key] = setTimeout(() => {
-        setGains((g) => {
-          const next = { ...g }
-          delete next[key]
-          return next
-        })
-      }, 1600)
+    for (const [key, diff] of gained) {
+      triggerGain(key, diff)
     }
-  }, [state.lastInteraction])
+  }, [state.lastInteraction, triggerGain])
+
+  useEffect(() => {
+    const onBubbleArrive = (e) => {
+      if (!e.detail?.fromBubble || !e.detail?.isLast) return
+      triggerGain(e.detail.res, e.detail.totalAmount || e.detail.amount)
+    }
+    window.addEventListener('cloudbreakers:resource-token-arrive', onBubbleArrive)
+    return () => window.removeEventListener('cloudbreakers:resource-token-arrive', onBubbleArrive)
+  }, [triggerGain])
 
   return (
     <div className="topbar panel" data-tutorial="hud-resources" onClick={() => ui.setPanel('storage')} role="button" tabIndex={0} aria-label="Resources — open storage">
