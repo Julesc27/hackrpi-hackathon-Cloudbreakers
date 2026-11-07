@@ -1,18 +1,24 @@
 // Independent, transparent sprites: the reference painting is never used as a map backdrop.
 export const PAINTED_ATLASES = {
-  starter: { src: '/art/starter-island-expanded.png', columns: 1, rows: 1 },
-  forest: { src: '/art/verdant-forest.png', columns: 1, rows: 1 },
-  prism: { src: '/art/prism-shelf.png', columns: 1, rows: 1 },
-  civic: { src: '/art/islands-civic-layered.png', columns: 2, rows: 2 },
-  settlement: { src: '/art/islands-settlement.png', columns: 2, rows: 2 },
-  buildings: { src: '/art/buildings.png', columns: 4, rows: 3 },
+  shelters: { src: '/art/shelters-grounded.png', columns: 2, rows: 1, cells: [[101, 100, 728, 715], [963, 163, 761, 654]] },
+  airship: { src: '/art/airship-painted.png', columns: 1, rows: 1, cells: [[139, 76, 1264, 867]] },
+  background: {
+    src: '/art/background-islands.png', columns: 3, rows: 2,
+    cells: [[73, 30, 391, 451], [550, 28, 423, 456], [1041, 50, 463, 435], [44, 524, 423, 463], [565, 543, 408, 440], [1080, 547, 402, 439]],
+  },
+  starter: { cells: [[29, 22, 1204, 1211]], src: '/art/starter-island-expanded.webp', columns: 1, rows: 1 },
+  forest: { cells: [[24, 26, 1204, 1169]], src: '/art/verdant-forest.webp', columns: 1, rows: 1 },
+  prism: { cells: [[15, 38, 1229, 1185]], src: '/art/prism-shelf.webp', columns: 1, rows: 1 },
+  civic: { cells: [[134, 2, 534, 505], [858, 41, 550, 463], [108, 545, 562, 459], [866, 552, 572, 461]], src: '/art/islands-civic-layered.webp', columns: 2, rows: 2 },
+  settlement: { cells: [[75, 12, 630, 488], [825, 50, 646, 446], [67, 538, 648, 470], [835, 533, 632, 478]], src: '/art/islands-settlement.webp', columns: 2, rows: 2 },
+  buildings: { cells: [[26, 46, 308, 289], [382, 68, 324, 252], [741, 65, 327, 268], [1104, 47, 324, 286], [21, 399, 322, 297], [381, 425, 326, 256], [742, 391, 324, 303], [1104, 395, 325, 302], [22, 746, 317, 325], [437, 728, 211, 335], [785, 750, 243, 310], [1105, 780, 323, 262]], src: '/art/buildings.webp', columns: 4, rows: 3 },
 }
 
 export const PAINTED_ISLANDS = {
-  newHaven: { sheet: 'starter', src: '/art/starter-island-expanded.png', cell: 0, rect: [445, 185, 660, 645] },
-  verdant: { sheet: 'forest', src: '/art/verdant-forest.png', cell: 0, rect: [120, 20, 470, 395] },
+  newHaven: { sheet: 'starter', src: '/art/starter-island-expanded.webp', cell: 0, rect: [445, 185, 660, 645] },
+  verdant: { sheet: 'forest', src: '/art/verdant-forest.webp', cell: 0, rect: [120, 20, 470, 395] },
   rain: { sheet: 'civic', cell: 2, rect: [980, 20, 430, 365] },
-  prism: { sheet: 'prism', src: '/art/prism-shelf.png', cell: 0, rect: [1130, 750, 450, 405] },
+  prism: { sheet: 'prism', src: '/art/prism-shelf.webp', cell: 0, rect: [1130, 750, 450, 405] },
   mercy: { sheet: 'civic', cell: 3, rect: [-25, 350, 380, 330] },
   hearth: { sheet: 'settlement', cell: 0, rect: [1220, 300, 435, 365] },
 }
@@ -23,32 +29,27 @@ export const BUILDING_CELLS = {
   communityHall: 8, windTurbine: 9, battery: 10, greenhouse: 11,
 }
 
-// Bound each cell by its alpha so different sprite margins don't change its world position.
-// This runs once at load, never during animation or zooming.
+// Shelter variants have no decorative tile plinth and sit directly on the terrain.
+export function buildingSprite(type, slot = 0) {
+  return type === 'shelter'
+    ? { sheet: 'shelters', cell: Math.max(0, slot) % 2 }
+    : { sheet: 'buildings', cell: BUILDING_CELLS[type] }
+}
+
+// Each cell's alpha bounds are measured ahead of time (they used to be found by scanning
+// every pixel in the browser at load, which froze the page for a moment). If you replace an
+// image, re-measure: for each cell, the box around pixels with alpha >= 32, as [x, y, w, h].
 export class PaintedAtlas {
-  constructor(src, columns, rows) {
-    this.cells = []
+  constructor(src, columns, rows, cells) {
+    this.cells = cells || []
     this.ready = false
     this.image = new Image()
+    this.image.decoding = 'async'
     this.image.onload = () => {
-      const image = this.image
-      const width = image.naturalWidth / columns, height = image.naturalHeight / rows
-      const canvas = document.createElement('canvas')
-      canvas.width = width; canvas.height = height
-      const context = canvas.getContext('2d', { willReadFrequently: true })
-      for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
-        context.clearRect(0, 0, width, height)
-        context.drawImage(image, column * width, row * height, width, height, 0, 0, width, height)
-        const pixels = context.getImageData(0, 0, width, height).data
-        let left = width, top = height, right = 0, bottom = 0
-        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-          if (pixels[(y * width + x) * 4 + 3] < 32) continue
-          left = Math.min(left, x); right = Math.max(right, x)
-          top = Math.min(top, y); bottom = Math.max(bottom, y)
-        }
-        this.cells.push(right > left ? [column * width + left, row * height + top, right - left + 1, bottom - top + 1] : null)
-      }
-      this.ready = true
+      // decode off the main thread before the first draw, so it doesn't stall a frame
+      const done = () => { this.ready = true }
+      if (this.image.decode) this.image.decode().then(done, done)
+      else done()
     }
     this.image.src = src
   }
@@ -65,8 +66,8 @@ export class PaintedAtlas {
 const atlases = new Map()
 export function getPaintedAtlas(sheet) {
   if (!atlases.has(sheet)) {
-    const { src, columns, rows } = PAINTED_ATLASES[sheet]
-    atlases.set(sheet, new PaintedAtlas(src, columns, rows))
+    const { src, columns, rows, cells } = PAINTED_ATLASES[sheet]
+    atlases.set(sheet, new PaintedAtlas(src, columns, rows, cells))
   }
   return atlases.get(sheet)
 }

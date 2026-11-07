@@ -5,12 +5,13 @@ Generated using the built-in image generation tool, then integrated as transpare
 
 ## Atlas layout
 
-- `islands-civic.png`: original reference atlas, 2 columns by 2 rows. New Haven, Mistral Heights, Rain Island, Mercy Rise.
-- `islands-civic-layered.png`: same grid with Mistral rotor blades removed. The active Rain Island and Mercy Rise sprites use this sheet in both the map and cards.
-- `islands-settlement.png`: 2 columns by 2 rows. Hearthside, Verdant Reach, Glass Gardens, Skyport.
-- `buildings.png`: 4 columns by 3 rows. Shelter, bridge anchor, garden, water collector; storage house, solar farm, market, clinic; community hall, wind turbine, battery, greenhouse.
+Shipped sprites are WebP (quality 88, lossless-quality alpha) to keep the download small. Keep the PNG masters outside `public/` if you need to edit them.
 
-Rows are ordered left to right. The map measures the alpha bounds of each cell once at load. Art positions are in `components/world/paintedArt.js`; gameplay hit areas and plots remain in `game/data.js`.
+- `islands-civic-layered.webp`: 2 columns by 2 rows (New Haven, Mistral Heights, Rain Island, Mercy Rise), with Mistral rotor blades removed. (The original `islands-civic.png` was unused and has been removed.) The active Rain Island and Mercy Rise sprites use this sheet in both the map and cards.
+- `islands-settlement.webp`: 2 columns by 2 rows. Hearthside, Verdant Reach, Glass Gardens, Skyport.
+- `buildings.webp`: 4 columns by 3 rows. Shelter, bridge anchor, garden, water collector; storage house, solar farm, market, clinic; community hall, wind turbine, battery, greenhouse.
+
+Rows are ordered left to right. Each cell's alpha bounds are precomputed and stored in `paintedArt.js` (`cells`), so the map never scans pixels at load. If you replace an atlas, regenerate those bounds. Art positions are in `components/world/paintedArt.js`; gameplay hit areas and plots remain in `game/data.js`.
 
 `PAINTED_ATLASES` is the shared source registry for the world and every preview. `PaintedSprite.jsx` fits each alpha-bounded sprite into its card and clips neighboring cells. The quest book, journal cover, advisor, island drawers, chart, workshop and bridge routes reuse the current island/building images. The workshop upgrade uses a hammer badge rather than the retired decorative anchor model.
 
@@ -39,7 +40,7 @@ Each island has independent floating motion and selection state. Water spray, en
 
 ## Expanded starter island
 
-`starter-island-expanded.png` replaces the main-island sprite. Its reference is `concept/command-center-expanded-starter-island.png`. It is a separate transparent sprite, with the original civic atlas retained for the other islands.
+`starter-island-expanded.webp` replaces the main-island sprite. Its reference is `concept/command-center-expanded-starter-island.png`. It is a separate transparent sprite, with the original civic atlas retained for the other islands.
 
 Built-in image generation brief: isolate only the central expanded starter island from the reference, preserving the beacon, terraces, pine grove, blue-roof cottage, cistern, farm, dock, cliffs and waterfalls. Keep the three large residential pads and upper clearing empty. Remove hammer signposts, dotted pad outlines, surrounding islands, sky, UI and people. Preserve the reference's painted style and supply a complete island with true transparency.
 
@@ -50,7 +51,34 @@ Eight stable gameplay slots occupy four clear terraces, with two shelters per te
 
 The built-in image generation tool produced two independent transparent sprites, referencing `concept/command-center-expanded-starter-island.png`:
 
-- `verdant-forest.png`: isolate a forest/farming island matching the reference's upper-left island; dense pine and golden trees, lumber shed, log piles, vegetable and seed beds, clear front terrace, cream paths, right-hand bridge dock, lavender hanging cliffs and cyan waterfalls. Preserve the painted perspective and palette; no people, sky, UI, words or connecting bridges.
-- `prism-shelf.png`: isolate the reference's lower-right crystal island; tiered pale stone shelves, luminous blue energy crystals, gold/brass pylons, component workshop, four clear building pads and upper-left bridge landing. Preserve the reference style and palette; no people, sky, UI, words or off-island bridges.
+- `verdant-forest.webp`: isolate a forest/farming island matching the reference's upper-left island; dense pine and golden trees, lumber shed, log piles, vegetable and seed beds, clear front terrace, cream paths, right-hand bridge dock, lavender hanging cliffs and cyan waterfalls. Preserve the painted perspective and palette; no people, sky, UI, words or connecting bridges.
+- `prism-shelf.webp`: isolate the reference's lower-right crystal island; tiered pale stone shelves, luminous blue energy crystals, gold/brass pylons, component workshop, four clear building pads and upper-left bridge landing. Preserve the reference style and palette; no people, sky, UI, words or off-island bridges.
 
 Both are game sprites with true alpha transparency. The resource loop uses the expanded starter island, forest, water island and crystal shelf. The hospital (Mercy Rise) and village (Hearthside) are also active destinations, restored from the original civic and settlement atlases. Older atlas assets remain available as reference material.
+
+
+## Distant background islands
+
+`background-islands.png` is a transparent 3-column, 2-row atlas generated with the built-in image tool using the supplied Stormfront, Cloudroot, Ancient Ruins, Skyport and Voidreach paintings as visual references. Cells: Stormfront, Cloudroot, Ancient Ruins; Skyport, Voidreach, a small ruined shrine. The original reference panoramas are not drawn as rectangular backdrops.
+
+Generation brief: six complete, isolated mini floating islands in equal cells with transparent gutters; painterly isometric cream stone, cobalt/gold details, lavender cliffs, soft cloud wisps and waterfalls; simplify the reference motifs for 80–130 pixel scenery. No people, UI, words, sky background or off-island bridges. Stormfront has a dome and turbine; Cloudroot has luminous roots and a great tree; Ancient Ruins has broken astronomical arches; Skyport has a lighthouse and airship dock; Voidreach has violet crystals and a contained portal; the sixth island has three mossy pillars.
+
+`PAINTED_ATLASES.background` stores premeasured alpha bounds. The canvas varies the sprites across `FAR_ISLETS`, preserves their proportions and uses low opacity for distance. Gentle bobbing follows reduced-motion preferences. These remain decorative scenery and do not add destinations, routes or buildable plots.
+
+Scenery positions are composed as uneven satellite groups rather than evenly spaced repeats. Each `FAR_ISLETS` entry specifies its theme cell, width and opacity: small companions range from 68–96 world units, while larger outer landmarks range from 150–240. Larger shapes frame the outer sky and leave playable terrain and bridge corridors clear.
+
+
+## Painted airship
+
+`airship-painted.png` replaces the simple canvas blimp with a transparent painted sprite generated using the built-in image tool. Its references are the supplied Skyport painting and the background-island atlas.
+
+Generation brief: one complete left-facing airship in a gently elevated three-quarter view, matching the islands' gouache textures; ivory canvas envelope with cobalt panels and brass ribs, timber boat-shaped gondola, cobalt cabin roof, gold rails, rope rigging, amber windows and a lantern. No people, text, sky, island or dock; true transparency and clear margins. The alpha bounds are premeasured in `PAINTED_ATLASES.airship`.
+
+The existing flight path remains live. Slow bobbing and a small rocking motion animate the craft, while docked fallback ships retain their mooring ropes. Reduced-motion preferences freeze ambient movement.
+
+
+## Grounded shelter variants
+
+`shelters-grounded.png` is a two-column transparent atlas generated with the built-in image tool from the starter island and original construction atlas references. The brief replaces the shelter's bright tile pedestal with walls meeting the paving, a narrow worn doorstep, irregular ivy and tiny plant tufts. Two modest cream-stone, weathered-terracotta cottages share the island's camera angle and softer palette; their porch, chimney and ivy differ subtly. No square platform, raised plinth, surrounding ground, people or text.
+
+`buildingSprite(type, slot)` selects the same shelter variant in the canvas and placement preview. The workshop uses the first variant. Shelters use a smaller footprint, a tighter contact shadow and a ground anchor at 93% of the cropped image height. Stable saved plot indexes are preserved; the upper pair is staggered along the paving. Procedural window glows are omitted on painted structures so they no longer create a misplaced yellow halo at the foundations.

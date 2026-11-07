@@ -9,7 +9,7 @@ import Backdrop from './Backdrop.jsx'
 import { CloudDefs, Cloud } from './Life.jsx'
 import { FxLayer, useWorldEvents } from './Fx.jsx'
 import WorldCanvas from '../world/WorldCanvas.jsx'
-import { BUILDING_CELLS } from '../world/paintedArt.js'
+import { buildingSprite, PAINTED_ATLASES } from '../world/paintedArt.js'
 import { buildingLayout } from '../world/buildingLayout.js'
 import { usePaintedAtlas } from '../PaintedSprite.jsx'
 import { bridgeCurve } from '../world/people.js'
@@ -25,7 +25,11 @@ export default function SkyMap() {
   const anchor = hasAnchor(state)
   const placingDef = ui.placing ? BUILDINGS[ui.placing] : null
   const buildingsAtlas = usePaintedAtlas('buildings')
-  const footprint = (type, island, slot) => buildingLayout(type, island, slot, buildingsAtlas?.cells[BUILDING_CELLS[type]])
+  const sheltersAtlas = usePaintedAtlas('shelters')
+  const footprint = (type, island, slot) => {
+    const { sheet, cell } = buildingSprite(type, slot)
+    return buildingLayout(type, island, slot, PAINTED_ATLASES[sheet].cells[cell])
+  }
   const [hover, setHover] = useState(null)
   const hoverRef = useRef(null)
   hoverRef.current = hover
@@ -58,14 +62,18 @@ export default function SkyMap() {
 
   const ids = Object.keys(ISLANDS)
 
+  // Big soft clouds that slide past in front of the world. Each cloud is its own small element
+  // so its drift is a GPU transform, instead of one huge SVG repainted every frame.
   const near = (
-    <svg className="near-clouds" viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} width="100%" height="100%" aria-hidden="true">
-      <defs><CloudDefs /></defs>
-      {/* a few big soft clouds that slide past in front of the world for depth */}
+    <>
       {[[-470, -220, 420, 1], [2050, -160, 460, 2], [-470, 1040, 520, 3], [2060, 1020, 480, 4], [-520, 420, 360, 5], [2110, 460, 380, 6]].map(([x, y, w, seed]) => (
-        <g key={seed} className="drift slow"><Cloud x={x} y={y} w={w} seed={seed * 31} opacity={0.2} /></g>
+        <svg key={seed} className="near-cloud drift slow" aria-hidden="true"
+          viewBox={`${-w * 0.6} ${-w * 0.45} ${w * 1.2} ${w * 0.62}`}
+          style={{ left: x - WORLD.x - w * 0.6, top: y - WORLD.y - w * 0.45, width: w * 1.2, height: w * 0.62 }}>
+          <Cloud x={0} y={0} w={w} seed={seed * 31} opacity={0.7} />
+        </svg>
       ))}
-    </svg>
+    </>
   )
 
   return (
@@ -127,7 +135,6 @@ export default function SkyMap() {
           return (
             <g role="button" tabIndex="0" aria-label={`Plan bridge to ${ISLANDS[state.connected.includes(r.a) ? r.b : r.a].name}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.setBridgeRoute(r.id) } }} key={r.id} className={`ghost-route${anchor ? '' : ' is-locked'}`} onClick={() => ui.setBridgeRoute(r.id)}>
               <g transform={`translate(${mx} ${my})`}><g className="route-btn">
-                <circle r="27" fill="none" stroke="rgba(243,217,143,.5)" strokeWidth="1.5" className="route-pulse" />
                 <circle r="20" fill="url(#goldBtn)" stroke="#fff1c4" strokeWidth="1.5" />
                 {anchor ? (
                   <path d="M-7 0h14M0 -7v14" stroke="#4a3208" strokeWidth="3.4" strokeLinecap="round" />
@@ -174,13 +181,15 @@ export default function SkyMap() {
           return ISLANDS[id].plots.map(([x, y], i) => {
             if (occupied(i)) return null
             const shape = footprint(ui.placing, id, i)
+            const sprite = buildingSprite(ui.placing, i)
+            const atlas = sprite.sheet === 'shelters' ? sheltersAtlas : buildingsAtlas
             return (
               <g key={`${id}-${i}`} transform={`translate(${x} ${y})`} className="slot" data-tutorial={id === 'newHaven' && i === firstFreePlot ? 'plot-newHaven' : undefined} role="button" tabIndex="0" aria-label={`Place ${placingDef.name} on ${ISLANDS[id].name} plot ${i + 1}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); place(id, i) } }} onClick={() => place(id, i)}>
                 <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill="transparent" />
                 <polygon points={`0,${-shape.groundDepth} ${shape.groundWidth},0 0,${shape.groundDepth} ${-shape.groundWidth},0`} fill="rgba(243,217,143,.28)" stroke="#fff1c4" strokeWidth="1.5" />
-                {buildingsAtlas?.cells[BUILDING_CELLS[ui.placing]] && <>
-                  <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x={shape.x} y={shape.y} width={shape.width} height={shape.height} viewBox={buildingsAtlas.cells[BUILDING_CELLS[ui.placing]].join(' ')}>
-                    <image href="/art/buildings.png" width={buildingsAtlas.image.naturalWidth} height={buildingsAtlas.image.naturalHeight} />
+                {atlas?.cells[sprite.cell] && <>
+                  <defs><pattern id={`preview-${id}-${i}`} patternUnits="userSpaceOnUse" x={shape.x} y={shape.y} width={shape.width} height={shape.height} viewBox={atlas.cells[sprite.cell].join(' ')}>
+                    <image href={PAINTED_ATLASES[sprite.sheet].src} width={atlas.image.naturalWidth} height={atlas.image.naturalHeight} />
                   </pattern></defs>
                   <rect className="plot-preview" x={shape.x} y={shape.y} width={shape.width} height={shape.height} fill={`url(#preview-${id}-${i})`} pointerEvents="none" />
                 </>}

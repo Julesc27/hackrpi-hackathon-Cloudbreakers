@@ -2,12 +2,13 @@ import { useEffect, useRef } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { STARTER_BEACON } from '../../game/mapLayout.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
-import { islandAccess } from '../../game/engine.js'
+import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
-import { WORLD_ISLANDS, FAR_ISLETS } from './layout.js'
-import { PAINTED_ISLANDS, BUILDING_CELLS, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
+import { TWINKLE_STARS } from '../map/Backdrop.jsx'
+import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
+import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
-import { drawIslandBase, animIslandBase, islandBounds, cloudPuff, cloudBank } from './island.js'
+import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
 import { bridgeCurve } from './people.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
@@ -54,28 +55,60 @@ PROPS.anchor = {
   size: () => [16, 18, 8],
 }
 
-/* ---------------- bitmap cache ---------------- */
+/* ---------------- bitmap cache ----------------
+ * Anything that looks the same from frame to frame (islands, buildings, clouds, props) is drawn
+ * once into an offscreen canvas at roughly the current screen resolution and then just copied.
+ * - Entries are keyed by zoom level, so zooming in re-renders sharper copies.
+ * - New copies are rendered within a small time budget per frame; when the budget is spent, the
+ *   previous zoom level's copy is reused for a frame or two instead of stalling the game.
+ * - Copies are never rendered sharper than their source image (maxScale), which keeps memory bounded.
+ * - Entries that haven't been drawn for a while are dropped. */
 class SpriteCache {
-  constructor() { this.map = new Map(); this.bucket = 1 }
+  constructor() { this.map = new Map(); this.latest = new Map(); this.bucket = 1; this.frame = 0; this.deadline = 0 }
   setBucket(ppu) {
-    const b = Math.min(4, Math.max(0.5, 2 ** (Math.ceil(Math.log2(ppu) * 2) / 2)))
-    if (b !== this.bucket) { this.bucket = b; this.map.clear() }
+    this.bucket = Math.min(4, Math.max(0.5, 2 ** (Math.ceil(Math.log2(ppu) * 2) / 2)))
   }
-  get(key, bounds, mode, draw) {
-    const k = `${key}|${mode}`
+  beginFrame() {
+    this.frame++
+    this.deadline = performance.now() + 6
+    this.rendered = 0
+    if (this.frame % 120 === 0) {
+      for (const [k, c] of this.map) {
+        if (this.frame - c.used > 300) {
+          this.map.delete(k)
+          if (this.latest.get(c.base) === c) this.latest.delete(c.base)
+        }
+      }
+    }
+  }
+  get(key, bounds, mode, draw, maxScale = Infinity) {
+    const base = `${key}|${mode}`
+    const s = Math.min(this.bucket, Math.max(0.5, maxScale))
+    const k = `${base}|${s}`
     let c = this.map.get(k)
     if (!c) {
-      const s = this.bucket
+      const prev = this.latest.get(base)
+      if (this.rendered > 0 && performance.now() > this.deadline) {
+        // Out of time this frame (always allow at least one render so it keeps progressing):
+        // reuse an older copy, or skip it for a frame and draw it next frame
+        if (prev) { prev.used = this.frame; return prev }
+        return null
+      }
+      this.rendered++
       const cv = document.createElement('canvas')
       cv.width = Math.max(1, Math.ceil(bounds.w * s)); cv.height = Math.max(1, Math.ceil(bounds.h * s))
       const cx = cv.getContext('2d')
       cx.scale(s, s); cx.translate(-bounds.x, -bounds.y)
+      cx.imageSmoothingEnabled = true
+      cx.imageSmoothingQuality = 'high'
       setMode(mode)
       draw(cx)
       setMode('lit')
-      c = { cv, b: bounds }
+      c = { cv, b: bounds, used: 0, base }
       this.map.set(k, c)
+      this.latest.set(base, c)
     }
+    c.used = this.frame
     return c
   }
 }
@@ -87,25 +120,6 @@ function propBounds(p) {
   return { x: cx - hw - 3, y: cy - up - 3, w: hw * 2 + 6, h: up + down + 6 }
 }
 const propKey = (p) => `${p.type}:${Math.round(p.x)}:${Math.round(p.y)}:${p.pts ? p.pts.flat().join(',') : ''}`
-
-/* ---------------- far islets (procedural, hazy) ---------------- */
-function drawIslet(ctx, x, y, s, seed) {
-  const r = rng(seed)
-  const rx = 42 * s, ry = 18 * s
-  const g = ctx.createLinearGradient(0, y, 0, y + 70 * s)
-  g.addColorStop(0, col(PAL.rock)); g.addColorStop(1, col(PAL.rockDark, 0.2))
-  ctx.beginPath(); ctx.moveTo(x - rx, y)
-  for (let i = 0; i <= 8; i++) { const t = i / 8; ctx.lineTo(x - rx + t * rx * 2, y + Math.sin(t * Math.PI) * 62 * s * (i % 2 ? 1 : 0.7)) }
-  ctx.lineTo(x + rx, y); ctx.closePath(); ctx.fillStyle = g; ctx.fill()
-  ellipse(ctx, x, y + 3, rx, ry, col(PAL.grassEdge)); ellipse(ctx, x, y, rx, ry, col(PAL.grass))
-  for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; cloudPuff(ctx, x + Math.cos(a) * rx, y + Math.sin(a) * ry + 4, (6 + r() * 6) * s, 1) }
-  // a tiny hazy shrine, warm enough to read as a distant town
-  const tx = x + (r() - 0.5) * rx * 0.5, ty = y - 2
-  ctx.fillStyle = col('#f4ead4'); ctx.fillRect(tx - 9 * s, ty - 10 * s, 18 * s, 10 * s)
-  poly(ctx, [[tx - 12 * s, ty - 10 * s], [tx + 12 * s, ty - 10 * s], [tx, ty - 22 * s]], col(PAL.roofBlue))
-  circle(ctx, tx, ty - 16 * s, 2.2 * s, col(PAL.goldLight))
-  for (let i = 0; i < 4; i++) { const px = x + (r() - 0.5) * rx * 1.4, py = y + (r() - 0.5) * ry; circle(ctx, px, py - 7 * s, 4.2 * s, col(PAL.leaf)) }
-}
 
 /* ---------------- bridges ---------------- */
 function drawBridge(ctx, b, t, lights = null, progress = 1) {
@@ -198,13 +212,16 @@ export default function WorldCanvas({ hoverRef }) {
     const cv = canvasRef.current
     const ctx = cv.getContext('2d')
     const atlases = Object.fromEntries(Object.keys(PAINTED_ATLASES).map((sheet) => [sheet, getPaintedAtlas(sheet)]))
-    const buildingsAtlas = atlases.buildings
     const appeared = new Map()
     const bridgeAppeared = new Map(stateRef.current.bridges.map((b) => [b.route, -1000]))
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let raf = 0, W = 0, H = 0, dpr = 1
+    // Adaptive quality: if this device can't hold a smooth frame rate, render the canvas at 1x
+    // pixel density and run the ambient animation (clouds, glints, bobbing) at 30 fps. Camera
+    // moves are always drawn immediately so dragging and zooming stay responsive.
+    let lowQuality = false, slowFor = 0, fastFor = 0, avgDt = 16, prevNow = 0
     const resize = () => {
-      dpr = Math.min(1.75, window.devicePixelRatio || 1)
+      dpr = lowQuality ? 1 : Math.min(1.75, window.devicePixelRatio || 1)
       const r = cv.parentElement.getBoundingClientRect()
       W = r.width; H = r.height
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr)
@@ -253,8 +270,24 @@ export default function WorldCanvas({ hoverRef }) {
       return [path[i][0] + (path[i + 1][0] - path[i][0]) * u, path[i][1] + (path[i + 1][1] - path[i][1]) * u]
     }
 
+    let lastDraw = 0, lastView = ''
     const frame = (now) => {
       raf = requestAnimationFrame(frame)
+      const dt = prevNow ? Math.min(250, now - prevNow) : 16
+      prevNow = now
+      avgDt = avgDt * 0.92 + dt * 0.08
+      if (!lowQuality && avgDt > 24) { if ((slowFor += dt) > 2000) { lowQuality = true; slowFor = 0; resize() } } else slowFor = 0
+      if (lowQuality && avgDt < 15) { if ((fastFor += dt) > 6000) { lowQuality = false; fastFor = 0; resize() } } else fastFor = 0
+
+      const camNow = uiRef.current.camera.current?.view?.()
+      const viewKey = camNow ? `${camNow.x.toFixed(1)},${camNow.y.toFixed(1)},${camNow.s.toFixed(4)}` : ''
+      const moved = viewKey !== lastView
+      // While a full-screen dialog covers the map (it has a blurred backdrop), the map only needs
+      // to tick slowly: every redraw underneath forces the browser to re-blur the whole screen.
+      const minGap = document.querySelector('.modal-backdrop') ? 100 : lowQuality && !moved ? 32 : 0
+      if (minGap && now - lastDraw < minGap) return
+      lastDraw = now
+      lastView = viewKey
       const t = reducedMotion.matches ? 0 : now / 1000
       const cam = uiRef.current.camera.current
       if (!cam?.view || !W) return
@@ -262,14 +295,35 @@ export default function WorldCanvas({ hoverRef }) {
       const st = stateRef.current
       const access = islandAccess(st)
       cache.current.setBucket(v.s * dpr)
+      cache.current.beginFrame()
 
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, cv.width, cv.height)
+
+      // 0. twinkling stars, in screen space so they drift with the slow sky layer behind
+      {
+        const off = cam.farOffset ? cam.farOffset() : { x: 0, y: 0 }
+        const pw = W * 1.36, ph = H * 1.36
+        for (const st of TWINKLE_STARS) {
+          let sx = (st.fx * pw - W * 0.18 + off.x) % pw, sy = st.fy * ph - H * 0.18 + off.y
+          if (sx < -8) sx += pw
+          if (sx > W + 8 || sy < -8 || sy > H + 8) continue
+          const a = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * st.sp * TAU + st.d))
+          if (st.bright) {
+            ctx.globalAlpha = a
+            ctx.strokeStyle = 'rgba(255,246,216,.75)'; ctx.lineWidth = 0.6 * dpr
+            ctx.beginPath(); ctx.moveTo(sx * dpr, (sy - 7) * dpr); ctx.lineTo(sx * dpr, (sy + 7) * dpr); ctx.moveTo((sx - 7) * dpr, sy * dpr); ctx.lineTo((sx + 7) * dpr, sy * dpr); ctx.stroke()
+          }
+          glow(ctx, sx * dpr, sy * dpr, (st.bright ? 4.5 : st.r * 2.2) * dpr, '#fffaf0', st.bright ? a : a * 0.85)
+          ctx.globalAlpha = 1
+        }
+      }
       const k = v.s * dpr
       ctx.setTransform(k, 0, 0, k, dpr * (v.x - WORLD.x * v.s), dpr * (v.y - WORLD.y * v.s))
       const vx0 = WORLD.x - v.x / v.s, vy0 = WORLD.y - v.y / v.s, vx1 = vx0 + W / v.s, vy1 = vy0 + H / v.s
       const visible = (b) => b.x < vx1 && b.x + b.w > vx0 && b.y < vy1 && b.y + b.h > vy0
       const blit = (c, dx = 0, dy = 0, alpha = 1) => {
+        if (!c) return
         if (!visible({ x: c.b.x + dx, y: c.b.y + dy, w: c.b.w, h: c.b.h })) return
         if (alpha !== 1) ctx.globalAlpha = alpha
         ctx.drawImage(c.cv, c.b.x + dx, c.b.y + dy, c.b.w, c.b.h)
@@ -283,10 +337,18 @@ export default function WorldCanvas({ hoverRef }) {
         const sp = cache.current.get(`bank${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, true))
         blit(sp, Math.sin(t * c.sp + c.ph) * 36, 0, c.a)
       }
-      FAR_ISLETS.forEach(([x, y, s], i) => {
-        const b = { x: x - 70 * s, y: y - 36 * s, w: 140 * s, h: 120 * s }
-        const sp = cache.current.get(`islet${i}`, b, 'locked', (cx) => drawIslet(cx, x, y, s, i + 1))
-        blit(sp, 0, Math.sin(t * 0.55 + i) * 3.5, i < 5 ? 0.72 : 0.42)
+      FAR_ISLETS.forEach(({ x, y, width, cell, opacity }, i) => {
+        const atlas = atlases.background
+        if (!atlas.ready) return
+        const bounds = atlas.cells[cell]
+        const height = width * bounds[3] / bounds[2]
+        const bob = reducedMotion.matches ? 0 : Math.sin(t * (.19 + i % 3 * .035) + i * 1.7) * Math.min(3, width * .015)
+        const box = { x: x - width / 2, y: y - height * .4 + bob, w: width, h: height }
+        if (!visible(box)) return
+        ctx.save()
+        ctx.globalAlpha = opacity
+        atlas.draw(ctx, cell, box.x, box.y, width, height)
+        ctx.restore()
       })
       for (const c of backClouds) {
         if (!c.mid) continue
@@ -305,14 +367,28 @@ export default function WorldCanvas({ hoverRef }) {
         if (atlas.ready) {
           const [x, y, width, height] = art.rect
           if (!visible({ x, y, w: width, h: height })) continue
-          ctx.save()
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
-          // Discovered islands retain the reference's color; their connection badge signals access.
-          ctx.globalAlpha = mode === 'hidden' ? 0.28 : mode === 'locked' ? 0.86 : 1
-          ctx.filter = mode === 'hidden' ? 'saturate(0.3)' : hoverRef?.current === isl.id ? 'brightness(1.09)' : 'none'
-          atlas.draw(ctx, art.cell, x, y + bob, width, height)
-          ctx.restore()
+          // Cached copy at screen resolution; the hidden/hover colour filters are baked in once
+          // instead of being re-run over the full painting every frame.
+          const variant = mode === 'hidden' ? 'hidden' : hoverRef?.current === isl.id ? 'hover' : 'plain'
+          const src = atlas.cells[art.cell]
+          const srcScale = src ? src[2] / width : 1
+          const alpha = mode === 'hidden' ? 0.28 : mode === 'locked' ? 0.86 : 1
+          if (variant === 'plain' && v.s * dpr >= srcScale * 0.95) {
+            // Zoomed in past the painting's own resolution: enlarging straight from the source is
+            // cheap and sharper than going through a cached copy (which would resample twice).
+            ctx.save()
+            ctx.imageSmoothingQuality = 'high'
+            ctx.globalAlpha = alpha
+            atlas.draw(ctx, art.cell, x, y + bob, width, height)
+            ctx.restore()
+          } else {
+            const sp = cache.current.get(`isl:${isl.id}`, { x, y, w: width, h: height }, variant, (cx) => {
+              if (variant === 'hidden') cx.filter = 'saturate(0.3)'
+              else if (variant === 'hover') cx.filter = 'brightness(1.09)'
+              atlas.draw(cx, art.cell, x, y, width, height)
+            }, srcScale)
+            blit(sp, 0, bob, alpha)
+          }
           if (mode !== 'hidden') {
             ctx.save(); ctx.translate(0, bob)
             // Animated glints, water ripples and falling spray live above the painted surface.
@@ -330,8 +406,8 @@ export default function WorldCanvas({ hoverRef }) {
 
             ctx.restore()
           }
-        } else {
-          // Keep the playable map available even if an asset is slow or fails to load.
+        } else if (now > 2500) {
+          // Keep the playable map available even if an asset is very slow or fails to load.
           const sp = cache.current.get(`isle:${isl.id}`, islandBounds(isl), mode, (cx) => drawIslandBase(cx, isl))
           blit(sp, 0, bob)
           if (mode === 'lit') { ctx.save(); ctx.translate(0, bob); animIslandBase(ctx, isl, t); ctx.restore() }
@@ -347,6 +423,20 @@ export default function WorldCanvas({ hoverRef }) {
         drawBridge(ctx, b, t, bridgeLights, progress)
       }
       setMode('lit')
+
+      // Pulsing rings around the "build a bridge" buttons. Drawn here rather than as a CSS
+      // animation in the SVG overlay, which made the browser repaint the whole overlay every frame.
+      if (!uiRef.current.placing && !reducedMotion.matches) {
+        const uk = Math.min(1.15, (cam.fitScale || v.s) / v.s)
+        const ph = (t / 2) % 1
+        const rr = 27 * uk * (0.85 + ph * 0.55)
+        ctx.lineWidth = 1.5 * uk
+        ctx.strokeStyle = `rgba(243,217,143,${0.5 * (1 - ph)})`
+        for (const r of openRoutes(st)) {
+          const [mx, my] = bridgeMid(r.id)
+          ctx.beginPath(); ctx.arc(mx, my, rr, 0, TAU); ctx.stroke()
+        }
+      }
 
       // 4. buildings, trees and props, depth-sorted. No characters.
       const items = []
@@ -367,26 +457,49 @@ export default function WorldCanvas({ hoverRef }) {
         if (!def) continue
         const b = propBounds(p)
         if (!visible({ ...b, y: b.y + it.bob })) continue
-        if (it.buildingType && buildingsAtlas.ready && BUILDING_CELLS[it.buildingType] != null) {
+        const sprite = it.buildingType ? buildingSprite(it.buildingType, it.slot) : null
+        const buildingAtlas = sprite ? atlases[sprite.sheet] : null
+        if (buildingAtlas?.ready && sprite.cell != null) {
           if (!appeared.has(it.fresh)) appeared.set(it.fresh, originalBuildings.current.has(it.fresh) ? now - 1000 : now)
           const progress = reducedMotion.matches ? 1 : Math.min(1, (now - appeared.get(it.fresh)) / 650)
           const scale = 1 - (1 - progress) ** 3
-          const cell = BUILDING_CELLS[it.buildingType]
-          const footprint = buildingLayout(it.buildingType, it.island, it.slot, buildingsAtlas.cells[cell])
+          const cell = sprite.cell
+          const footprint = buildingLayout(it.buildingType, it.island, it.slot, buildingAtlas.cells[cell])
+          const gw = footprint.groundWidth, gd = footprint.groundDepth
+          const x0 = Math.min(footprint.x, -gw - 5), y0 = Math.min(footprint.y, 1 - gd - 5)
+          const x1 = Math.max(footprint.x + footprint.width, gw + 5), y1 = Math.max(footprint.y + footprint.height, 1 + gd + 5)
+          const bnd = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }
+          const src = buildingAtlas.cells[cell]
+          const srcScale = src ? src[2] / footprint.width : 1
+          const key = `${sprite.sheet}:${cell}:${it.island}:${it.slot}:${footprint.width}:${footprint.height}`
+          // The soft ground shadow needs a blur, so it is rendered once and reused.
+          const shadow = cache.current.get(`bshadow:${key}`, bnd, 'plain', (cx) => {
+            cx.filter = 'blur(2px)'
+            ellipse(cx, 0, 1, gw, gd, 'rgba(48,39,27,.22)')
+          }, 1)
           ctx.save(); ctx.translate(p.x, p.y + it.bob); ctx.scale(scale, scale)
-          ctx.save()
-          ctx.filter = 'blur(2px)'
-          ellipse(ctx, 0, 1, footprint.groundWidth, footprint.groundDepth, 'rgba(48,39,27,.22)')
-          ctx.restore()
-          buildingsAtlas.draw(ctx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
+          if (shadow) ctx.drawImage(shadow.cv, bnd.x, bnd.y, bnd.w, bnd.h)
+          if (v.s * dpr >= srcScale * 0.95) {
+            // zoomed in past the sprite's resolution: draw from the source (sharper, and cheap when enlarging)
+            ctx.imageSmoothingQuality = 'high'
+            buildingAtlas.draw(ctx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
+          } else {
+            const fb = { x: footprint.x, y: footprint.y, w: footprint.width, h: footprint.height }
+            const sp = cache.current.get(`bld:${key}`, fb, 'plain', (cx) => {
+              buildingAtlas.draw(cx, cell, footprint.x, footprint.y, footprint.width, footprint.height)
+            }, srcScale)
+            if (sp) ctx.drawImage(sp.cv, fb.x, fb.y, fb.w, fb.h)
+          }
           ctx.restore()
         } else if (b.w > 1) blit(cache.current.get(propKey(p), b, it.mode, (cx) => def.draw(cx, p)), 0, it.bob)
-        if (def.anim && it.mode !== 'hidden' && !(it.buildingType && buildingsAtlas.ready)) {
+        if (def.anim && it.mode !== 'hidden' && !buildingAtlas?.ready) {
           setMode(it.mode)
           ctx.save(); ctx.translate(0, it.bob); def.anim(ctx, p, t, { beacon: st.beaconRestored }); ctx.restore()
           setMode('lit')
         }
-        if (it.mode === 'lit' && def.lights) for (const l of def.lights(p)) lights.push([l[0], l[1] + it.bob, l[2]])
+        // Painted windows already contain their light. Procedural house lights are
+        // much lower than the painted windows and otherwise put a yellow halo under the walls.
+        if (it.mode === 'lit' && def.lights && !buildingAtlas?.ready) for (const l of def.lights(p)) lights.push([l[0], l[1] + it.bob, l[2]])
       }
 
       for (const isl of order) {
@@ -440,7 +553,7 @@ export default function WorldCanvas({ hoverRef }) {
       {
         const kk = ((t / 110) + 0.27) % 1
         const [x, y] = along([[2300, 30], [1200, 70], [400, 10], [-700, -20]], kk)
-        PROPS.airship.anim(ctx, { x, y: y, base: y + 70 }, t)
+        PROPS.airship.anim(ctx, { x, y, width: 104 }, t)
       }
 
       // 7. cloud sea in front of the island roots, then a soft navy vignette in screen space
@@ -449,16 +562,17 @@ export default function WorldCanvas({ hoverRef }) {
         blit(cache.current.get(`sea${c.seed}`, b, 'lit', (cx) => cloudBank(cx, c.x, c.y, c.w, c.seed, false)), Math.sin(t * 0.05 + c.seed) * 22, 0)
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
-      const vg = ctx.createRadialGradient(cv.width / 2, cv.height * 0.42, Math.min(cv.width, cv.height) * 0.28, cv.width / 2, cv.height * 0.48, Math.max(cv.width, cv.height) * 0.72)
-      vg.addColorStop(0, 'rgba(5,8,28,0)')
-      vg.addColorStop(1, 'rgba(4,7,24,0.28)')
-      ctx.fillStyle = vg
-      ctx.fillRect(0, 0, cv.width, cv.height)
+      // (the soft navy vignette is a static CSS layer, .world-vignette, instead of a per-frame full-screen draw)
     }
     raf = requestAnimationFrame(frame)
     return () => { cancelAnimationFrame(raf); ro.disconnect() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
+  return (
+    <>
+      <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
+      <div className="world-vignette" aria-hidden="true" />
+    </>
+  )
 }
 

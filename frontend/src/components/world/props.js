@@ -5,6 +5,7 @@
 //   lights?(p)            warm light sources for the glow pass when the island is lit
 //   size                  [halfWidth, heightAbove, depthBelow] for the bitmap cache
 import { PAL, col, poly, ellipse, circle, line, glow, box, iso, at, lit, rng, TAU } from './iso.js'
+import { getPaintedAtlas } from './paintedArt.js'
 
 const EDGE = 'rgba(28,24,60,.30)'
 
@@ -402,20 +403,22 @@ function helipad(ctx, p) {
   for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.4; line(ctx, c[0], c[1], c[0] + Math.cos(a) * 7, c[1] + Math.sin(a) * 3.5, col('#f3d98f'), 0.8) }
 }
 function airship(ctx, p, t) {
-  const bob = Math.sin(t * 1.1 + p.x) * 2
-  const x = p.x, y = p.y + bob
-  ellipse(ctx, p.x, p.base || p.y + 30, 16, 5, 'rgba(18,24,60,.18)')
-  if (p.rope) line(ctx, x - 10, y + 10, p.x - 14, p.base || p.y + 30, col('#8a6a35'), 0.6)
-  ctx.beginPath(); ctx.moveTo(x - 26, y); ctx.bezierCurveTo(x - 26, y - 13, x + 24, y - 13, x + 30, y); ctx.bezierCurveTo(x + 24, y + 13, x - 26, y + 13, x - 26, y)
-  const g = ctx.createLinearGradient(0, y - 12, 0, y + 12); g.addColorStop(0, col('#ffffff')); g.addColorStop(1, col('#c9cbe0'))
-  ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = col('#a88a4a'); ctx.lineWidth = 0.8; ctx.stroke()
-  for (const dx of [-14, -3, 8, 18]) { ctx.beginPath(); ctx.moveTo(x + dx, y - 10); ctx.quadraticCurveTo(x + dx + 3, y, x + dx, y + 10); ctx.strokeStyle = col('#c9a24f'); ctx.lineWidth = 0.8; ctx.stroke() }
-  poly(ctx, [[x + 27, y - 3], [x + 34, y - 8], [x + 34, y + 8], [x + 27, y + 3]], col(PAL.banner), col(PAL.gold), 0.5)
-  line(ctx, x - 8, y + 9, x - 6, y + 15, col('#8a6a35'), 0.7); line(ctx, x + 8, y + 9, x + 6, y + 15, col('#8a6a35'), 0.7)
-  ctx.fillStyle = col('#8a5a2e'); ctx.fillRect(x - 9, y + 14, 18, 6)
-  for (let i = 0; i < 3; i++) { ctx.fillStyle = lit() ? col(PAL.window) : col(PAL.windowOff); ctx.fillRect(x - 6 + i * 5, y + 15.5, 2.6, 2.2) }
-  const prop = Math.abs(Math.sin(t * 18)) * 5 + 0.5
-  ellipse(ctx, x - 28, y, 1, prop, col(PAL.gold))
+  const atlas = getPaintedAtlas('airship')
+  if (!atlas.ready) return
+  const width = p.width || 88
+  const bounds = atlas.cells[0]
+  const height = width * bounds[3] / bounds[2]
+  const x = p.x, y = p.y + Math.sin(t * .8 + p.x) * 2
+  // Docked ships retain their mooring. Passing craft cast no shadow on empty sky.
+  if (p.rope) {
+    ellipse(ctx, x, p.base ?? p.y + 30, width * .24, 5, 'rgba(18,24,60,.14)')
+    line(ctx, x - width * .17, y + height * .46, x - 14, p.base ?? p.y + 30, col('#8a6a35'), .6)
+  }
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(Math.sin(t * .45 + p.x * .01) * .012)
+  atlas.draw(ctx, 0, -width / 2, -height * .42, width, height)
+  ctx.restore()
 }
 
 /* ---------------------------------------------------------------- Gardens: greenhouse, windmill, crops */

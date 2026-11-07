@@ -119,8 +119,10 @@
 .res-meter .bar { margin: 4px 0 2px; }
 .res-num { font-size: 12.5px; font-weight: 800; text-align: right; color: #e7ecff; }
 .res-big { font-size: 22px; font-weight: 800; line-height: 1.1; }
-.res.is-low .bar { box-shadow: 0 0 0 1px rgba(255, 122, 91, 0.8); animation: lowPulse 1.4s ease-in-out infinite; }
-@keyframes lowPulse { 50% { box-shadow: 0 0 0 1px rgba(255, 122, 91, 0.2), 0 0 10px rgba(255, 122, 91, 0.6); } }
+.res.is-low .bar { box-shadow: 0 0 0 1px rgba(255, 122, 91, 0.8), 0 0 8px rgba(255, 122, 91, 0.4); }
+/* pulse the fill's opacity rather than the box-shadow: opacity runs on the GPU, box-shadow repaints */
+.res.is-low .bar-fill { animation: lowPulse 1.4s ease-in-out infinite; will-change: opacity; }
+@keyframes lowPulse { 50% { opacity: 0.45; } }
 .delta { font-family: var(--font-body); font-size: 11.5px; font-weight: 800; letter-spacing: 0; }
 .delta.up { color: var(--up); }
 .delta.down { color: var(--down); }
@@ -199,8 +201,7 @@
   padding: 7px 16px;
   border-radius: 99px;
   border: 1px solid rgba(227, 194, 122, 0.55);
-  background: rgba(10, 16, 52, 0.82);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 16, 52, 0.86); /* no backdrop blur: it re-blurred the moving map every frame */
   font-size: 14px;
   white-space: nowrap;
 }

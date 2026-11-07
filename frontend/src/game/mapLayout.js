@@ -9,7 +9,7 @@ export const STARTER_PLOTS = [
   [738, 495], [795, 507], // central residential terrace
   [928, 430], [981, 446], // upper-right residential terrace
   [952, 594], [1002, 610], // lower-right residential terrace
-  [679, 344], [721, 352], // upper clearing, clear of the stairs and beacon
+  [680, 343], [722, 356], // staggered along the upper paving, doors facing the steps
 ]
 
 // Smaller clearings need smaller footprints; saved buildings keep their slot indexes.
