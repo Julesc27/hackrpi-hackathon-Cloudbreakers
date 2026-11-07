@@ -1,13 +1,15 @@
-"""Deploy hook: GitHub Actions calls this after the pipeline passes; it redeploys the VM.
+"""Deploy hook: the manual "Deploy" GitHub Actions workflow calls this; it redeploys the VM.
 
 Auth uses GitHub's OIDC tokens (no shared secret anywhere):
   - the workflow requests a short-lived JWT signed by GitHub (permissions: id-token: write)
   - we verify the signature against GitHub's public keys and check the claims:
-    right repository, branch main, our deploy workflow, our audience
-So a stranger who finds this URL can't trigger anything.
+    right repository (by numeric id), branch main, our deploy workflow file as it exists on
+    main, started by hand (workflow_dispatch) on a GitHub-hosted runner, our audience
+So a stranger who finds this URL can't trigger anything. Forks have a different repository id,
+and other branches/workflows/events (pull requests etc.) are refused.
 
-Deploys only the commit the pipeline ran for, and only if it is still the tip of main
-(an older, slower run never rolls the site back). One deploy at a time.
+Deploys only the commit the run was for, and only if it is still the tip of main
+(an older run never rolls the site back). One deploy at a time.
 
 Stdlib HTTP server + PyJWT. Configure with environment variables (see CONFIG below).
 """
@@ -15,16 +17,18 @@ Stdlib HTTP server + PyJWT. Configure with environment variables (see CONFIG bel
 import json
 import logging
 import os
+import re
 import subprocess
 import threading
 import time
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import jwt
-from jwt import PyJWKClient
 
 CONFIG = {
-    "listen_host": os.getenv("HOOK_HOST", "0.0.0.0"),
+    # Docker's bridge address: reachable from containers (Caddy), not from the internet.
+    "listen_host": os.getenv("HOOK_HOST", "172.17.0.1"),
     "listen_port": int(os.getenv("HOOK_PORT", "9000")),
     "repo_dir": os.getenv("REPO_DIR", "/opt/cloudbreakers"),
     # GitHub's numeric repo id survives renames and transfers (owner/name does not).
@@ -41,11 +45,39 @@ CONFIG = {
     "deploy_timeout": int(os.getenv("DEPLOY_TIMEOUT", "1200")),
 }
 
+MAX_TOKEN_LEN = 8192
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+
 log = logging.getLogger("deploy-hook")
-_jwks = PyJWKClient(CONFIG["jwks_url"], cache_keys=True, lifespan=3600)
 _deploy_lock = threading.Lock()
 _seen_jti: dict[str, float] = {}  # token id -> expiry, to refuse replays
 _seen_lock = threading.Lock()
+
+
+class _Jwks:
+    """GitHub's signing keys, cached for an hour. Tokens with an unknown key id trigger at most
+    one refetch per minute, so junk tokens can't make us hammer GitHub."""
+
+    def __init__(self, url: str):
+        self.url, self.keys, self.fetched_at, self.lock = url, {}, 0.0, threading.Lock()
+
+    def _fetch(self):
+        with urllib.request.urlopen(self.url, timeout=10) as r:
+            data = json.load(r)
+        self.keys = {k["kid"]: jwt.PyJWK(k).key for k in data.get("keys", []) if "kid" in k}
+        self.fetched_at = time.monotonic()
+
+    def get(self, kid: str):
+        with self.lock:
+            age = time.monotonic() - self.fetched_at
+            if age > 3600 or (kid not in self.keys and age > 60):
+                self._fetch()
+            if kid not in self.keys:
+                raise jwt.InvalidTokenError("unknown signing key")
+            return self.keys[kid]
+
+
+_jwks = _Jwks(CONFIG["jwks_url"])
 
 
 class HookError(Exception):
@@ -55,28 +87,35 @@ class HookError(Exception):
 
 
 def verify(token: str) -> dict:
+    if len(token) > MAX_TOKEN_LEN:
+        raise HookError(401, "invalid token: too long")
     try:
-        key = _jwks.get_signing_key_from_jwt(token).key
+        header = jwt.get_unverified_header(token)
+        if header.get("alg") != "RS256":
+            raise jwt.InvalidTokenError("unexpected algorithm")
+        key = _jwks.get(str(header.get("kid", "")))
         claims = jwt.decode(
             token,
             key,
             algorithms=["RS256"],
             audience=CONFIG["audience"],
             issuer=CONFIG["issuer"],
-            options={"require": ["exp", "iat", "iss", "aud", "sub", "jti"]},
+            options={"require": ["exp", "iat", "nbf", "iss", "aud", "sub", "jti"]},
             leeway=30,
         )
-    except jwt.PyJWTError as e:
+    except (jwt.PyJWTError, OSError, ValueError, KeyError) as e:
         raise HookError(401, f"invalid token: {e}")
 
     want_ref = f"refs/heads/{CONFIG['branch']}"
     checks = {
         "repository_id": str(claims.get("repository_id")) == CONFIG["repository_id"],
         "ref": claims.get("ref") == want_ref,
+        "ref_type": claims.get("ref_type") == "branch",
         # workflow_ref looks like "owner/repo/.github/workflows/deploy.yml@refs/heads/main"
         "workflow": str(claims.get("workflow_ref", "")).endswith(f"/{CONFIG['workflow_file']}@{want_ref}"),
-        "event": claims.get("event_name") in ("push", "workflow_dispatch"),
-        "sha": isinstance(claims.get("sha"), str) and len(claims["sha"]) == 40,
+        "event": claims.get("event_name") == "workflow_dispatch",
+        "runner": claims.get("runner_environment") == "github-hosted",
+        "sha": isinstance(claims.get("sha"), str) and bool(SHA_RE.match(claims["sha"])),
     }
     failed = [k for k, ok in checks.items() if not ok]
     if failed:

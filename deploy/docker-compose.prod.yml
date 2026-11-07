@@ -29,6 +29,8 @@ services:
     env_file: ../backend/.env
     environment:
       - ALLOWED_ORIGINS=https://${SITE_DOMAIN:-cloudbreakers.club},https://www.${SITE_DOMAIN:-cloudbreakers.club}
+      # Trust X-Forwarded-For (only Caddy can reach this container) so rate limits see real client IPs
+      - FORWARDED_ALLOW_IPS=*
     # not published: only Caddy talks to it
     restart: unless-stopped
 

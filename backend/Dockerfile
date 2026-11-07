@@ -12,6 +12,6 @@ COPY . .
 
 EXPOSE 8000
 
-# Local dev only (docker-compose overrides this with --reload). Production runs on Vercel,
-# which finds the FastAPI `app` in app/main.py by itself.
+# docker-compose overrides this with --reload for dev. Production (deploy/docker-compose.prod.yml)
+# runs it as-is behind Caddy, with FORWARDED_ALLOW_IPS set so client IPs are real.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

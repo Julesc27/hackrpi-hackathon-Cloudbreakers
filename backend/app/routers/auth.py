@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
+from app import ratelimit
 from app.auth import create_token, hash_password, verify_password
 from app.models import Player, PlayerOut
 
@@ -14,8 +15,8 @@ class Credentials(BaseModel):
 
 
 class LoginBody(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=64)
+    password: str = Field(max_length=128)
 
 
 class AuthResponse(BaseModel):
@@ -25,7 +26,10 @@ class AuthResponse(BaseModel):
 
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
-async def register(body: Credentials):
+async def register(body: Credentials, request: Request):
+    ip = ratelimit.client_ip(request)
+    ratelimit.check("register_ip", ip)
+    ratelimit.hit("register_ip", ip)
     player = Player(username=body.username, password_hash=hash_password(body.password))
     try:
         await player.insert()
@@ -35,8 +39,13 @@ async def register(body: Credentials):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(body: LoginBody):
+async def login(body: LoginBody, request: Request):
+    ip = ratelimit.client_ip(request)
+    ratelimit.check("login_ip", ip)
+    ratelimit.check("login_fail_user", body.username)
+    ratelimit.hit("login_ip", ip)
     player = await Player.find_one(Player.username == body.username)
     if player is None or not verify_password(body.password, player.password_hash):
+        ratelimit.hit("login_fail_user", body.username)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong username or password")
     return AuthResponse(access_token=create_token(player), player=PlayerOut.from_doc(player))

@@ -67,4 +67,4 @@ cd "$REPO_DIR"
 sudo docker compose -f deploy/docker-compose.prod.yml up -d --build --remove-orphans
 sudo docker compose -f deploy/docker-compose.prod.yml ps
 
-log "Done. Hook: $(curl -s localhost:9000/health)"
+log "Done. Hook: $(curl -s 172.17.0.1:9000/health)"
