@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, MISSIONS, WEATHER, INTRO, BRIDGE_TYPES, RESOURCES } from '../../game/data.js'
-import { caps, projectTurn, housing, islandAccess, bridgeLabel } from '../../game/engine.js'
-import { Modal, YieldChips, Progress } from './Panel.jsx'
-import { RES_ICON, WeatherIcon, People, Leaf, Smile, Check, Star } from '../icons.jsx'
+import { caps, projectTurn, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost } from '../../game/engine.js'
+import { islandCardArt, ISLAND_BADGE } from '../artPaths.js'
+import { Modal, YieldChips, Progress, CostChips } from './Panel.jsx'
+import { RES_ICON, WeatherIcon, People, Leaf, Smile, Check, Star, ArtIcon } from '../icons.jsx'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { useSync } from '../../game/CloudSync.jsx'
 
@@ -52,7 +53,7 @@ export function JournalModal() {
   useEffect(() => { dispatch({ type: 'READ_JOURNAL' }) }, [dispatch])
   const entries = [...state.journal].reverse()
   return (
-    <Modal title="Journal" kicker="Discoveries, missions and events" onClose={() => ui.setPanel(null)} size="lg">
+    <Modal title="Journal" kicker="Discoveries · missions · events" onClose={() => ui.setPanel(null)} size="lg">
       <ol className="journal">
         {entries.map((e) => (
           <li key={e.id} className={`jentry jentry-${e.type}`}>
@@ -75,7 +76,7 @@ export function StorageModal() {
   const { gain, use, net } = projectTurn(state)
   const rows = ['wood', 'water', 'food', 'energy', 'coins']
   return (
-    <Modal title="Storage" kicker="Stock and flow next turn" onClose={() => ui.setPanel(null)}>
+    <Modal title="Storehouse" kicker="Stock and flow next turn" onClose={() => ui.setPanel(null)}>
       <table className="table">
         <thead><tr><th>Resource</th><th>Stock</th><th>In</th><th>Out</th><th>Net</th></tr></thead>
         <tbody>
@@ -103,24 +104,56 @@ export function StorageModal() {
   )
 }
 
+function IslandBadge({ id }) {
+  const b = ISLAND_BADGE[id] || {}
+  if (b.img) return <img className="card-badge" src={b.img} alt="" />
+  return <span className="card-badge ring" style={{ background: b.ring }}><ArtIcon name={b.icon} size={30} /></span>
+}
+
+// "The Skyway Chart — choose your next horizon"
 export function MapModal() {
   const { state } = useGame()
   const ui = useUI()
   const access = islandAccess(state)
+  const routes = openRoutes(state)
+  const ids = Object.keys(ISLANDS).filter((id) => id !== 'newHaven')
+  const rank = (id) => (routes.some((r) => otherEnd(r, state.connected) === id) ? 0 : state.connected.includes(id) ? 1 : 2)
+  ids.sort((a, b) => rank(a) - rank(b))
   return (
-    <Modal title="Sky Chart" kicker="Islands and routes" onClose={() => ui.setPanel(null)} size="lg">
-      <div className="chart-grid">
-        {Object.entries(ISLANDS).map(([id, d]) => {
+    <Modal title="The Skyway Chart" kicker="Choose your next horizon" onClose={() => ui.setPanel(null)} size="xl" className="chart"
+      footer={<div className="chart-foot"><span className="dots" />Further skies await<span className="dots" /></div>}>
+      <div className="chart-cards">
+        {ids.map((id) => {
+          const d = ISLANDS[id]
           const status = state.connected.includes(id) ? 'connected' : state.discovered.includes(id) ? 'discovered' : 'hidden'
+          const route = routes.find((r) => otherEnd(r, state.connected) === id)
+          const hidden = status === 'hidden'
           return (
-            <button key={id} className={`chart-card card is-${status}`} onClick={() => ui.openIsland(id)}>
-              <div className="chart-name">{status === 'hidden' ? 'Uncharted' : d.name}</div>
-              <div className="muted small">{status === 'hidden' ? '???' : d.kind}</div>
-              {status !== 'hidden' && id !== 'newHaven' && <YieldChips yields={d.yields} />}
-              <div className={`status-chip status-${status === 'connected' ? (access[id] === 1 ? 'ok' : 'warn') : 'locked'}`}>
-                {status === 'connected' ? (id === 'newHaven' ? 'Home' : access[id] === 1 ? 'Connected' : 'Strained') : status === 'discovered' ? 'Reachable' : 'Unknown'}
-              </div>
-            </button>
+            <article key={id} className={`chart-card is-${status}`}>
+              <IslandBadge id={id} />
+              <div className="cc-art"><img src={islandCardArt(id)} alt="" /></div>
+              <h3>{hidden ? 'Uncharted' : d.name}</h3>
+              <p className="cc-desc">{hidden ? 'Something drifts beyond the clouds. Connect a neighbour to chart it.' : d.desc}</p>
+              {!hidden && (
+                <>
+                  <div className="cc-label">{status === 'connected' ? 'Produces' : 'Connection cost'}</div>
+                  <div className="cc-cost">
+                    {status === 'connected'
+                      ? <YieldChips yields={d.yields} />
+                      : route
+                        ? <CostChips cost={bridgeCost(route, 'rope')} resources={state.resources} />
+                        : <span className="muted small">No route yet</span>}
+                  </div>
+                </>
+              )}
+              {status === 'connected' ? (
+                <div className="btn-connected"><Check size={18} /> {access[id] === 1 ? 'Connected' : 'Bridge damaged'}</div>
+              ) : (
+                <button className="btn-pill" disabled={!route} onClick={() => { ui.setPanel(null); ui.setBridgeRoute(route.id) }}>
+                  Chart Route <span aria-hidden="true">›</span>
+                </button>
+              )}
+            </article>
           )
         })}
       </div>

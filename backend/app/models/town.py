@@ -28,7 +28,7 @@ class Building(_Loose):
     id: str
     type: str
     island: str
-    slot: NonNegInt
+    slot: int  # starter buildings use negative slots (fixed spots, not build plots)
     builtTurn: NonNegInt
 
 

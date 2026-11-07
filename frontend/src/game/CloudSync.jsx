@@ -11,8 +11,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import * as api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useGame } from './GameContext.jsx'
+import { createInitialState } from './engine.js'
 
 const SYNC_MS = 30_000
+// Saves from an older engine version can't be loaded (same rule as GameContext's loadSave);
+// if the account only has an outdated save, this device's town replaces it.
+const SAVE_VERSION = createInitialState().version
 const OWNER_KEY = 'cloudbreakers-save-owner' // username the local save belongs to (absent = guest save)
 const DIRTY_KEY = 'cloudbreakers-save-dirty' // local changes not yet on the server
 
@@ -81,7 +85,9 @@ export function SyncProvider({ children }) {
     reconciling.current = username
     setSync({ status: 'loading', savedAt: null, error: null })
     try {
-      const { town, saved_at } = await api.loadTown()
+      const res = await api.loadTown()
+      const town = res.town?.version === SAVE_VERSION ? res.town : null // outdated = no save
+      const saved_at = res.saved_at
       const local = stateRef.current
       const owner = ls.get(OWNER_KEY)
       let action // 'load' server save | 'upload' this device's save | 'new' fresh game then upload
@@ -104,7 +110,7 @@ export function SyncProvider({ children }) {
       }
 
       ls.set(OWNER_KEY, username)
-      if (action === 'load' && town?.version === 1) {
+      if (action === 'load') {
         prevState.current = null // let the effect below see the LOAD without marking dirty
         dispatch({ type: 'LOAD', state: { ...town, toasts: [] } })
         setDirty(false)

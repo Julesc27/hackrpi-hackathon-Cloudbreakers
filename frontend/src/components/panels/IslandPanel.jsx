@@ -2,6 +2,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, BUILDINGS, ROUTES, BEACON_COST, GATHER_AMOUNT, HARVEST } from '../../game/data.js'
 import { islandAccess, openRoutes, otherEnd, canAfford, hasAnchor } from '../../game/engine.js'
 import { Drawer, CostChips, YieldChips } from './Panel.jsx'
+import { islandCardArt } from '../artPaths.js'
 
 export default function IslandPanel() {
   const { state, dispatch } = useGame()
@@ -22,7 +23,7 @@ export default function IslandPanel() {
   }
 
   const buildings = state.buildings.filter((b) => b.island === id)
-  const freeSlots = def.slots.length - buildings.length
+  const freeSlots = def.plots.length - buildings.length
   const route = openRoutes(state).find((r) => otherEnd(r, state.connected) === id)
   const noActions = state.actionsLeft < 1
   const statusText =
@@ -30,6 +31,7 @@ export default function IslandPanel() {
 
   return (
     <Drawer side="right" title={def.name} kicker={def.kind} onClose={close}>
+      <img className="island-art" src={islandCardArt(id)} alt="" />
       <div className={`status-chip status-${status === 'connected' ? (access[id] === 1 ? 'ok' : 'warn') : 'locked'}`}>{statusText}</div>
       <p>{def.desc}</p>
       <blockquote className="question">{def.question}</blockquote>
@@ -62,7 +64,7 @@ export default function IslandPanel() {
             )}
             {id === 'verdant' && (
               <button className="btn-action" disabled={noActions || !access.verdant} onClick={() => dispatch({ type: 'HARVEST_FOREST' })}>
-                <span>Harvest the forest</span><small>1 action · +{HARVEST.wood} wood · lowers sustainability</small>
+                <span>Harvest the grove</span><small>1 action · +{HARVEST.wood} wood · lowers sustainability</small>
               </button>
             )}
             {id === 'newHaven' && !state.beaconRestored && (

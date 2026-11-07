@@ -3,6 +3,7 @@ import { ISLANDS, ROUTE_MAP, BRIDGE_TYPES, REPAIR_COST } from '../../game/data.j
 import { bridgeCost, canAfford, hasAnchor, isUnlocked, otherEnd, unlockLevel, bridgeStatus } from '../../game/engine.js'
 import { Modal, CostChips, YieldChips, Progress } from './Panel.jsx'
 import { Lock } from '../icons.jsx'
+import { islandCardArt } from '../artPaths.js'
 
 function Stat({ label, value, max = 100, suffix = '%', color }) {
   return (
@@ -58,7 +59,8 @@ export default function BridgeModal() {
   const anchor = hasAnchor(state)
 
   return (
-    <Modal title={`Bridge to ${ISLANDS[dest].name}`} kicker={`From ${ISLANDS[from].name}`} onClose={close} size="lg">
+    <Modal title={`Bridge to ${ISLANDS[dest].name}`} kicker={`From ${ISLANDS[from].name}`} onClose={close} size="lg" crest={false}>
+      <div className="bridge-hero"><img src={islandCardArt(dest)} alt="" /></div>
       <p className="lead">{route.note} <span className="muted">{ISLANDS[dest].kind} — produces</span> <YieldChips yields={ISLANDS[dest].yields} />{ISLANDS[dest].special === 'forecast' && <span className="muted"> + forecasts</span>}</p>
       {!anchor && <p className="warn-text">You need a Bridge Anchor on New Haven before any bridge can be built. Open Build to place one.</p>}
       <div className="bridge-options">

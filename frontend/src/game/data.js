@@ -14,92 +14,103 @@ export const RESOURCES = {
   coins: { label: 'Coins', color: 'var(--coin)' },
 }
 
-// Map coordinates live in a 1600 x 900 SVG viewBox.
-// `rx` is the island's horizontal radius; its vertical radius is rx / 2.
-// `slots` are building plots in island-local coordinates.
+// Islands are painted cut-outs from the concept art (public/art/island-*.webp).
+// Map coordinates use the concept art's 1600 x 900 frame. `hit` is the clickable
+// ellipse [cx, cy, rx, ry]; `plots` are building spots in the same frame.
 export const ISLANDS = {
   newHaven: {
     name: 'New Haven',
     kind: 'Home Island',
-    theme: 'haven',
-    x: 800, y: 450, rx: 175,
+    hit: [765, 450, 230, 150],
     yields: {},
-    desc: 'What remains of a small outpost: a shelter site, a gathering area and a dormant navigation beacon.',
+    desc: 'What remains of a small outpost: a gathering plaza, a fountain and a dormant navigation beacon.',
     question: 'New Haven is small, but it is still here.',
-    slots: [[-105, -18], [-62, 30], [72, 30], [112, -14], [-14, 56], [44, -52], [-80, -52]],
+    plots: [[640, 478], [688, 540], [882, 468], [905, 528], [612, 520]],
   },
   verdant: {
     name: 'Verdant Reach',
-    kind: 'Forest Island',
-    theme: 'forest',
-    x: 330, y: 540, rx: 130,
-    yields: { wood: 5, food: 2 },
-    desc: 'Trees, vines, herbs and old wooden platforms. The easiest island to reach and the fastest way to build.',
+    kind: 'Market Grove',
+    hit: [500, 680, 190, 95],
+    yields: { wood: 5, coins: 2 },
+    badge: 'wood',
+    desc: 'Pine groves around an old trading post. The easiest island to reach and the fastest way to build.',
     question: 'How much of the forest should the town harvest, and how much should it protect?',
-    slots: [[-30, 22], [48, 8]],
+    plots: [[545, 695], [610, 700]],
   },
   rain: {
     name: 'Rain Island',
     kind: 'Water Island',
-    theme: 'rain',
-    x: 1170, y: 225, rx: 130,
+    hit: [930, 225, 205, 115],
     yields: { water: 6 },
-    desc: 'Natural reservoirs, suspended waterfalls and old filtration equipment.',
+    badge: 'drop',
+    desc: 'Crystal reservoirs and endless waterfalls. The sky\'s lifeblood flows here.',
     question: 'Redirect the water now for growth, or restore the natural collection system first?',
-    slots: [[-58, 22], [56, 26]],
-  },
-  prism: {
-    name: 'Prism Shelf',
-    kind: 'Crystal Island',
-    theme: 'crystal',
-    x: 1275, y: 545, rx: 120,
-    yields: { energy: 6 },
-    desc: 'Luminous crystals that store wind and sunlight. Powers research and advanced bridges.',
-    question: 'Can the crystals be used without destabilizing the island?',
-    slots: [[-44, 20], [40, 22]],
+    plots: [[840, 255], [1065, 270]],
   },
   mistral: {
     name: 'Mistral Heights',
-    kind: 'Wind Island',
-    theme: 'wind',
-    x: 440, y: 220, rx: 120,
-    yields: { energy: 5 },
-    desc: 'Old wind turbines on exposed ridges. Reliable power, at the price of noise.',
-    question: 'Is the town willing to accept noisy machinery in exchange for reliable energy?',
-    slots: [[-46, 24], [40, 26]],
-  },
-  observatory: {
-    name: 'Quiet Observatory',
-    kind: 'High Island',
-    theme: 'observatory',
-    x: 575, y: 775, rx: 105,
-    yields: { coins: 3 },
+    kind: 'Wind & Sun Island',
+    hit: [410, 235, 215, 120],
+    yields: { energy: 6 },
     special: 'forecast',
-    desc: 'A star map, a weather instrument and records of the first sky settlements. Unlocks weather forecasts.',
-    question: 'The storms may not be random. Investigate, warn others, or keep it secret?',
-    slots: [[-40, 18], [36, 20]],
+    badge: 'energy',
+    desc: 'Old turbines and solar rows on an exposed ridge. Reliable power, and a good view of the weather.',
+    question: 'Is the town willing to accept noisy machinery in exchange for reliable energy?',
+    plots: [[430, 285], [525, 248]],
+  },
+  mercy: {
+    name: 'Mercy Rise',
+    kind: 'Clinic Island',
+    hit: [320, 470, 175, 120],
+    yields: {},
+    happiness: 2,
+    badge: 'happiness',
+    desc: 'A white stone clinic and an airship pad. Healthy residents are happy residents.',
+    question: 'Who gets care first when supplies run short?',
+    plots: [[440, 470], [470, 505]],
+  },
+  hearth: {
+    name: 'Hearthside',
+    kind: 'Village Island',
+    hit: [1220, 450, 200, 125],
+    yields: { food: 1 },
+    housing: 8,
+    badge: 'town',
+    desc: 'Cottages and lantern-lit lanes, ready for new families. Adds homes for 8 residents.',
+    question: 'Grow quickly, or keep the town small enough that everyone knows each other?',
+    plots: [[1110, 480], [1300, 520]],
   },
   gardens: {
     name: 'The Glass Gardens',
     kind: 'Greenhouse Island',
-    theme: 'gardens',
-    x: 1035, y: 780, rx: 120,
+    hit: [1040, 690, 210, 100],
     yields: { food: 6 },
-    desc: 'Greenhouses, seed libraries and automated growing beds left by a vanished community.',
+    badge: 'leaf',
+    desc: 'A greenhouse, a windmill and tidy crop rows left by a vanished community.',
     question: 'Preserve the old seeds as a library, or plant them now to solve shortages?',
-    slots: [[-50, 18], [48, 22]],
+    plots: [[890, 690], [1180, 735]],
+  },
+  skyport: {
+    name: 'Skyport',
+    kind: 'Airship Dock',
+    hit: [1470, 640, 120, 120],
+    yields: { coins: 6 },
+    badge: 'coins',
+    desc: 'A timber dock where trade airships tie up. Brings cloud coins from distant towns.',
+    question: 'Who should New Haven trade with — and what should it never sell?',
+    plots: [[1440, 655]],
   },
 }
 
+// Route ids match the painted bridge files (public/art/bridge-<id>.webp).
 export const ROUTES = [
-  { id: 'haven-verdant', a: 'newHaven', b: 'verdant', wood: 14, note: 'A short, sheltered span.' },
-  { id: 'haven-rain', a: 'newHaven', b: 'rain', wood: 20, note: 'Close enough to see, far enough to be expensive.' },
-  { id: 'haven-prism', a: 'newHaven', b: 'prism', wood: 18, note: 'Crystal glare makes the crossing tricky.' },
-  { id: 'verdant-mistral', a: 'verdant', b: 'mistral', wood: 18, note: 'Gusty, but the ridge gives good anchors.' },
-  { id: 'verdant-observatory', a: 'verdant', b: 'observatory', wood: 16, note: 'An old stair hints a path once existed.' },
-  { id: 'prism-gardens', a: 'prism', b: 'gardens', wood: 18, note: 'Warm air rises from the glasshouses.' },
-  { id: 'rain-prism', a: 'rain', b: 'prism', wood: 12, note: 'A loop route — a second way home if a bridge fails.' },
-  { id: 'rain-mistral', a: 'rain', b: 'mistral', wood: 30, note: 'The High Span. Long, exposed and ambitious.' },
+  { id: 'verdant-haven', a: 'newHaven', b: 'verdant', wood: 14, note: 'A short stair down to the grove.' },
+  { id: 'mistral-haven', a: 'newHaven', b: 'mistral', wood: 18, note: 'A long boardwalk. Gusty, but well anchored.' },
+  { id: 'rain-haven', a: 'newHaven', b: 'rain', wood: 20, note: 'Close enough to see, far enough to be expensive.' },
+  { id: 'gardens-haven', a: 'newHaven', b: 'gardens', wood: 20, note: 'Steep steps, sheltered from the wind.' },
+  { id: 'mercy-haven', a: 'newHaven', b: 'mercy', wood: 22, note: 'A railed span over a long drop.' },
+  { id: 'hearth-haven', a: 'newHaven', b: 'hearth', wood: 22, note: 'The village has been waiting for this one.' },
+  { id: 'hearth-skyport', a: 'hearth', b: 'skyport', wood: 26, note: 'A trestle out to the airship dock.' },
 ]
 export const ROUTE_MAP = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
 
@@ -175,8 +186,9 @@ export const BUILDINGS = {
     desc: 'Strong renewable power. Residents say it hums at night.',
   },
   // Pre-placed, not buildable
-  starterGarden: { name: 'Starter Garden', category: 'Survival', prod: { food: 2 }, buildable: false, desc: 'A few hardy rows Pip refuses to give up on.' },
-  rainBarrel: { name: 'Old Rain Barrel', category: 'Survival', prod: { water: 2 }, buildable: false, desc: 'Leaky, but faithful.' },
+  // Pre-existing (part of the painted island, not drawn separately)
+  starterGarden: { name: 'Starter Garden', category: 'Survival', prod: { food: 2 }, buildable: false, painted: true, desc: 'A few hardy rows Pip refuses to give up on.' },
+  rainBarrel: { name: 'Fountain Cistern', category: 'Survival', prod: { water: 2 }, buildable: false, painted: true, desc: 'The plaza fountain still trickles.' },
 }
 
 export const BUILD_ORDER = [
@@ -267,7 +279,7 @@ export const WEATHER = {
   heavyRain: { name: 'Heavy Rain', text: 'Collectors overflow. Rope bridges creak.', icon: 'rain', gain: { water: 5 }, bridgeDamage: 1, weight: 2 },
   heatWave: { name: 'Heat Wave', text: 'Thirsty crops, thirsty people.', icon: 'heat', gain: { food: -2 }, use: { water: 3 }, weight: 1.5 },
   crosswind: { name: 'Crosswind', text: 'Bridges sway. Turbines sing.', icon: 'wind', gain: { energy: 2 }, bridgeDamage: 0.7, weight: 2 },
-  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { prism: 0.5 }, weight: 1 },
+  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { mistral: 0.5 }, weight: 1 },
   cloudDrought: { name: 'Cloud Drought', text: 'The clouds are holding on to their water.', icon: 'drought', gain: { water: -3 }, weight: 1.5 },
 }
 

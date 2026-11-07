@@ -11,7 +11,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 export function createInitialState() {
   return {
-    version: 1,
+    version: 2,
     townName: 'New Haven',
     turn: 1,
     actionsLeft: ACTIONS_PER_TURN,
@@ -24,12 +24,12 @@ export function createInitialState() {
     blueprints: [],
     flags: {},
     buildings: [
-      { id: 'b1', type: 'starterGarden', island: 'newHaven', slot: 0, builtTurn: 0 },
-      { id: 'b2', type: 'rainBarrel', island: 'newHaven', slot: 1, builtTurn: 0 },
+      { id: 'b1', type: 'starterGarden', island: 'newHaven', slot: -1, builtTurn: 0 },
+      { id: 'b2', type: 'rainBarrel', island: 'newHaven', slot: -2, builtTurn: 0 },
     ],
     beaconRestored: false,
     connected: ['newHaven'],
-    discovered: ['newHaven', 'verdant', 'rain', 'prism'],
+    discovered: ['newHaven', 'verdant', 'rain', 'mistral', 'gardens', 'mercy', 'hearth'],
     bridges: [],
     weather: 'clear',
     forecast: 'clear',
@@ -68,7 +68,9 @@ export const countType = (state, type) => state.buildings.filter((b) => b.type =
 export const hasAnchor = (state) => countType(state, 'bridgeAnchor') > 0
 
 export function housing(state) {
-  return BASE_HOUSING + state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].housing || 0), 0)
+  const access = islandAccess(state)
+  const islandHomes = Object.keys(access).reduce((s, id) => s + (ISLANDS[id].housing || 0), 0)
+  return BASE_HOUSING + islandHomes + state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].housing || 0), 0)
 }
 
 export function caps(state) {
@@ -291,8 +293,10 @@ function endTurn(state, roll) {
   const house = housing(state)
   if (state.population > house) { dh -= 3; reasons.push(['Overcrowding', -3]) }
   if (w.happiness) { dh += w.happiness; reasons.push([w.name, w.happiness]) }
-  const bh = state.buildings.reduce((s, b) => s + (access[b.island] ? BUILDINGS[b.type].happiness || 0 : 0), 0)
-  if (bh) { dh += bh; reasons.push(['Buildings', bh]) }
+  const bh =
+    state.buildings.reduce((s, b) => s + (access[b.island] ? BUILDINGS[b.type].happiness || 0 : 0), 0) +
+    Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
+  if (bh) { dh += bh; reasons.push(['Buildings & islands', bh]) }
   const happiness = clamp(state.happiness + dh, 0, 100)
 
   // Population
@@ -399,7 +403,7 @@ export function gameReducer(state, action) {
       return checkMissions(s)
     }
 
-    case 'HARVEST_FOREST': {
+    case 'HARVEST_FOREST': {  // Verdant Reach
       const blocked = needAction(state)
       if (blocked) return blocked
       if (!islandAccess(state).verdant) return toast(state, 'warn', 'Verdant Reach is not reachable.')
@@ -423,6 +427,7 @@ export function gameReducer(state, action) {
       if (def.unique && countType(state, buildingType)) return toast(state, 'warn', `You already have a ${def.name}.`)
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
       if (!canAfford(state.resources, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
+      if (slot < 0 || slot >= (ISLANDS[island].plots || []).length) return state
       if (state.buildings.some((b) => b.island === island && b.slot === slot)) return state
       let s = {
         ...state,

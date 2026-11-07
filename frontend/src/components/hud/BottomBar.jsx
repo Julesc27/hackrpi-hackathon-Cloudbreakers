@@ -1,16 +1,16 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { activeMissions } from '../../game/engine.js'
 import { ACTIONS_PER_TURN, BUILDINGS } from '../../game/data.js'
-import { HouseIcon, Compass, Book, Crate, Gear, Hourglass, Star } from '../icons.jsx'
+import { HouseIcon, Hourglass, Star, ArtIcon } from '../icons.jsx'
 
 export function BottomNav() {
   const { state } = useGame()
   const ui = useUI()
   const tabs = [
     { id: null, label: 'Town', Icon: HouseIcon },
-    { id: 'map', label: 'Map', Icon: Compass },
-    { id: 'journal', label: 'Journal', Icon: Book, badge: state.journalUnread > 0 },
-    { id: 'storage', label: 'Storage', Icon: Crate },
+    { id: 'map', label: 'Map', Icon: (p) => <ArtIcon name="map" {...p} /> },
+    { id: 'journal', label: 'Journal', Icon: (p) => <ArtIcon name="journal" {...p} />, badge: state.journalUnread > 0 },
+    { id: 'storage', label: 'Storage', Icon: (p) => <ArtIcon name="storage" {...p} /> },
   ]
   const isActive = (id) => (id === null ? !['map', 'journal', 'storage'].includes(ui.panel) : ui.panel === id)
   return (
@@ -23,7 +23,7 @@ export function BottomNav() {
             onClick={() => (id === null ? ui.closeAll() : ui.toggle(id))}
           >
             {badge && <span className="badge">!</span>}
-            <Icon size={40} />
+            <Icon size={44} />
             <span>{label}</span>
           </button>
         </span>
@@ -59,7 +59,7 @@ export function SettingsButton() {
   const ui = useUI()
   return (
     <button className="gear-btn panel" aria-label="Settings" onClick={() => ui.toggle('settings')}>
-      <Gear size={34} />
+      <ArtIcon name="gear" size={38} />
     </button>
   )
 }

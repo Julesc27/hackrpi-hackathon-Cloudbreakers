@@ -8,7 +8,7 @@ function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const s = JSON.parse(raw)
-      if (s?.version === 1) return { ...s, toasts: [] }
+      if (s?.version === 2) return { ...s, toasts: [] }
     }
   } catch { /* storage unavailable — start fresh */ }
   return createInitialState()

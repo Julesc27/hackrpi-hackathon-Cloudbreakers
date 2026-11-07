@@ -22,6 +22,13 @@
   --danger: #ff7a5b;
   --font-display: 'Cinzel', Georgia, serif;
   --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-hand: 'Patrick Hand', 'Comic Sans MS', 'Nunito', sans-serif;
+  --font-script: 'Caveat', 'Segoe Script', cursive;
+  --ink: #1f2a5a;
+  --ink-soft: #4a4f6e;
+  --parch-1: #fbf2db;
+  --parch-2: #efdfbb;
+  --parch-3: #dcc394;
   --r: 14px;
   color-scheme: dark;
 }
@@ -195,6 +202,8 @@ p { margin: 0 0 10px; }
 .chip small { font-weight: 600; opacity: 0.7; font-size: 11px; }
 .chip.is-short { color: #ffb08f; border-color: rgba(255, 122, 91, 0.6); }
 .chip-yield { color: #d9f5e1; }
+
+.art-icon { display: inline-block; flex: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
 
 .badge {
   position: absolute;
