@@ -1,5 +1,5 @@
 import { bridgeCurve } from './people.js'
-import { BRIDGE_APPROACHES, BRIDGE_ENDS, EASTERN_DOCK, WORLD_ISLANDS } from './layout.js'
+import { EASTERN_DOCK, WORLD_ISLANDS } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
 
@@ -28,32 +28,6 @@ function crossVector(a, b) {
   const u = dx / 2 + dy, v = dy - dx / 2
   const length = Math.hypot(u, v) || 1
   return [(-v - u) / length, (u - v) / (2 * length)]
-}
-
-function drawApproach(ctx, route, end, progress) {
-  const path = BRIDGE_APPROACHES[route]?.[end]
-  if (!path || progress <= 0) return
-  const island = BRIDGE_ENDS[route][end][0]
-  const bob = WORLD_ISLANDS[island]._bob || 0
-  ctx.save()
-  ctx.translate(0, bob)
-  ctx.globalAlpha = Math.min(1, progress)
-  for (let segment = 0; segment < path.length - 1; segment++) {
-    const a = path[segment], b = path[segment + 1]
-    const cross = crossVector(a, b)
-    const count = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 7))
-    const at = (t, side) => [a[0] + (b[0] - a[0]) * t + cross[0] * side * 10.5,
-      a[1] + (b[1] - a[1]) * t + cross[1] * side * 10.5]
-    for (let i = 0; i < count; i++) {
-      const t0 = i / count, t1 = (i + 1) / count
-      // Fade the last few paving stones into the island's painted walkway.
-      ctx.globalAlpha = Math.min(1, progress) * (segment === path.length - 2 ? 1 - t0 * .75 : 1)
-      poly(ctx, [at(t0, -1), at(t1, -1), at(t1, 1), at(t0, 1)], col(i % 2 ? '#dfcfad' : '#ebddbd'), col('#bca883'), .35)
-      const mid = at((t0 + t1) / 2, 0), seam = at((t0 + t1) / 2, i % 2 ? 1 : -1)
-      line(ctx, ...mid, ...seam, col('#c1af8e'), .35)
-    }
-  }
-  ctx.restore()
 }
 
 // One shore structure serves two distinct exits; neither span is drawn over the other.
@@ -92,7 +66,6 @@ export function drawEasternDock(ctx, bridges, progress = 1) {
   if (!routes.has('hearth-haven')) railing(corners[1], corners[2])
   if (!routes.has('prism-haven')) railing(corners[3], corners[4])
   ctx.restore()
-  drawApproach(ctx,'hearth-haven','b',progress*5)
 }
 
 export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
@@ -122,10 +95,6 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const postCount = Math.max(3, Math.ceil(length / 34))
   const railHeight = 13
 
-  // The crossing continues along actual paving on both shores. These paths bob
-  // with their own island and leave a clear entrance beyond the bridge rails.
-  if (!EASTERN_DOCK.exits[bridge.route]) drawApproach(ctx, bridge.route, 'b', progress * 5)
-  drawApproach(ctx, bridge.route, 'a', Math.max(0, (progress - .88) / .12))
   ctx.save()
   // Reveal every layer together from home, including the landings and handrails.
   if (progress < 1) {

@@ -30,7 +30,10 @@ test('the complete bridge network renders and both eastern crossings can be mana
   await startAt(page, 'all-bridges')
   await expect(page.locator('.skymap .bridge')).toHaveCount(5)
   await page.getByRole('button', { name: 'Fold Cloud away' }).click()
-  await page.waitForFunction(() => [...document.images].every(image => image.complete))
+  await page.waitForFunction(async () => {
+    const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
+    return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)
+  })
   await page.screenshot({ path: testInfo.outputPath('complete-network.png') })
   for (const island of ['Hearthside', 'Prism Shelf']) {
     const crossing = page.getByRole('button', { name: `Manage New Haven ↔ ${island} bridge`, exact: true })
