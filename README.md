@@ -69,7 +69,8 @@ frontend/src/
 - `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
 - `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
 - `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
-- `people.js`: bridge curves. The town has a population count, but no characters are drawn.
+- `people.js`: residents. Sky-folk (skywrights, farmers, lamplighters, couriers, villagers and kids with kites) walk the painted paths, cross bridges, tend crops, sit, look out and chat. Their number follows the population.
+- `walkGrid.js`: where residents can walk, traced from the island paintings by `frontend/scripts/trace_walkways.py`. Re-run it after repainting or moving an island.
 - `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
 
 Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
