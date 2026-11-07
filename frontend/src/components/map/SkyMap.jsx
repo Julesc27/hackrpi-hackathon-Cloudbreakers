@@ -31,6 +31,7 @@ export default function SkyMap() {
 
   const place = (island, slot) => {
     dispatch({ type: 'BUILD', buildingType: ui.placing, island, slot })
+    if (ui.placing === 'bridgeAnchor') ui.setPanel('bridges')
     ui.setPlacing(null)
   }
 
@@ -143,13 +144,18 @@ export default function SkyMap() {
 
         {/* built player buildings can be inspected */}
         {state.buildings.map((b) => {
-          if (b.slot < 0) return null
+          if (b.slot < 0 || BUILDINGS[b.type].infrastructure) return null
           const plot = ISLANDS[b.island]?.plots?.[b.slot]
           if (!plot) return null
           return (
-            <g key={b.id} className="building-hit" transform={`translate(${plot[0]} ${plot[1]})`}
-              onClick={(e) => { e.stopPropagation(); if (!ui.placing) ui.openIsland(b.island) }}>
-              <polygon points="0,-18 26,0 0,18 -26,0" fill="transparent" />
+            <g key={b.id} className="building-hit" role="button" tabIndex="0"
+              aria-label={`Inspect ${BUILDINGS[b.type].name}`}
+              transform={`translate(${plot[0]} ${plot[1]})`}
+              onClick={(e) => { e.stopPropagation(); if (!ui.placing) ui.openIsland(b.island) }}
+              onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ui.openIsland(b.island) } }}>
+              <title>{BUILDINGS[b.type].name}</title>
+              <rect x="-38" y="-66" width="76" height="82" rx="7" fill="transparent" />
+
             </g>
           )
         })}
@@ -159,7 +165,7 @@ export default function SkyMap() {
           if (statusOf(id) !== 'connected' || !access[id]) return null
           if (placingDef.homeOnly && id !== 'newHaven') return null
           return ISLANDS[id].plots.map(([x, y], i) => {
-            if (state.buildings.some((b) => b.island === id && b.slot === i)) return null
+            if (state.buildings.some((b) => !BUILDINGS[b.type].infrastructure && b.island === id && b.slot === i)) return null
             return (
               <g key={`${id}-${i}`} transform={`translate(${x} ${y})`} className="slot" role="button" tabIndex="0" aria-label={`Place ${placingDef.name} on ${ISLANDS[id].name} plot ${i + 1}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); place(id, i) } }} onClick={() => place(id, i)}>
                 <rect x="-35" y="-65" width="70" height="80" fill="transparent" />

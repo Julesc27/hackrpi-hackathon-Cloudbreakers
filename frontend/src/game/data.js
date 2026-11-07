@@ -132,8 +132,8 @@ export const BUILDINGS = {
     desc: 'Timber and canvas homes. Houses 4 residents.',
   },
   bridgeAnchor: {
-    name: 'Bridge Anchor', category: 'Exploration', cost: { wood: 8, stone: 4 }, unique: true, homeOnly: true,
-    desc: 'A braced timber anchor. Needed before any bridge can be built.',
+    name: 'Bridge Anchor', category: 'Exploration', cost: { wood: 8, stone: 4 }, unique: true, homeOnly: true, infrastructure: true,
+    desc: 'A workshop upgrade that unlocks bridges without using a shelter plot. Open bridge routes here to build, reinforce or repair crossings.',
   },
   waterCollector: {
     name: 'Water Collector', category: 'Survival', cost: { wood: 8 }, prod: { water: 4 },
@@ -201,7 +201,7 @@ export const MISSIONS = [
   },
   {
     id: 'anchor', name: 'Hold Fast', chapter: 1,
-    objective: 'Build a bridge anchor on New Haven.',
+    objective: 'Unlock bridge construction in the workshop.',
     reward: { xp: 30 }, rewardText: '30 XP · bridges unlocked',
     progress: (s) => [s.buildings.filter((b) => b.type === 'bridgeAnchor').length, 1],
   },

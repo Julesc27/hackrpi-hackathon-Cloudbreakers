@@ -24,7 +24,7 @@ export default function IslandPanel() {
   }
 
   const buildings = state.buildings.filter((b) => b.island === id)
-  const freeSlots = def.plots.length - buildings.filter((b) => b.slot >= 0).length
+  const freeSlots = def.plots.length - buildings.filter((b) => b.slot >= 0 && !BUILDINGS[b.type].infrastructure).length
   const route = openRoutes(state).find((r) => otherEnd(r, state.connected) === id)
   const statusText =
     status === 'discovered' ? 'Not connected' : access[id] === 1 ? 'Connected' : access[id] ? 'Bridge strained — half output' : 'Cut off — repair the bridge'
@@ -51,7 +51,7 @@ export default function IslandPanel() {
           <ul className="building-list">
             {buildings.map((b) => (
               <li key={b.id}>
-                <span>{BUILDINGS[b.type].name}</span>
+                {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : <span>{BUILDINGS[b.type].name}</span>}
                 {BUILDINGS[b.type].prod && <YieldChips yields={BUILDINGS[b.type].prod} />}
               </li>
             ))}

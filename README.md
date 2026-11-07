@@ -118,3 +118,5 @@ Storm Island, Cloudroot Island, Ancient Ruins, Skyport Island and Void Island ar
 
 
 New towns start with no bridges. Route buttons offer construction choices, but no bridge geometry appears until a valid build action pays its cost. A new bridge reveals its entire deck, posts and rails together from New Haven toward the destination. Its endpoints follow both islands’ floating motion, and built spans can be selected along their full length.
+
+Bridge access is a one-time workshop upgrade. It does not place a decorative bridge on the island or consume a shelter plot. Existing anchor buildings migrate to the plot-free upgrade. Use **Manage bridges** in the workshop to plan, reinforce or repair crossings.

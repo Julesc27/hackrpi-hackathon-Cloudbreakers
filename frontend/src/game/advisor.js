@@ -14,7 +14,7 @@ export function getAdvice(state) {
     add(`Connect to ${ISLANDS[id].name}`, reason, `The bridge costs ${cost.wood} wood.`, confidence, { routeId: route.id, art: id })
   }
   if (!countType(state, 'shelter')) add('Build a Shelter', 'The first families need a home. Choose an empty stone terrace on New Haven.', 'A shelter uses 10 wood and 2 stone.', 98, { art: 'shelter' })
-  if (!hasAnchor(state)) add('Build a Bridge Anchor', 'The workshop prepares the first crossing. An anchor lets us reach the three resource islands.', 'Reserve 8 wood and 4 stone for the anchor.', 96, { art: 'bridgeAnchor' })
+  if (!hasAnchor(state)) add('Unlock bridges in the workshop', 'The workshop prepares the first crossing. The anchor upgrade opens routes to the resource islands without occupying a plot.', 'Reserve 8 wood and 4 stone for the anchor.', 96, { art: 'bridgeAnchor' })
   if (!state.connected.includes('verdant')) connect('verdant', `New Haven has only ${state.deposits.wood} timber left. Verdant Reach supplies renewable wood, food, seeds and building materials.`, 94)
   if (actionsOfSupply(state, 'water') <= 4 || state.connected.includes('verdant')) connect('rain', 'Rain Island supplies fresh water, fish and stone. Its waterfalls can support more homes and gardens.', 92)
   if (projection.net.food < 0 && canAfford(state.resources, BUILDINGS.garden.cost) && getLevelInfo(state.xp).level >= 2) add('Plant a Food Garden', 'Food use is outpacing the starter garden. Seeds from Verdant Reach can fill another terrace with crops.', 'A garden uses 6 wood, 1 seed and water for upkeep.', 91, { art: 'garden' })

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { STARTER_BEACON } from '../../game/mapLayout.js'
-import { ISLANDS } from '../../game/data.js'
+import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
 import { WORLD_ISLANDS, FAR_ISLETS } from './layout.js'
@@ -355,7 +355,7 @@ export default function WorldCanvas({ hoverRef }) {
         for (const p of isl.props) items.push({ y: p.pts ? Math.max(p.pts[0][1], p.pts[1][1]) : p.y, p, mode, bob: isl._bob })
       }
       for (const b of st.buildings) {
-        if (b.slot < 0 || !st.connected.includes(b.island)) continue
+        if (b.slot < 0 || BUILDINGS[b.type].infrastructure || !st.connected.includes(b.island)) continue
         const p = buildingProp(b)
         if (p) items.push({ y: p.y, p, mode: access[b.island] ? 'lit' : 'locked', bob: WORLD_ISLANDS[b.island]._bob, fresh: b.id, buildingType: b.type, island: b.island })
       }

@@ -114,7 +114,7 @@ export function QuestBook() {
 
 /* ---------------- Town Workshop (build) ---------------- */
 export function BuildPanel() {
-  const { state } = useGame()
+  const { state, dispatch } = useGame()
   const ui = useUI()
   const close = () => ui.setPanel(null)
   useEsc(close)
@@ -133,7 +133,8 @@ export function BuildPanel() {
             const unlocked = isUnlocked(state, key)
             const affordable = canAfford(state.resources, def.cost)
             const built = def.unique && countType(state, key) > 0
-            const disabled = !unlocked || !affordable || built
+            const managing = def.infrastructure && built
+            const disabled = !managing && (!unlocked || !affordable || built)
             const fx = []
             if (def.housing) fx.push(`Houses ${def.housing}`)
             if (def.capBonus) fx.push(`+${def.capBonus} storage`)
@@ -142,7 +143,7 @@ export function BuildPanel() {
             return (
               <div key={key} className={`ws-card${!unlocked ? ' is-locked' : ''}`}>
                 <div className="ws-name">{def.name}</div>
-                <BuildingArt type={key} className="ws-art" />
+                <>{def.infrastructure ? <div className="ws-art anchor-upgrade-art"><ArtIcon name="build" size={62} /><span>Workshop upgrade</span></div> : <BuildingArt type={key} className="ws-art" />}</>
                 <p className="ws-desc">{def.desc}</p>
                 <div className="ws-meta">
                   {def.prod && <YieldChips yields={def.prod} />}
@@ -150,15 +151,20 @@ export function BuildPanel() {
                   {fx.length > 0 && <span className="ws-fx">{fx.join(' · ')}</span>}
                 </div>
                 <div className="ws-cost">
-                  {unlocked ? <CostChips cost={def.cost} resources={state.resources} /> : <span className="locked-note"><Lock size={14} /> Level {unlockLevel(key)}</span>}
+                  {managing ? <span className="small">Unlocked · no building plot needed</span> : unlocked ? <CostChips cost={def.cost} resources={state.resources} /> : <span className="locked-note"><Lock size={14} /> Level {unlockLevel(key)}</span>}
                 </div>
                 <button
-                  className="gold-plus"
+                  className={def.infrastructure ? 'btn-gold full' : 'gold-plus'}
                   disabled={disabled}
-                  title={built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
-                  onClick={() => { ui.setPlacing(key); ui.setPanel(null) }}
+                  title={managing ? 'Manage bridges' : built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
+                  onClick={() => {
+                    if (def.infrastructure) {
+                      if (!built) dispatch({ type: 'BUILD', buildingType: key, island: 'newHaven' })
+                      ui.setPanel('bridges')
+                    } else { ui.setPlacing(key); ui.setPanel(null) }
+                  }}
                 >
-                  {built ? <Check size={22} /> : unlocked ? <Plus size={26} /> : <Lock size={20} />}
+                  {def.infrastructure ? (managing ? 'Manage bridges' : 'Unlock bridges') : built ? <Check size={22} /> : unlocked ? <Plus size={26} /> : <Lock size={20} />}
                 </button>
               </div>
             )

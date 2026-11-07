@@ -181,3 +181,32 @@ test('every bridge span stays attached to both independently floating islands', 
     } finally { a._bob = oldA; b._bob = oldB }
   }
 })
+
+
+test('bridge access is a one-time workshop upgrade that does not require a free plot', () => {
+  const initial = createInitialState()
+  const full = { ...initial, resources: { ...initial.resources, wood: 100, stone: 100 },
+    buildings: [...initial.buildings, ...ISLANDS.newHaven.plots.map((_, slot) => ({ id: `home-${slot}`, type: 'shelter', island: 'newHaven', slot }))],
+  }
+  const upgraded = gameReducer(full, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
+  assert.equal(upgraded.buildings.find((b) => b.type === 'bridgeAnchor').slot, -3)
+  assert.equal(upgraded.buildings.filter((b) => b.slot >= 0).length, ISLANDS.newHaven.plots.length)
+  assert.equal(upgraded.resources.wood, 92)
+  assert.equal(upgraded.resources.stone, 96)
+  const repeated = gameReducer(upgraded, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
+  assert.deepEqual(repeated.resources, upgraded.resources)
+  assert.equal(repeated.buildings.length, upgraded.buildings.length)
+})
+
+test('old decorative anchors become plot-free upgrades while retaining bridge access', () => {
+  const initial = createInitialState()
+  const old = { ...initial, resources: { ...initial.resources, wood: 100 },
+    buildings: [...initial.buildings, { id: 'old-anchor', type: 'bridgeAnchor', island: 'newHaven', slot: 4 }],
+  }
+  const migrated = migrateSave(old)
+  assert.equal(migrated.buildings.find((b) => b.id === 'old-anchor').slot, -3)
+  const reused = gameReducer(migrated, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 4 })
+  assert.ok(reused.buildings.some((b) => b.type === 'shelter' && b.slot === 4))
+  const crossed = gameReducer(migrated, { type: 'BUILD_BRIDGE', routeId: 'verdant-haven', bridgeType: 'rope' })
+  assert.equal(crossed.bridges.length, 1)
+})

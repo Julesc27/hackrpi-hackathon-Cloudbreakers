@@ -9,6 +9,7 @@ import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/
 import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls, CameraHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
+import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
 import { JournalModal, StorageModal, MapModal, SettingsModal, IntroModal, Toasts } from './components/panels/Modals.jsx'
 
@@ -56,6 +57,7 @@ function GameScreen() {
       {ui.panel === 'storage' && <StorageModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
+      {ui.panel === 'bridges' && <BridgeAnchorModal />}
       {ui.bridgeRoute && <BridgeModal />}
       {auth.loginOpen && <AuthModal />}
       {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && <IntroModal />}

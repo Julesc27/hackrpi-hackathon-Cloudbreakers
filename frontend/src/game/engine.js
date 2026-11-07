@@ -414,12 +414,12 @@ export function gameReducer(state, action) {
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
       if (!islandAccess(state)[island]) return toast(state, 'warn', `Connect ${ISLANDS[island]?.name || 'that island'} before building there.`)
       if (!canAfford(state.resources, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
-      if (slot < 0 || slot >= (ISLANDS[island].plots || []).length) return state
-      if (state.buildings.some((b) => b.island === island && b.slot === slot)) return state
+      if (!def.infrastructure && (!Number.isInteger(slot) || slot < 0 || slot >= ISLANDS[island].plots.length)) return state
+      if (!def.infrastructure && state.buildings.some((b) => !BUILDINGS[b.type].infrastructure && b.island === island && b.slot === slot)) return state
       let s = {
         ...state,
         resources: pay(state.resources, def.cost),
-        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot, builtLevel: getLevelInfo(state.xp).level }],
+        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot: def.infrastructure ? -3 : slot, builtLevel: getLevelInfo(state.xp).level }],
         nextId: state.nextId + 1,
       }
       s = toast(s, 'build', `${def.name} built on ${ISLANDS[island].name}`)
@@ -515,11 +515,11 @@ export function migrateSave(saved) {
   for (const { builtTurn, ...building } of ordered) {
     const island = remap(building.island)
     if (!ISLANDS[island] || !BUILDINGS[building.type]) continue
-    let slot = building.slot
+    let slot = BUILDINGS[building.type].infrastructure ? -3 : building.slot
     if (slot >= 0 && (slot >= ISLANDS[island].plots.length || occupied.has(`${island}:${slot}`))) {
       slot = ISLANDS[island].plots.findIndex((_, i) => !occupied.has(`${island}:${i}`))
     }
-    if (building.slot >= 0 && slot < 0) continue
+    if (building.slot >= 0 && slot < 0 && !BUILDINGS[building.type].infrastructure) continue
     occupied.add(`${island}:${slot}`)
     buildings.set(building.id, { builtLevel: 1, ...building, island, slot })
   }
