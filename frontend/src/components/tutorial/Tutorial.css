@@ -51,16 +51,18 @@
   }
 }
 
+
 /* Active element in-place highlight elevation */
 [data-tutorial-active="true"] {
   position: relative;
   z-index: 995 !important;
   box-shadow:
-    0 0 0 3px var(--gold) !important,
-    0 0 16px rgba(227, 194, 122, 0.85) !important,
+    0 0 0 3px var(--gold),
+    0 0 16px rgba(227, 194, 122, 0.85),
     0 0 32px rgba(227, 194, 122, 0.5) !important;
   cursor: pointer !important;
 }
+
 
 /* SVG elements active highlight */
 ellipse[data-tutorial-active="true"],
