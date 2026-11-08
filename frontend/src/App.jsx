@@ -13,6 +13,7 @@ import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPan
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
+import { BuildingModal, RemovalModal } from './components/panels/Removal.jsx'
 import {
   JournalModal,
   StorageModal,
@@ -79,6 +80,8 @@ function GameScreen() {
       {ui.panel === 'journal' && <JournalModal />}
       {ui.panel === 'storage' && <StorageModal />}
       {ui.panel === 'storageHouse' && <StorageHouseModal />}
+      {ui.panel === 'building' && <BuildingModal />}
+      {ui.panel === 'remove' && <RemovalModal />}
       {ui.panel === 'backpack' && <BackpackModal />}
       {ui.panel === 'store' && <StoreModal />}
       {ui.panel === 'map' && <MapModal />}

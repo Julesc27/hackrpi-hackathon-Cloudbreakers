@@ -109,7 +109,11 @@
       "type": "shelter",
       "island": "newHaven",
       "slot": 0,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 10,
+        "stone": 2
+      }
     }
   ],
   "beaconRestored": false,

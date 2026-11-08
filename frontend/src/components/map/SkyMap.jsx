@@ -197,7 +197,7 @@ export default function SkyMap() {
           const plot = ISLANDS[b.island]?.plots?.[b.slot]
           if (!plot) return null
           const shape = footprint(b.type, b.island, b.slot)
-          const inspect = () => { if (b.type === 'storageHouse') { ui.setSelected(b.id); ui.setPanel('storageHouse') } else ui.openIsland(b.island) }
+          const inspect = () => { ui.setSelected(b.id); ui.setPanel(b.type === 'storageHouse' ? 'storageHouse' : 'building') }
           return (
             <g key={b.id} className="building-hit" role="button" tabIndex="0"
               aria-label={`Inspect ${BUILDINGS[b.type].name}`}
