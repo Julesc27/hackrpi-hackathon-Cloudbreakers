@@ -2,6 +2,8 @@
 // on Vercel it's an environment variable on the frontend project, read at build time).
 // Without it the game still runs fully offline, saving to localStorage only.
 
+import { possibleMoves } from '../game/possibleMoves.js'
+
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const TOKEN_KEY = 'cloudbreakers-token'
 
@@ -59,7 +61,8 @@ export const saveTown = (state, { keepalive = false } = {}) => request('/town', 
 
 // Consult the Gods (store item). Sends the live town; the journal is left out to save tokens.
 // -> { poem }
+// The gods may only advise moves the player can actually make right now (see possibleMoves.js).
 export const consultGods = (state) => {
   const { journal, toasts, lastInteraction, ...town } = state
-  return request('/advisor', { method: 'POST', body: town })
+  return request('/advisor', { method: 'POST', body: { ...town, possibleMoves: possibleMoves(state) } })
 }

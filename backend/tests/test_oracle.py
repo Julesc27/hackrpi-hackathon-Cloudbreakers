@@ -223,3 +223,43 @@ def test_route_rate_limit(client, databricks):
 def test_route_requires_login():
     app.dependency_overrides.clear()
     assert TestClient(app).post("/advisor", json=TOWN).status_code == 401
+
+
+# ---------- only possible advice ----------
+
+def test_allowed_focuses_keeps_known_moves_only():
+    assert oracle.allowed_focuses(None) is None  # older clients: no limit
+    assert oracle.allowed_focuses(["shelter", "verdant", "laser", "gather", "gather"]) == ("shelter", "verdant", "gather")
+    assert oracle.allowed_focuses(["laser"]) == ("balance",)
+
+
+def test_prompt_lists_the_possible_moves(client, databricks):
+    databricks.replies.append(chat_reply(json.dumps({"strategy": "chop", "poem": GOOD_POEM, "focus": "gather"})))
+    res = client.post("/advisor", json={**TOWN, "possibleMoves": ["shelter", "gather", "balance"]})
+    assert res.status_code == 200 and res.json()["focus"] == "gather"
+    sent = json.loads(databricks.requests[0].content)["messages"][1]["content"]
+    assert "Only these moves are possible" in sent and "shelter, gather, balance" in sent
+    assert '"possibleMoves"' not in sent  # the list goes in the instructions, not the town JSON
+
+
+def test_impossible_advice_is_retried(client, databricks):
+    databricks.replies += [
+        chat_reply(json.dumps({"strategy": "bridge to rain", "poem": GOOD_POEM, "focus": "rain"})),
+        chat_reply(json.dumps({"strategy": "build a shelter", "poem": GOOD_POEM, "focus": "shelter"})),
+    ]
+    res = client.post("/advisor", json={**TOWN, "possibleMoves": ["shelter", "gather", "balance"]})
+    assert res.status_code == 200 and res.json()["focus"] == "shelter"
+
+
+def test_gods_stay_silent_rather_than_advise_the_impossible(client, databricks):
+    impossible = chat_reply(json.dumps({"strategy": "build a solar farm", "poem": GOOD_POEM, "focus": "solarFarm"}))
+    databricks.replies += [impossible, impossible]
+    res = client.post("/advisor", json={**TOWN, "possibleMoves": ["gather", "balance"]})
+    assert res.status_code == 503
+    assert "cannot be done" in res.json()["detail"] and "Nothing was charged" in res.json()["detail"]
+
+
+def test_advice_without_a_focus_is_not_trusted_when_moves_are_known(client, databricks):
+    unknown = chat_reply(json.dumps({"strategy": "something", "poem": GOOD_POEM}))
+    databricks.replies += [unknown, unknown]
+    assert client.post("/advisor", json={**TOWN, "possibleMoves": ["gather", "balance"]}).status_code == 503
