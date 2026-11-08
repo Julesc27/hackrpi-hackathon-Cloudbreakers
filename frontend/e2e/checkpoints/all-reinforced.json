@@ -126,21 +126,34 @@
       "type": "shelter",
       "island": "newHaven",
       "slot": 0,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 10,
+        "stone": 2
+      }
     },
     {
       "id": "b7",
       "type": "bridgeAnchor",
       "island": "newHaven",
       "slot": -3,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 8,
+        "stone": 4
+      }
     },
     {
       "id": "b67",
       "type": "market",
       "island": "newHaven",
       "slot": 1,
-      "builtLevel": 5
+      "builtLevel": 5,
+      "paidCost": {
+        "wood": 15,
+        "coins": 20,
+        "materials": 2
+      }
     }
   ],
   "beaconRestored": false,
@@ -165,31 +178,56 @@
       "route": "verdant-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 2
+      "builtLevel": 2,
+      "paidCost": {
+        "wood": 24,
+        "coins": 20,
+        "stone": 8
+      }
     },
     {
       "route": "rain-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 4
+      "builtLevel": 4,
+      "paidCost": {
+        "wood": 34,
+        "coins": 20,
+        "stone": 8
+      }
     },
     {
       "route": "prism-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 4
+      "builtLevel": 4,
+      "paidCost": {
+        "wood": 31,
+        "coins": 20,
+        "stone": 8
+      }
     },
     {
       "route": "mercy-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5
+      "builtLevel": 5,
+      "paidCost": {
+        "wood": 38,
+        "coins": 20,
+        "stone": 8
+      }
     },
     {
       "route": "hearth-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5
+      "builtLevel": 5,
+      "paidCost": {
+        "wood": 38,
+        "coins": 20,
+        "stone": 8
+      }
     }
   ],
   "weather": "cloudDrought",

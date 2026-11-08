@@ -4,6 +4,7 @@ import { bridgeCost, canAfford, hasAnchor, isUnlocked, otherEnd, unlockLevel, br
 import { Modal, CostChips, YieldChips, Progress } from './Panel.jsx'
 import { Lock } from '../icons.jsx'
 import IslandArt from '../IslandArt.jsx'
+import { RemoveButton } from './Removal.jsx'
 
 function Stat({ label, value, max = 100, suffix = '%', color }) {
   return (
@@ -29,6 +30,7 @@ export default function BridgeModal() {
     const upCost = { wood: Math.ceil(full.wood / 2), coins: full.coins, stone: full.stone }
     return (
       <Modal title={`${ISLANDS[route.a].name} ↔ ${ISLANDS[route.b].name}`} kicker={`${t.name} bridge · built at level ${existing.builtLevel}`} onClose={close}>
+        <RemoveButton routeId={route.id} />
         <Stat label="Condition" value={existing.condition} color={st === 'good' ? 'linear-gradient(90deg,#5fb24f,#a8e08a)' : 'linear-gradient(90deg,#ff7a4b,#ffb38f)'} />
         <Stat label="Stability in storms" value={t.stability} color="linear-gradient(90deg,#7fb8ff,#cfe4ff)" />
         <Stat label="Capacity" value={t.capacity} max={8} suffix=" carts" color="linear-gradient(90deg,#e3b84f,#ffe28a)" />

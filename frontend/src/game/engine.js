@@ -109,6 +109,43 @@ export function bridgeCost(route, type) {
   return cost
 }
 
+const recordedCost = (item, recipe) => Object.fromEntries(Object.entries(item.paidCost || recipe || {}).filter(([key,value]) => RESOURCES[key] && Number.isFinite(value) && value > 0).map(([key,value]) => [key, Math.floor(value)]))
+const addCosts = (a,b) => Object.fromEntries([...new Set([...Object.keys(a),...Object.keys(b)])].map(key => [key,(a[key] || 0)+(b[key] || 0)]))
+
+function linkedIslands(bridges) {
+  const connected = new Set(['newHaven'])
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const bridge of bridges) {
+      const route = ROUTE_MAP[bridge.route]
+      if (!route) continue
+      for (const [a,b] of [[route.a,route.b],[route.b,route.a]]) if (connected.has(a) && !connected.has(b)) { connected.add(b); changed = true }
+    }
+  }
+  return [...connected]
+}
+
+export function removalInfo(state, target) {
+  if (!target) return null
+  const bridge = target.routeId && state.bridges.find(b => b.route === target.routeId)
+  const building = target.buildingId && state.buildings.find(b => b.id === target.buildingId)
+  const item = bridge || building
+  if (!item) return null
+  const def = building && BUILDINGS[building.type]
+  const route = bridge && ROUTE_MAP[bridge.route]
+  if ((!def && building) || (!route && bridge)) return null
+  const protectedItem = building && (def.buildable === false || def.painted || (building.slot < 0 && !def.infrastructure))
+  const reason = protectedItem ? 'Starter scenery cannot be removed.' : building && !islandAccess(state)[building.island] ? 'Reconnect this island before removing its buildings.' : null
+  const cost = recordedCost(item, bridge ? bridgeCost(route, bridge.type) : def.cost)
+  const refund = Object.fromEntries(Object.entries(cost).map(([key,value]) => [key,Math.floor(value*.5)]).filter(([,value]) => value > 0))
+  const after = bridge ? { ...state, bridges: state.bridges.filter(b => b !== bridge), connected: linkedIslands(state.bridges.filter(b => b !== bridge)) } : { ...state, buildings: state.buildings.filter(b => b !== building) }
+  const capacity = caps(after)
+  const overflow = Object.fromEntries(METERS.map(key => [key,Math.max(0,state.resources[key]-capacity[key])]).filter(([,value]) => value > 0))
+  return { name: bridge ? `${ISLANDS[route.b].name} bridge` : def.name, refund, reason, after, overflow,
+    bedLoss: Math.max(0,housing(state)-housing(after)), lostIslands: state.connected.filter(id => !after.connected.includes(id)) }
+}
+
 const edgeFactor = (b) => (b.condition <= 0 ? 0 : b.condition < 40 ? 0.5 : 1)
 export const bridgeStatus = (b) => (b.condition <= 0 ? 'closed' : b.condition < 40 ? 'strained' : 'good')
 
@@ -491,6 +528,19 @@ function gatherAtSite(state, siteId, now = Date.now()) {
 
 export function gameReducer(state, action) {
   switch (action.type) {
+    case 'REMOVE_BUILDING':
+    case 'REMOVE_BRIDGE': {
+      const target = action.type === 'REMOVE_BUILDING' ? { buildingId: action.buildingId } : { routeId: action.routeId }
+      const info = removalInfo(state,target)
+      if (!info) return state
+      if (info.reason) return toast(state,'warn',info.reason)
+      if (info.lostIslands.includes(state.player?.island)) return toast(state,'warn','Return to New Haven before dismantling this bridge.')
+      const resources = { ...state.resources }
+      for (const [key,value] of Object.entries(info.refund)) resources[key] = (resources[key] || 0)+value
+      const capacity = caps(info.after)
+      for (const key of METERS) resources[key] = Math.min(resources[key],capacity[key])
+      return toast({ ...info.after, resources },'build',`${info.name} removed. Recovered supplies were added to Town Storage.`)
+    }
     case 'DEPOSIT_BACKPACK': {
       if (!backpackUsed(state)) return state
       if (!atTownStorage(state, action.storageId)) return toast(state, 'warn', 'Walk to the workshop or a connected storage house to deposit supplies.')
@@ -520,7 +570,7 @@ export function gameReducer(state, action) {
       let s = {
         ...state,
         resources: pay(state.resources, def.cost),
-        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot: def.infrastructure ? -3 : slot, builtLevel: getLevelInfo(state.xp).level }],
+        buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot: def.infrastructure ? -3 : slot, builtLevel: getLevelInfo(state.xp).level, paidCost: { ...def.cost } }],
         nextId: state.nextId + 1,
       }
       s = toast(s, 'build', `${def.name} built on ${ISLANDS[island].name}`)
@@ -539,7 +589,7 @@ export function gameReducer(state, action) {
       let s = {
         ...state,
         resources: pay(state.resources, cost),
-        bridges: [...state.bridges, { route: routeId, type: bridgeType, condition: 100, builtLevel: getLevelInfo(state.xp).level }],
+        bridges: [...state.bridges, { route: routeId, type: bridgeType, condition: 100, builtLevel: getLevelInfo(state.xp).level, paidCost: { ...cost } }],
         connected: [...state.connected, dest],
       }
       s = discoverFrom(s, dest)
@@ -558,7 +608,7 @@ export function gameReducer(state, action) {
       let s = {
         ...state,
         resources: pay(state.resources, cost),
-        bridges: state.bridges.map((x) => (x === b ? { ...x, type: 'reinforced', condition: 100 } : x)),
+        bridges: state.bridges.map((x) => (x === b ? { ...x, type: 'reinforced', condition: 100, paidCost: addCosts(recordedCost(b,bridgeCost(ROUTE_MAP[b.route],b.type)),cost) } : x)),
       }
       s = toast(s, 'build', `${bridgeLabel(b.route)} reinforced`)
       return progressSettlement(s, 10)

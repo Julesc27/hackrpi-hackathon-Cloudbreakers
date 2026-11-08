@@ -11,6 +11,7 @@ import { RES_ICON, People, Leaf, Smile, Check, Star, ArtIcon, WeatherIcon } from
 import { useAuth } from '../../auth/AuthContext.jsx'
 import { useSync } from '../../game/CloudSync.jsx'
 import Backpack from './Backpack.jsx'
+import { RemoveButton } from './Removal.jsx'
 
 const sign = (v) => (v > 0 ? `+${v}` : `${v}`)
 
@@ -145,6 +146,7 @@ export function StorageHouseModal() {
     <div className="action-stack">
       <button className="btn-gold" disabled={!carried || !connected} onClick={() => dispatch({ type: 'DEPOSIT_BACKPACK', storageId: building.id })}>Deposit All Here</button>
       <button className="btn-ghost" onClick={() => ui.setPanel('storage')}>View Town Storage</button>
+      <RemoveButton buildingId={building.id} />
     </div>
     <p className="muted small">Your captain walks to this house and unloads on arrival. Press E beside it to deposit supplies again.</p>
   </Modal>

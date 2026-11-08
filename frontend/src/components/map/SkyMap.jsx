@@ -81,14 +81,15 @@ export default function SkyMap() {
     if (ui.panel === 'island' && ui.selected) ui.camera.current?.focusIsland(ui.selected)
   }, [ui.panel, ui.selected]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // While placing, frame the island the player chose. Home-only buildings stay on New Haven.
-  // Otherwise show that island's plots up close; with no focus, pull back so every connected plot is visible.
+  // Keep the player's zoom while placing. Only pan when they chose a specific island.
   useEffect(() => {
     if (!ui.placing) return
     const cam = ui.camera.current
-    if (BUILDINGS[ui.placing]?.homeOnly) cam?.focusIsland('newHaven', false, 1.35)
-    else if (ui.placeFocus && state.connected.includes(ui.placeFocus)) cam?.focusIsland(ui.placeFocus, false, 1.65)
-    else cam?.home()
+    const island = BUILDINGS[ui.placing]?.homeOnly ? 'newHaven' : ui.placeFocus
+    if (cam && island && state.connected.includes(island)) {
+      const [x,y] = ISLANDS[island].hit
+      cam.flyTo(x, y, cam.view().s)
+    }
   }, [ui.placing, ui.placeFocus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const ids = Object.keys(ISLANDS)
@@ -197,7 +198,7 @@ export default function SkyMap() {
           const plot = ISLANDS[b.island]?.plots?.[b.slot]
           if (!plot) return null
           const shape = footprint(b.type, b.island, b.slot)
-          const inspect = () => { if (b.type === 'storageHouse') { ui.setSelected(b.id); ui.setPanel('storageHouse') } else ui.openIsland(b.island) }
+          const inspect = () => { ui.setSelected(b.id); ui.setPanel(b.type === 'storageHouse' ? 'storageHouse' : 'building') }
           return (
             <g key={b.id} className="building-hit" role="button" tabIndex="0"
               aria-label={`Inspect ${BUILDINGS[b.type].name}`}

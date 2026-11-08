@@ -122,14 +122,22 @@
       "type": "shelter",
       "island": "newHaven",
       "slot": 0,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 10,
+        "stone": 2
+      }
     },
     {
       "id": "b7",
       "type": "bridgeAnchor",
       "island": "newHaven",
       "slot": -3,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 8,
+        "stone": 4
+      }
     }
   ],
   "beaconRestored": false,
