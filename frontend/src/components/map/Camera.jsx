@@ -314,7 +314,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
   // ---- keyboard -------------------------------------------------------------
   useEffect(() => {
     const onKey = (e) => {
-      if (e.target.closest?.('input, textarea, [role="dialog"]')) return
+      if (e.target.closest?.('input, textarea, select, form, summary, [role="dialog"]')) return
       if (document.querySelector('.modal-backdrop')) return
       const step = 60
       const c = cam.current
