@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford } from '../../game/engine.js'
 import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
@@ -123,9 +123,13 @@ export function JournalModal() {
   )
 }
 
+export function BackpackModal() {
+  const ui = useUI()
+  return <Modal title="Backpack" kicker="Supplies for the journey" onClose={() => ui.setPanel(null)}><Backpack /></Modal>
+}
+
 export function StorageModal() {
   const { state } = useGame()
-  const [tab, setTab] = useState(() => backpackUsed(state) ? 'backpack' : 'town')
   const ui = useUI()
   const cap = caps(state)
   const { gain, use, net } = projectProduction(state)
@@ -133,18 +137,11 @@ export function StorageModal() {
   return (
     <Modal
       title="Storehouse"
-      kicker={tab === 'backpack' ? 'Supplies for the journey' : 'Stock and flow next action'}
+      kicker="Stock and flow next action"
       onClose={() => ui.setPanel(null)}
     >
-      <div className="storage-tabs" role="tablist" aria-label="Storage views" data-tutorial="storage-table">
-        {[['backpack', 'Backpack'], ['town', 'Town Storage']].map(([id,label]) => <button key={id} id={`storage-tab-${id}`} role="tab" aria-selected={tab === id} aria-controls={`storage-panel-${id}`} tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)} onKeyDown={e => {
-          if (['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) { e.preventDefault(); const next = e.key === 'Home' ? 'backpack' : e.key === 'End' ? 'town' : tab === 'backpack' ? 'town' : 'backpack'; setTab(next); document.getElementById(`storage-tab-${next}`)?.focus() }
-        }}>{label}</button>)}
-      </div>
-      <div id="storage-panel-backpack" role="tabpanel" aria-labelledby="storage-tab-backpack" hidden={tab !== 'backpack'}><Backpack /></div>
-      <div id="storage-panel-town" role="tabpanel" aria-labelledby="storage-tab-town" hidden={tab !== 'town'}>
       <p className="muted small">Town stock is available for building and upgrades. Supplies in your backpack become available here after you deposit them.</p>
-      <table className="table">
+      <table className="table" data-tutorial="storage-table">
         <thead>
           <tr>
             <th>Resource</th>
@@ -197,7 +194,6 @@ export function StorageModal() {
         Each resident eats ½ food and drinks ½ water per action.
         Projection uses current weather ({WEATHER[state.weather].name}).
       </p>
-      </div>
     </Modal>
   )
 }

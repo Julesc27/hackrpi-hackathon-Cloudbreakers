@@ -77,7 +77,7 @@ const PANEL_STEPS = {
     railText: 'Want the full picture of your supplies? Click Storage to open the Storehouse!',
     railHint: 'Click the Storage button in the bottom bar',
     title: 'Backpack and Town Storage',
-    text: 'Gathered materials fill your captain’s backpack. Deposit All returns them to town for building. The Town Storage tab shows stored supplies and their production.',
+    text: 'Open Backpack in the side bar to see carried materials and choose Deposit All. Storage shows the town supplies available for building and their production.',
     nextLabel: 'Got it \u203a',
     next: 15,
   },
@@ -144,7 +144,7 @@ export default function Tutorial() {
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
-      text = 'Choose Gather wood. Your captain will walk to the grove and put the timber in their backpack. Open Storage to deposit carried materials before using them to build.'
+      text = 'Choose Gather wood. Your captain will walk to the grove and put the timber in their backpack. Open Backpack in the side bar to deposit materials before building.'
       hint = 'Choose Gather wood, then watch your captain walk there'
       showNextBtn = false
     }

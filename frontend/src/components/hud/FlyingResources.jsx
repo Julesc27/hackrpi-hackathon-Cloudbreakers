@@ -65,6 +65,7 @@ function getResourceTargetPos(res, backpack = false) {
 
   // Not in the top bar — target the Storage nav button at the bottom
   const storageEl =
+    (backpack && document.querySelector('[data-tutorial="rail-backpack"]')) ||
     document.querySelector('[data-tutorial="nav-storage"]') ||
     document.querySelector('.bottom-nav')
   if (storageEl) {
@@ -82,6 +83,7 @@ function getBumpTarget(res, backpack = false) {
     if (el) return el
   }
   return (
+    (backpack && document.querySelector('[data-tutorial="rail-backpack"]')) ||
     document.querySelector('[data-tutorial="nav-storage"]') ||
     document.querySelector('.bottom-nav')
   )

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { activeMissions, getLevelInfo, backpackUsed, backpackCapacity } from '../../game/engine.js'
+import { activeMissions, getLevelInfo } from '../../game/engine.js'
 import { BUILDINGS } from '../../game/data.js'
 import { HouseIcon, Star, ArtIcon } from '../icons.jsx'
 
@@ -25,7 +25,6 @@ export function BottomNav() {
             data-tutorial={id ? `nav-${id}` : 'nav-town'}
           >
             {badge && <span className="badge">!</span>}
-            {id === 'storage' && <span className={`backpack-badge${backpackUsed(state) >= backpackCapacity(state) ? ' is-full' : ''}`} aria-label={`Backpack: ${backpackUsed(state)} of ${backpackCapacity(state)} items`}>{backpackUsed(state)}/{backpackCapacity(state)}</span>}
             <Icon size={44} />
             <span>{label}</span>
           </button>

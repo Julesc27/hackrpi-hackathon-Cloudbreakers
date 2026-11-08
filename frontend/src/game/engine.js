@@ -420,7 +420,7 @@ function gatherAtSite(state, siteId) {
     lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward, carried: Object.fromEntries(Object.entries(reward).filter(([key]) => BACKPACK_RESOURCES.includes(key))) },
   }
   s = progressSettlement(s, 10)
-  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Storage to return and deposit your supplies.')
+  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Backpack in the side bar to return and deposit your supplies.')
   if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
   return s
 }

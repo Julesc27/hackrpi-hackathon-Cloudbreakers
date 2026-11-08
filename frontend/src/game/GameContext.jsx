@@ -60,7 +60,7 @@ export function GameProvider({ children }) {
 // UI-only state (which panel is open, what is being placed, tutorial, etc.)
 export function UIProvider({ children }) {
   const { state, dispatch, player } = useContext(GameCtx)
-  const [panel, setPanel] = useState(null) // quests | build | advisor | island | journal | storage | store | map | settings
+  const [panel, setPanel] = useState(null) // quests | build | backpack | advisor | island | journal | storage | store | map | settings
   const [selected, setSelected] = useState(null) // island id
   const [placing, setPlacing] = useState(null) // building type
   const [placeFocus, setPlaceFocus] = useState(null) // island the player asked to build on
