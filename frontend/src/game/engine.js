@@ -1,8 +1,9 @@
 // Deterministic, action-driven game rules with XP and level unlocks.
 import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
-  GATHER_AMOUNT, HARVEST, GATHER_SITES, STARTER_DEPOSITS, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
+  GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
+import { formatRemaining, freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
 
 export const METERS = ['energy', 'water', 'food']
 const ALL_RES = Object.keys(RESOURCES)
@@ -10,10 +11,10 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 export function createInitialState() {
   return {
-    version: 5,
+    version: 6,
     townName: 'New Haven',
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
-    deposits: { ...STARTER_DEPOSITS },
+    deposits: freshDeposits(),
     lastInteraction: null,
     happiness: 62,
     population: 6,
@@ -402,36 +403,58 @@ export const bridgeLabel = (routeId) => {
   return `${ISLANDS[r.a].name} ↔ ${ISLANDS[r.b].name}`
 }
 
-export function gatherAvailability(state, siteId) {
+function withRegrowth(state, now) {
+  const deposits = {}
+  for (const id of Object.keys(GATHER_SITES)) {
+    const view = viewDeposit(state.deposits, id, now)
+    deposits[id] = { stock: view.stock, regrowAt: view.regrowAt }
+  }
+  return { ...state, deposits }
+}
+
+export function gatherAvailability(state, siteId, now = Date.now()) {
   const site = GATHER_SITES[siteId]
   if (!site) return 'Unknown resource site'
   if (!islandAccess(state)[site.island]) return `Connect ${ISLANDS[site.island].name} first`
-  if (site.deposit && (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit]) <= 0) return 'Deposit depleted — expand to a resource island'
+  const view = viewDeposit(state.deposits, siteId, now)
+  if (!view?.ready) return `Depleted — regrows in ${formatRemaining(view?.remainingMs || site.regrowMs)}`
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
   const cap = caps(state)
   if (!Object.keys(site.reward).some((key) => (state.resources[key] || 0) < (cap[key] ?? Infinity))) return 'Storage is full'
   return null
 }
 
-function gatherAtSite(state, siteId) {
-  const reason = gatherAvailability(state, siteId)
-  if (reason) return toast(state, 'warn', reason)
+function gatherAtSite(state, siteId, now = Date.now()) {
+  const ready = withRegrowth(state, now)
+  const reason = gatherAvailability(ready, siteId, now)
+  if (reason) return toast(ready, 'warn', reason)
   const site = GATHER_SITES[siteId]
-  const resources = pay(state.resources, site.cost)
-  const deposits = { ...STARTER_DEPOSITS, ...state.deposits }
+  const primary = primaryReward(site)
+  const resources = pay(ready.resources, site.cost)
+  const deposits = { ...ready.deposits }
+  const node = { ...deposits[siteId] }
+  const cap = caps(ready)
   const reward = {}
-  const cap = caps(state)
+  const taken = Math.min(site.reward[primary], node.stock, (cap[primary] ?? Infinity) - (resources[primary] || 0))
+  if (taken <= 0) return toast(ready, 'warn', 'Storage is full')
+  resources[primary] = (resources[primary] || 0) + taken
+  reward[primary] = taken
+  const fraction = taken / site.reward[primary]
   for (const [key, value] of Object.entries(site.reward)) {
-    const amount = Math.min(value, site.deposit ? deposits[site.deposit] : Infinity, (cap[key] ?? Infinity) - (resources[key] || 0))
+    if (key === primary) continue
+    const amount = Math.min(Math.round(value * fraction), (cap[key] ?? Infinity) - (resources[key] || 0))
+    if (amount <= 0) continue
     resources[key] = (resources[key] || 0) + amount
     reward[key] = amount
-    if (site.deposit) deposits[site.deposit] -= amount
   }
-  let s = { ...state, resources, deposits, nextId: state.nextId + 1,
-    lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward },
+  node.stock -= taken
+  if (node.stock <= 0) { node.stock = 0; node.regrowAt = now + site.regrowMs }
+  deposits[siteId] = node
+  let s = { ...ready, resources, deposits, nextId: ready.nextId + 1,
+    lastInteraction: { id: `i${ready.nextId}`, siteId, island: site.island, kind: site.kind, reward },
   }
   s = progressSettlement(s, 10)
-  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : site.deposit === 'water' ? 'Water source' : site.deposit === 'food' ? 'Food garden' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
+  if (node.stock === 0) s = journal(s, 'event', `${site.label} is resting`, `${site.label} is depleted and regrows in ${formatRemaining(site.regrowMs)}. Nothing was added to storage while it waits.`)
   return s
 }
 
@@ -440,11 +463,11 @@ function gatherAtSite(state, siteId) {
 export function gameReducer(state, action) {
   switch (action.type) {
     case 'GATHER_WOOD':
-      return gatherAtSite(state, 'grove')
+      return gatherAtSite(state, 'grove', action.now)
     case 'HARVEST_FOREST':
-      return gatherAtSite(state, 'forest')
+      return gatherAtSite(state, 'forest', action.now)
     case 'GATHER_AT_SITE':
-      return gatherAtSite(state, action.siteId)
+      return gatherAtSite(state, action.siteId, action.now)
 
     case 'BUILD': {
       const { buildingType, island, slot } = action
@@ -559,7 +582,7 @@ export function gameReducer(state, action) {
 
 // Map the older eight-island town into the current chapter without losing buildings.
 export function migrateSave(saved) {
-  if (!saved || ![2, 3, 4, 5].includes(saved.version)) return createInitialState()
+  if (!saved || ![2, 3, 4, 5, 6].includes(saved.version)) return createInitialState()
   const { turn, actionsLeft, report, showReport, ...rest } = saved
   const islandMap = { mistral: 'prism', gardens: 'verdant', skyport: 'prism' }
   const remap = (id) => islandMap[id] || id
@@ -591,9 +614,9 @@ export function migrateSave(saved) {
     })
   }
   return {
-    ...createInitialState(), ...rest, version: 5, toasts: [],
+    ...createInitialState(), ...rest, version: 6, toasts: [],
     resources: { ...createInitialState().resources, ...saved.resources },
-    deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
+    deposits: normalizeDeposits(saved.deposits),
     connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),
     discovered: Object.keys(ISLANDS),
     buildings: originals.map((b) => buildings.get(b.id)).filter(Boolean),

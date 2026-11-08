@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ISLANDS, ROUTES } from './data.js'
+import { GATHER_SITES, ISLANDS, ROUTES } from './data.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
@@ -287,7 +287,7 @@ test('resource quests advance through actions and interface actions do not simul
 test('old saves preserve town progress and resume even with zero former actions', () => {
   const old = { ...createInitialState(), version: 2, xp: 250, turn: 9, actionsLeft: 0, report: {}, showReport: true }
   const state = migrateSave(old)
-  assert.equal(state.version, 5)
+  assert.equal(state.version, 6)
   assert.equal(state.xp, old.xp)
   assert.deepEqual(state.resources, old.resources)
   for (const key of ['turn', 'actionsLeft', 'report', 'showReport']) assert.equal(key in state, false)
@@ -315,25 +315,25 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 test('starter timber, stone, water and food deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
-  assert.equal(state.deposits.wood, 0)
+  assert.equal(state.deposits.grove.stock, 0)
   const rejected = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(rejected.xp, state.xp)
   assert.equal(rejected.resources.wood, state.resources.wood)
   assert.equal(rejected.lastInteraction, state.lastInteraction)
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
-  assert.equal(state.deposits.stone, 0)
-  assert.match(gatherAvailability(state, 'stone'), /depleted/)
+  assert.equal(state.deposits.stone.stock, 0)
+  assert.match(gatherAvailability(state, 'stone'), /depleted/i)
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
-  assert.equal(state.deposits.water, 0)
-  assert.match(gatherAvailability(state, 'collector'), /depleted/)
+  assert.equal(state.deposits.collector.stock, 0)
+  assert.match(gatherAvailability(state, 'collector'), /depleted/i)
   for (let i = 0; i < 2; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden' })
-  assert.equal(state.deposits.food, 0)
-  assert.match(gatherAvailability(state, 'garden'), /depleted/)
+  assert.equal(state.deposits.garden.stock, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/i)
   state = { ...state, connected: [...state.connected, 'verdant'], bridges: [{ route: 'verdant-haven', type: 'reinforced', condition: 100 }] }
   state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'forage' })
   assert.ok(state.resources.seeds > 0)
-  assert.equal(state.deposits.food, 0)
-  assert.match(gatherAvailability(state, 'garden'), /depleted/)
+  assert.equal(state.deposits.garden.stock, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/i)
 })
 
 test('outer resource sites require a working bridge and provide their distinct resources', () => {
@@ -401,7 +401,7 @@ test('a fresh town can build homes and reach all three resource islands before s
   act({ type: 'BUILD_BRIDGE', routeId: 'prism-haven', bridgeType: 'rope' })
   assert.equal(state.connected.length, 4)
   assert.equal(state.bridges.length, 3)
-  assert.ok(state.deposits.wood > 0)
+  assert.ok(state.deposits.grove.stock > 0)
   assert.ok(state.resources.seeds > 0)
   assert.ok(state.resources.crystals > 0)
   assert.ok(state.resources.fish > 0)
@@ -587,4 +587,76 @@ test('happiness depletion: food and water at 25%+ follow normal rules', () => {
   const ok = { ...base, happiness: 60, resources: { ...base.resources, water: 26, food: 60, energy: 50 } }
   assert.equal(projectProduction(ok).net.happiness, 2)
   assert.equal(gameReducer(ok, { type: 'GATHER_WOOD' }).happiness, 62)
+})
+
+test('each gather node depletes on its own and grants nothing until its own timer', () => {
+  const t0 = 1_700_000_000_000
+  let state = createInitialState()
+  const seeds = state.resources.seeds
+  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: t0 })
+  assert.equal(state.deposits.grove.stock, 0)
+  assert.equal(state.deposits.grove.regrowAt, t0 + GATHER_SITES.grove.regrowMs)
+  assert.equal(state.deposits.stone.stock, GATHER_SITES.stone.stock)
+  assert.equal(state.deposits.forest.stock, GATHER_SITES.forest.stock)
+  const empty = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: t0 + 1 })
+  assert.equal(empty.resources.wood, state.resources.wood)
+  assert.equal(empty.xp, state.xp)
+  assert.equal(empty.deposits.grove.stock, 0)
+  const early = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: state.deposits.grove.regrowAt - 1 })
+  assert.equal(early.resources.wood, state.resources.wood)
+  const refilled = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: state.deposits.grove.regrowAt })
+  assert.equal(refilled.resources.wood, state.resources.wood + 6)
+  assert.equal(refilled.deposits.grove.stock, GATHER_SITES.grove.stock - 6)
+  assert.equal(refilled.deposits.grove.regrowAt, 0)
+  assert.equal(refilled.resources.seeds, seeds)
+})
+
+test('plants and stone regrow without spending inventory, and a reload cannot skip the wait', () => {
+  const t0 = Date.now()
+  let state = createInitialState()
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden', now: t0 })
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden', now: t0 })
+  assert.equal(state.deposits.garden.stock, 0)
+  assert.equal(state.resources.seeds, 0)
+  const waiting = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden', now: t0 + 1_000 })
+  assert.equal(waiting.resources.seeds, 0)
+  assert.equal(waiting.resources.food, state.resources.food)
+  assert.equal(waiting.xp, state.xp)
+  const saved = JSON.parse(JSON.stringify(state))
+  const reloaded = migrateSave(saved)
+  assert.equal(reloaded.deposits.garden.stock, 0)
+  assert.equal(reloaded.deposits.garden.regrowAt, state.deposits.garden.regrowAt)
+  const skipped = gameReducer(reloaded, { type: 'GATHER_AT_SITE', siteId: 'garden', now: reloaded.deposits.garden.regrowAt - 1 })
+  assert.equal(skipped.resources.food, reloaded.resources.food)
+  let mined = gameReducer(reloaded, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 })
+  assert.equal(mined.deposits.garden.stock, 0)
+  assert.equal(mined.resources.seeds, 0)
+  for (let i = 0; i < 5; i++) mined = gameReducer(mined, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 })
+  assert.equal(mined.deposits.stone.stock, 0)
+  assert.equal(mined.deposits.garden.regrowAt, reloaded.deposits.garden.regrowAt)
+  const rested = gameReducer(mined, { type: 'GATHER_AT_SITE', siteId: 'stone', now: mined.deposits.stone.regrowAt })
+  assert.equal(rested.resources.stone, mined.resources.stone + 3)
+  assert.equal(rested.resources.seeds, 0)
+})
+
+test('old saves keep partial world stock and outer nodes start full', () => {
+  const legacy = {
+    ...createInitialState(), version: 5,
+    deposits: { wood: 12, stone: 0, water: 18, food: 10 },
+  }
+  const loaded = migrateSave(legacy)
+  assert.equal(loaded.version, 6)
+  assert.equal(loaded.deposits.grove.stock, 12)
+  assert.equal(loaded.deposits.stone.stock, 0)
+  assert.ok(loaded.deposits.stone.regrowAt > Date.now())
+  assert.equal(loaded.deposits.collector.stock, 18)
+  assert.equal(loaded.deposits.garden.stock, 10)
+  assert.equal(loaded.deposits.forest.stock, GATHER_SITES.forest.stock)
+  const again = migrateSave(JSON.parse(JSON.stringify(loaded)))
+  assert.equal(again.deposits.grove.stock, 12)
+  assert.equal(again.deposits.stone.stock, 0)
+  assert.equal(again.deposits.stone.regrowAt, loaded.deposits.stone.regrowAt)
+  const partial = gameReducer(again, { type: 'GATHER_AT_SITE', siteId: 'grove', now: 1_700_000_000_000 })
+  assert.equal(partial.resources.wood, again.resources.wood + 6)
+  assert.equal(partial.deposits.grove.stock, 6)
 })

@@ -663,7 +663,7 @@ export function IntroModal() {
 
       <ol className="steps">
         <li>Build a <strong>Shelter</strong>, then choose <strong>Unlock bridges</strong> in the Build menu.</li>
-        <li>Tap the grove, stone deposits, garden or collector on New Haven. <strong>Starter timber and stone are limited.</strong></li>
+        <li>Tap the grove, stone deposits, garden or collector on New Haven. <strong>Each source runs out, then regrows after a short rest.</strong></li>
         <li>Build a bridge to <strong>Verdant Reach</strong> for timber and crops, <strong>Rain Island</strong> for water, or <strong>Prism Shelf</strong> for crystals.</li>
         <li>Earn <strong>10 XP per action</strong> and bonus XP from quests. <strong>Level up</strong> to unlock buildings and bridges. Resources update automatically after each action.</li>
       </ol>

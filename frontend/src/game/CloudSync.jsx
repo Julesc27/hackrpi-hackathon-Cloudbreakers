@@ -83,7 +83,7 @@ export function SyncProvider({ children }) {
     setSync({ status: 'loading', savedAt: null, error: null })
     try {
       const res = await api.loadTown()
-      const town = [2, 3, 4, 5].includes(res.town?.version) ? migrateSave(res.town) : null
+      const town = [2, 3, 4, 5, 6].includes(res.town?.version) ? migrateSave(res.town) : null
       const saved_at = res.saved_at
       const local = stateRef.current
       const owner = ls.get(OWNER_KEY)
