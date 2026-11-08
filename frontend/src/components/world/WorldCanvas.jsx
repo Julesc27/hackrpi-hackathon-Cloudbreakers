@@ -224,8 +224,9 @@ export default function WorldCanvas({ hoverRef }) {
       if (minGap && now - lastDraw < minGap) return
       lastDraw = now
       lastView = viewKey
-      // people keep walking at real speed however often we draw (and stand still for reduced motion)
-      if (!reducedMotion.matches) crowd.current.update(lastSim ? (now - lastSim) / 1000 : 0)
+      // Resident travel is part of the living town. Reduced motion only pauses
+      // decorative effects; it must not stop residents from following their paths.
+      crowd.current.update(lastSim ? (now - lastSim) / 1000 : 0)
       lastSim = now
       const t = reducedMotion.matches ? 0 : now / 1000
       const cam = uiRef.current.camera.current

@@ -23,6 +23,28 @@ async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page))).toBeTruthy()
 }
 
+for (const reducedMotion of ['reduce', 'no-preference']) {
+  test(`residents keep walking with reduced motion set to ${reducedMotion}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion })
+    await startAt(page, 'all-bridges')
+    // Observe the crowd updated by the real canvas loop, without advancing it ourselves.
+    await page.evaluate(async () => {
+      const { Crowd } = await import('/src/components/world/people.js')
+      const update = Crowd.prototype.update, positions = new Map()
+      window.residentWalkDistance = 0
+      Crowd.prototype.update = function(dt) {
+        update.call(this, dt)
+        for (const person of this.agents) {
+          const previous = positions.get(person.id)
+          if (previous) window.residentWalkDistance += Math.hypot(person.x - previous[0], person.y - previous[1])
+          positions.set(person.id, [person.x, person.y])
+        }
+      }
+    })
+    await expect.poll(() => page.evaluate(() => window.residentWalkDistance), { timeout: 12_000 }).toBeGreaterThan(10)
+  })
+}
+
 for (const checkpointName of ['all-bridges', 'all-reinforced']) {
   test(`the complete bridge network (${checkpointName}) renders and both eastern crossings can be managed`, async ({ page }, testInfo) => {
     const errors = []
