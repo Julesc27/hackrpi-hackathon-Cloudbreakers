@@ -2,13 +2,13 @@ import { Crowd, bridgeAt } from '../components/world/people.js'
 import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { islandAccess, gatherAvailability, canAfford } from './engine.js'
+import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots } from './engine.js'
 import { avatarLook } from './avatar.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
 const BEACON = [795, 407]
-const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON'])
+const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON', 'DEPOSIT_BACKPACK'])
 export const isPlayerTask = action => TASKS.has(action.type)
 
 /** Move the camera onto the captain. Their place in the world, and the current zoom, stay put. */
@@ -51,6 +51,16 @@ export class Player extends Crowd {
   }
   plan() {} // No autonomous wandering for the player.
 
+  reroute(a) {
+    const pending = this.pending
+    super.reroute(a)
+    if (pending) {
+      const point = pending.action?.type === 'BUILD' ? this.task(pending.action)?.point : pending.point
+      if (!point || !this.go(pending.island, point, pending.action, pending.label)) { this.pending = null; a.task = null }
+    }
+    this.remember()
+  }
+
   sync(state) {
     this.state = state
     if (this.avatar && state.avatar !== this.lastAvatar) this.dress()
@@ -71,6 +81,13 @@ export class Player extends Crowd {
   }
 
   task(action) {
+    if (action.type === 'DEPOSIT_BACKPACK') {
+      const a = this.avatar
+      const depots = storageDepots(this.state)
+      const depot = action.storageId ? depots.find(d => d.id === action.storageId) : depots.sort((p,q) => Number(q.island === a.isl)-Number(p.island === a.isl) || Math.hypot(p.point[0]-a.x,p.point[1]-a.y)-Math.hypot(q.point[0]-a.x,q.point[1]-a.y))[0]
+      if (!depot) return null
+      return { island: depot.island, point: this.recoveryPoint(depot.island, ...depot.point), focus: depot.point, label: 'Deposit backpack' }
+    }
     const siteId = action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : action.siteId
     if (siteId && GATHER_SITES[siteId]) {
       const site = GATHER_SITES[siteId], focus = INTERACTION_POINTS[siteId]
@@ -90,6 +107,7 @@ export class Player extends Crowd {
   }
 
   request(action, dispatch) {
+    if (action.type === 'DEPOSIT_BACKPACK' && !backpackUsed(this.state)) { this.status = 'Your backpack is empty'; return false }
     const task = this.task(action)
     if (!task?.point) return false
     const site = action.siteId || (action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : null)
@@ -168,6 +186,7 @@ export class Player extends Crowd {
     const choices = Object.entries(GATHER_SITES).filter(([, s]) => s.island === a.isl).map(([id, site]) => ({
       id, point: this.task({ type: 'GATHER_AT_SITE', siteId: id }).point || INTERACTION_POINTS[id], label: site.label, action: { type: 'GATHER_AT_SITE', siteId: id }, reason: gatherAvailability(this.state, id),
     }))
+    if (backpackUsed(this.state)) for (const depot of storageDepots(this.state).filter(d => d.island === a.isl)) choices.push({ id: 'deposit', point: depot.point, label: 'Deposit backpack', action: { type: 'DEPOSIT_BACKPACK', storageId: depot.id } })
     if (a.isl === 'newHaven') {
       choices.push({ id: 'workshop', point: WORKSHOP, label: 'Open workshop', menu: 'build' })
       if (!this.state.beaconRestored) choices.push({ id: 'beacon', point: BEACON, label: 'Restore the beacon', action: { type: 'RESTORE_BEACON' },

@@ -1,0 +1,17 @@
+.backpack-summary { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; margin-bottom:7px; }
+.backpack-summary span { font-size:12px; }
+.backpack-capacity { display:block; appearance:none; width:100%; height:12px; margin:8px 0 12px; accent-color:#477b85; border:1px solid #ad9259; border-radius:8px; overflow:hidden; background:#d3c49f; }
+.backpack-capacity::-webkit-progress-bar { background:#d3c49f; }
+.backpack-capacity::-webkit-progress-value { background:linear-gradient(90deg,#345d77,#68959e); }
+.backpack-capacity::-moz-progress-bar { background:#477b85; }
+.backpack-full { padding:10px 12px; border-radius:8px; border:1px solid #a56536; background:#e8c997; color:#653c24; }
+.backpack-deposit { margin-top:16px; }
+.backpack-deposit button { width:100%; }
+.backpack-deposit p { margin-top:10px; }
+.backpack-deposit button:disabled { opacity:.5; cursor:default; }
+.rail-btn .backpack-badge { position:absolute; top:0; right:-2px; min-width:30px; padding:2px 4px; border:1px solid #d5b879; border-radius:9px; background:#213b55; color:#ffe6ad; font-size:9px; line-height:1.1; font-variant-numeric:tabular-nums; }
+.rail-btn .backpack-badge.is-full { background:#855236; }
+.storage-capacities { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:16px 0; }
+.storage-capacities > div { display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 6px; border:1px solid #ad9259; border-radius:10px; background:#f7ebcf; }
+.storage-capacities span { font-size:12px; }
+.storage-capacities strong { font-size:22px; }

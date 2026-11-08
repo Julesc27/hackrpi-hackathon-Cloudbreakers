@@ -15,3 +15,10 @@ export function buildingLayout(type, island, slot, bounds) {
     groundDepth: width * (type === 'shelter' ? .10 : .16),
   }
 }
+
+// Solid ground occupied by the whole isometric base, plus walking clearance.
+// The smaller groundWidth/groundDepth above describe the painted shadow only.
+export function buildingObstacle(type, island, slot, clearance = 1.5) {
+  const { width } = buildingLayout(type, island, slot)
+  return { rx: width*.5 + clearance, ry: width*.25 + clearance }
+}

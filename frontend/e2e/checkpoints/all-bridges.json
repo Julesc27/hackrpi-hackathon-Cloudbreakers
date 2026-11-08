@@ -27,6 +27,14 @@
     "materials": 17,
     "fish": 8
   },
+  "backpack": {
+    "wood": 0,
+    "stone": 0,
+    "seeds": 0,
+    "crystals": 0,
+    "materials": 0,
+    "fish": 0
+  },
   "deposits": {
     "grove": {
       "stock": 24,
@@ -74,11 +82,14 @@
     }
   },
   "lastInteraction": {
-    "id": "i46",
+    "id": "i58",
     "siteId": "forest",
     "island": "verdant",
     "kind": "wood",
     "reward": {
+      "wood": 8
+    },
+    "carried": {
       "wood": 8
     }
   },
@@ -233,98 +244,98 @@
       "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     },
     {
-      "id": "j19",
+      "id": "j23",
       "level": 2,
       "type": "discovery",
       "title": "Reached Verdant Reach",
       "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
     },
     {
-      "id": "j21",
+      "id": "j25",
       "level": 2,
       "type": "mission",
       "title": "The First Bridge",
       "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
     },
     {
-      "id": "j23",
+      "id": "j27",
       "level": 3,
       "type": "level",
       "title": "Reached level 3: Builder",
       "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
     },
     {
-      "id": "j25",
+      "id": "j29",
       "level": 3,
       "type": "mission",
       "title": "A Garden in the Sky",
       "text": "Achieve a food surplus after an action. Reward: 75 XP · Starter Garden upgrade (+2 food)."
     },
     {
-      "id": "j27",
+      "id": "j31",
       "level": 3,
       "type": "mission",
       "title": "Keep the Lights On",
       "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
     },
     {
-      "id": "j29",
+      "id": "j33",
       "level": 4,
       "type": "level",
       "title": "Reached level 4: Steward",
       "text": "Unlocked Clinic, Community Hall."
     },
     {
-      "id": "j30",
+      "id": "j34",
       "level": 4,
       "type": "event",
       "title": "Crosswind",
       "text": "Bridges sway. Turbines sing."
     },
     {
-      "id": "j33",
+      "id": "j39",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j36",
+      "id": "j44",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j38",
+      "id": "j46",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j40",
+      "id": "j48",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j41",
+      "id": "j49",
       "level": 5,
       "type": "event",
       "title": "Solar Storm",
       "text": "Panels flicker; solar output is halved."
     },
     {
-      "id": "j45",
+      "id": "j57",
       "level": 5,
       "type": "discovery",
       "title": "Reached Mercy Rise",
       "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
     },
     {
-      "id": "j48",
+      "id": "j62",
       "level": 5,
       "type": "discovery",
       "title": "Reached Hearthside",
@@ -333,5 +344,10 @@
   ],
   "journalUnread": 20,
   "seenIntro": true,
-  "nextId": 49
+  "nextId": 63,
+  "player": {
+    "island": "newHaven",
+    "x": 642.5,
+    "y": 612.5
+  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { getLevelInfo, housing, activeMissions } from '../../game/engine.js'
+import { getLevelInfo, housing, activeMissions, backpackUsed, backpackCapacity } from '../../game/engine.js'
 import { getAdvice } from '../../game/advisor.js'
 import { WEATHER } from '../../game/data.js'
 import { CloudIcon, WeatherIcon, People, Leaf, ArtIcon } from '../icons.jsx'
@@ -31,6 +31,7 @@ export function LeftRail() {
   const items = [
     { id: 'quests', label: 'Quest Book', icon: 'quest', badge: hasNewMission },
     { id: 'build', label: 'Build', icon: 'build' },
+    { id: 'backpack', label: 'Backpack', icon: 'backpack' },
     { id: 'advisor', label: 'Cloud', icon: 'cloud' },
     { id: 'store', label: 'Store', icon: 'store' },
     { id: 'captain', label: 'Captain', portrait: true },
@@ -46,6 +47,7 @@ export function LeftRail() {
             data-tutorial={`rail-${id}`}
           >
             {badge && <span className="badge">!</span>}
+            {id === 'backpack' && <span className={`backpack-badge${backpackUsed(state) >= backpackCapacity(state) ? ' is-full' : ''}`} aria-label={`Backpack: ${backpackUsed(state)} of ${backpackCapacity(state)} items`}>{backpackUsed(state)}/{backpackCapacity(state)}</span>}
             {portrait ? <AvatarPortrait avatar={state.avatar} className="art-icon rail-avatar" size={50} /> : <ArtIcon name={icon} size={50} />}
             <span>{label}</span>
           </button>

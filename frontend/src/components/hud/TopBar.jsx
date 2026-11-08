@@ -110,7 +110,7 @@ export default function TopBar() {
     if (!state.lastInteraction || state.lastInteraction.id === prev?.id) return
 
     const reward = state.lastInteraction.reward || {}
-    const gained = Object.entries(reward).filter(([, v]) => v > 0)
+    const gained = Object.entries(reward).filter(([key, v]) => v > 0 && !state.lastInteraction.carried?.[key])
     if (gained.length === 0) return
 
     for (const [key, diff] of gained) {

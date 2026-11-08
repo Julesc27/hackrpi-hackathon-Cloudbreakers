@@ -2,7 +2,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { GATHER_SITES, ROUTE_MAP } from '../src/game/data.js'
-import { bridgeCost, createInitialState, gameReducer } from '../src/game/engine.js'
+import { backpackUsed, bridgeCost, createInitialState, gameReducer } from '../src/game/engine.js'
+import { Player } from '../src/game/player.js'
 
 // A fixed clock keeps regrowth deterministic. Date.now() would change every
 // committed checkpoint and would let a reload skip the wait.
@@ -11,6 +12,17 @@ export function generateTowns() {
   let town = { ...createInitialState(), seenIntro: true }
   const act = (action) => { town = gameReducer(town, { ...action, now }) }
   const snap = () => JSON.parse(JSON.stringify((({ toasts, ...rest }) => rest)(town)))
+
+  // Materials go into the Captain's backpack; walk them home and deposit them, just like a
+  // player, so they count towards town stock.
+  const depositBackpack = () => {
+    if (!backpackUsed(town)) return
+    const captain = new Player(town)
+    captain.onSave = (position) => act({ type: 'PLAYER_POSITION', position })
+    if (!captain.request({ type: 'DEPOSIT_BACKPACK' }, (action) => { act(action); captain.sync(town) })) throw new Error('Cannot reach town storage')
+    for (let i = 0; captain.pending && i < 2000; i++) captain.update(0.1)
+    if (backpackUsed(town)) throw new Error('Checkpoint supplies were not deposited')
+  }
 
   const readyStock = (siteId) => {
     const site = GATHER_SITES[siteId]
@@ -28,6 +40,7 @@ export function generateTowns() {
     if (siteId === 'grove') act({ type: 'GATHER_WOOD' })
     else if (siteId === 'forest') act({ type: 'HARVEST_FOREST' })
     else act({ type: 'GATHER_AT_SITE', siteId })
+    depositBackpack()
     return (town.resources[key] || 0) > before
   }
 
@@ -56,7 +69,7 @@ export function generateTowns() {
 
   act({ type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
   if (!town.completed.includes('anchor')) throw new Error('Anchor checkpoint did not complete Hold Fast')
-  for (let i = 0; i < 2; i++) act({ type: 'GATHER_WOOD' })
+  for (let i = 0; i < 2; i++) gather('grove')
   if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')
   towns['anchor-ready'] = snap()
 

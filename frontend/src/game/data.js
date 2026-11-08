@@ -42,7 +42,8 @@ export const ISLANDS = {
     yields: { water: 8, fish: 1, stone: 1 }, badge: 'drop',
     desc: 'Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town.',
     question: 'Clean water links the homes, gardens and workshops of the settlement.',
-    plots: [[825, 270], [885, 288], [1010, 285], [1070, 303]],
+    // Keep the two eastern plots on reachable plaza paving, above the cliff.
+    plots: [[825, 270], [885, 288], [900, 200], [940, 240]],
   },
   prism: {
     name: 'Prism Shelf', kind: 'Crystal Island', hit: [410, 235, 225, 140],
@@ -61,7 +62,8 @@ export const ISLANDS = {
     name: 'Hearthside', kind: 'Village Island', hit: [1220, 450, 200, 125], yields: { food: 1 }, housing: 8,
     desc: 'Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow.',
     question: 'Welcome new families while keeping everyone fed and supplied with water.',
-    plots: [[1110, 490], [1250, 548]],
+    // Leave the bridge entrance clear of a building's full foundation.
+    plots: [[1138, 515], [1250, 548]],
   },
 }
 for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
@@ -154,7 +156,7 @@ export const BUILDINGS = {
   },
   storageHouse: {
     name: 'Storage House', category: 'Survival', cost: { wood: 12, stone: 4 }, capBonus: 25,
-    desc: 'Raises water, food and energy storage by 25.',
+    desc: 'Adds 25 capacity each for water, food and energy. Drop off backpack supplies here while its island is connected.',
   },
   solarFarm: {
     name: 'Solar Farm', category: 'Renewable', cost: { wood: 12, coins: 30, crystals: 3, materials: 2 }, prod: { energy: 5 }, renewable: true,

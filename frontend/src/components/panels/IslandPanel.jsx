@@ -83,7 +83,7 @@ export default function IslandPanel() {
           <ul className="building-list">
             {buildings.map((b) => (
               <li key={b.id}>
-                {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : <span>{BUILDINGS[b.type].name}</span>}
+                {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : b.type === 'storageHouse' ? <button className="link" onClick={() => { ui.setSelected(b.id); ui.setPanel('storageHouse') }}>Storage House · capacity and unloading</button> : <span>{BUILDINGS[b.type].name}</span>}
                 {BUILDINGS[b.type].prod && <YieldChips yields={BUILDINGS[b.type].prod} />}
               </li>
             ))}

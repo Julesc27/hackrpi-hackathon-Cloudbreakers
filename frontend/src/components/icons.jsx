@@ -106,7 +106,19 @@ export const SunArt = (p) => (
   <I {...p}><circle cx="12" cy="12" r="4.4" fill="#ffe28a" stroke="#c9a24f" /><path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7" stroke="#f0c53c" strokeWidth="1.6" strokeLinecap="round" /></I>
 )
 
+export const BackpackIcon = (p) => (
+  <I {...p}>
+    <path d="M8 6V4a4 4 0 0 1 8 0v2" fill="none" stroke="#d5b775" strokeWidth="1.5" />
+    <rect x="4" y="5" width="16" height="17" rx="4" fill="#34546c" stroke="#d5b775" />
+    <path d="M4 9c4 4 12 4 16 0V8a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3Z" fill="#ad7b48" stroke="#e2c27f" />
+    <rect x="7" y="14" width="10" height="6" rx="2" fill="#976a40" stroke="#e2c27f" />
+    <path d="M9 8v5m6-5v5" stroke="#f1d69c" strokeWidth="1.5" />
+    <rect x="10.5" y="15" width="3" height="2" rx=".5" fill="#f1d69c" />
+  </I>
+)
+
 const ART = {
+  backpack: BackpackIcon,
   energy: Bolt, water: Drop, happiness: Smile, wood: Log, coins: Coin,
   sun: SunArt, quest: Scroll, build: Hammer, cloud: CloudIcon, map: MapIcon,
   journal: Book, storage: Crate, store: Shop, ancestors: Lantern, gear: Gear, 'hammer-gold': Hammer, scales: Scales,
