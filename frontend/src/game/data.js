@@ -6,6 +6,9 @@ import { ISLAND_OFFSETS, STARTER_PLOTS, BRIDGE_LAYOUT_SHIFTS, shiftIslandPoint }
 export const BASE_HOUSING = 6
 export const BASE_CAP = 100
 export const GATHER_AMOUNT = 6
+// One shared pile for gathered goods. Not per material, and not energy, coins, or XP.
+export const STORAGE_CAP = 250
+export const STORED_MATERIALS = ['wood', 'stone', 'food', 'seeds', 'water', 'fish', 'materials', 'crystals']
 
 export const RESOURCES = {
   energy: { label: 'Energy', color: 'var(--energy)' },

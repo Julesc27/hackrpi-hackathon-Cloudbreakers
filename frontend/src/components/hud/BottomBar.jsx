@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { activeMissions, getLevelInfo } from '../../game/engine.js'
+import { activeMissions, getLevelInfo, storageUsed } from '../../game/engine.js'
+import { STORAGE_CAP } from '../../game/data.js'
 import { BUILDINGS } from '../../game/data.js'
 import { HouseIcon, Star, ArtIcon } from '../icons.jsx'
+import '../../styles/storage.css'
 
 export function BottomNav() {
   const { state } = useGame()
   const ui = useUI()
+  const stored = storageUsed(state.resources)
+  const storageFull = stored >= STORAGE_CAP
   const tabs = [
     { id: null, label: 'Town', Icon: HouseIcon },
     { id: 'map', label: 'Map', Icon: (p) => <ArtIcon name="map" {...p} /> },
@@ -23,11 +27,12 @@ export function BottomNav() {
             className={`nav-btn panel${isActive(id) ? ' is-active' : ''}`}
             onClick={() => (id === null ? ui.closeAll() : ui.toggle(id))}
             data-tutorial={id ? `nav-${id}` : 'nav-town'}
-            aria-label={badge ? `${label}, new entries` : undefined}
+            aria-label={id === 'storage' ? `Storage, ${stored} of ${STORAGE_CAP}${storageFull ? ', full' : ''}` : badge ? `${label}, new entries` : undefined}
           >
             {badge && <span className="badge" aria-hidden="true">!</span>}
             <Icon size={44} />
             <span>{label}</span>
+            {id === 'storage' && <span className={`storage-badge${storageFull ? ' is-full' : ''}`} aria-hidden="true">{stored}/{STORAGE_CAP}</span>}
           </button>
         </span>
       ))}
