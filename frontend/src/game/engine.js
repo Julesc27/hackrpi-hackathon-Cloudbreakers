@@ -434,7 +434,7 @@ function gatherAtSite(state, siteId) {
     lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward },
   }
   s = progressSettlement(s, 10)
-  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
+  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : site.deposit === 'water' ? 'Water source' : site.deposit === 'food' ? 'Food garden' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
   return s
 }
 

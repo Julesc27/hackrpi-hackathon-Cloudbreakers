@@ -88,12 +88,12 @@ export const ROUTES = [
   { id: 'hearth-haven', a: 'newHaven', b: 'hearth', wood: 22, note: 'Connect the village and welcome new families.' },
 ]
 export const ROUTE_MAP = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
-export const STARTER_DEPOSITS = { wood: 36, stone: 18 }
+export const STARTER_DEPOSITS = { wood: 36, stone: 18, water: 18, food: 10 }
 export const GATHER_SITES = {
   grove: { island: 'newHaven', label: 'Gather wood', kind: 'wood', deposit: 'wood', reward: { wood: 6 } },
   stone: { island: 'newHaven', label: 'Mine stone', kind: 'stone', deposit: 'stone', reward: { stone: 3 } },
-  garden: { island: 'newHaven', label: 'Tend the garden', kind: 'garden', cost: { seeds: 1 }, reward: { food: 5 } },
-  collector: { island: 'newHaven', label: 'Collect fresh water', kind: 'water', reward: { water: 5 } },
+  garden: { island: 'newHaven', label: 'Tend the garden', kind: 'garden', deposit: 'food', cost: { seeds: 1 }, reward: { food: 5 } },
+  collector: { island: 'newHaven', label: 'Collect fresh water', kind: 'water', deposit: 'water', reward: { water: 3 } },
   forest: { island: 'verdant', label: 'Harvest timber', kind: 'wood', reward: { wood: 8 } },
   forage: { island: 'verdant', label: 'Forage & collect seeds', kind: 'garden', reward: { food: 5, seeds: 2 } },
   lumber: { island: 'verdant', label: 'Prepare building materials', kind: 'stone', reward: { materials: 3 } },

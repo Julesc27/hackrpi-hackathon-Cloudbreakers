@@ -15,7 +15,9 @@
   },
   "deposits": {
     "wood": 24,
-    "stone": 18
+    "stone": 18,
+    "water": 18,
+    "food": 10
   },
   "lastInteraction": {
     "id": "i46",

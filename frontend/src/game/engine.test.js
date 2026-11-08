@@ -2,9 +2,25 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
-import { Player } from './player.js'
+import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+
+test('centering the camera keeps the current zoom and does not move the captain', () => {
+  const avatar = { x: 120.5, y: 40.25, isl: 'verdant' }
+  const calls = []
+  const camera = {
+    view: () => ({ s: 0.62 }),
+    flyTo: (...args) => calls.push(args),
+    home: () => { throw new Error('must not fly home to New Haven') },
+  }
+  assert.equal(centerCameraOnAvatar(camera, avatar), true)
+  assert.deepEqual(calls[0], [120.5, 40.25, 0.62, { duration: 300 }])
+  assert.deepEqual(avatar, { x: 120.5, y: 40.25, isl: 'verdant' })
+  centerCameraOnAvatar({ view: () => ({ s: 1.8 }), flyTo: (...args) => calls.push(args) }, avatar)
+  assert.equal(calls[1][2], 1.8)
+  assert.equal(centerCameraOnAvatar({ view: () => ({ s: 1 }), flyTo() {} }, null), false)
+})
 
 test('every painted stair flight is walkable in both directions using up and down controls', () => {
   const state = { ...createInitialState(), connected: ['newHaven','verdant','prism'], bridges: [
@@ -72,6 +88,52 @@ test('the captain walks to a task before gathering, and movement itself grants n
   assert.equal(player.pending, null)
   assert.equal(state.resources.wood, before.wood + 6)
   assert.ok(Math.hypot(player.avatar.x-start[0], player.avatar.y-start[1]) > 30)
+})
+
+test('task tools animate only after arrival and dispatch once after visible work completes', () => {
+  const actions = [
+    ...['grove', 'stone', 'garden', 'collector', 'forest', 'forage', 'lumber', 'falls', 'fishing', 'crystals', 'salvage'].map(siteId => ({ type: 'GATHER_AT_SITE', siteId })),
+    { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 },
+    { type: 'RESTORE_BEACON' }, { type: 'BUILD_BRIDGE', routeId: 'verdant-haven' },
+    { type: 'REPAIR_BRIDGE', routeId: 'verdant-haven' }, { type: 'UPGRADE_BRIDGE', routeId: 'verdant-haven' },
+  ]
+  for (const action of actions) {
+    const state = { ...createInitialState(), connected: Object.keys(ISLANDS), bridges: ROUTES.map(route => ({ route: route.id, type: 'rope', condition: 100 })) }
+    const player = new Player(state), task = player.task(action), point = player.walkPoint(task.island, ...task.point)
+    Object.assign(player.avatar, { isl: task.island, x: point[0], y: point[1] })
+    let dispatched = 0
+    assert.equal(player.request(action, () => dispatched++), true)
+    assert.equal(player.avatar.task, null, 'No work animation while travelling')
+    for (let i=0; !player.avatar.task && i<100; i++) player.update(.05)
+    assert.ok(player.avatar.task, `Missing work animation for ${JSON.stringify(action)}`)
+    const work = player.avatar.task
+    assert.ok(work.duration >= 1.5, 'Give the work animation time to be seen')
+    const before = work.progress
+    player.update(.1)
+    assert.ok(work.progress > before && work.progress < 1)
+    assert.equal(dispatched, 0, 'No reward until the animation completes')
+    for (let i=0; player.pending && i<100; i++) player.update(.1)
+    assert.equal(dispatched, 1)
+    assert.equal(player.avatar.task, null)
+    for (let i=0; i<20; i++) player.update(.1)
+    assert.equal(dispatched, 1, 'Animation completion cannot repeat rewards')
+  }
+})
+
+test('cancelling or walking away during work removes tools and grants no reward', () => {
+  for (const interrupt of [p => p.cancel(), p => p.setInput(1, 0)]) {
+    const player = new Player(createInitialState()), point = player.walkPoint('newHaven', ...INTERACTION_POINTS.grove)
+    Object.assign(player.avatar, { x: point[0], y: point[1] })
+    let dispatched = 0
+    player.request({ type: 'GATHER_WOOD' }, () => dispatched++)
+    for (let i=0; !player.avatar.task && i<100; i++) player.update(.05)
+    assert.ok(player.avatar.task)
+    interrupt(player)
+    assert.equal(player.avatar.task, null)
+    for (let i=0; i<100; i++) player.update(.1)
+    assert.equal(dispatched, 0)
+    assert.equal(player.pending, null)
+  }
 })
 
 test('keyboard movement stops on release and cancels a queued task without spending resources', () => {
@@ -250,7 +312,7 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 })
 
 
-test('starter timber and stone deplete; rejected harvesting grants neither XP nor effects', () => {
+test('starter timber, stone, water and food deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(state.deposits.wood, 0)
@@ -261,6 +323,17 @@ test('starter timber and stone deplete; rejected harvesting grants neither XP no
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
   assert.equal(state.deposits.stone, 0)
   assert.match(gatherAvailability(state, 'stone'), /depleted/)
+  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
+  assert.equal(state.deposits.water, 0)
+  assert.match(gatherAvailability(state, 'collector'), /depleted/)
+  for (let i = 0; i < 2; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden' })
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
+  state = { ...state, connected: [...state.connected, 'verdant'], bridges: [{ route: 'verdant-haven', type: 'reinforced', condition: 100 }] }
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'forage' })
+  assert.ok(state.resources.seeds > 0)
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
 })
 
 test('outer resource sites require a working bridge and provide their distinct resources', () => {

@@ -10,6 +10,7 @@ import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { shiftIslandPoint } from '../../game/mapLayout.js'
 import { STAIRWAYS, stairProjection } from './stairways.js'
 import { buildingLayout } from './buildingLayout.js'
+import { drawTaskTool } from './taskAnimation.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
 
 /* ---------------- bridges ---------------- */
@@ -588,13 +589,14 @@ function drawEyes(ctx, a, hy) {
 }
 
 /** Draw one resident with their feet at (a.x, a.y). `detail` false draws the far-zoom figure. */
-export function drawPerson(ctx, a, t, detail = true) {
+export function drawPerson(ctx, a, t, detail = true, motion = true) {
   if (!detail) { drawPersonFar(ctx, a); return }
   const s = a.kid ? 0.88 : 1.18
   const walking = a.act === 'walk'
   const swing = walking ? Math.sin(a.phase) : 0
   const bob = walking ? Math.abs(Math.cos(a.phase)) * 0.6 : 0
-  const sit = a.act === 'sit', tend = a.act === 'tend'
+  const working = a.act === 'work' && a.task
+  const sit = a.act === 'sit', tend = a.act === 'tend' || (working && ['garden', 'harvest', 'collect'].includes(a.task.kind))
   const wind = Math.sin(t * 2.3 + a.id) * 0.5 + (walking ? 1 : 0.3)
   ctx.save()
   ctx.translate(a.x, a.y)
@@ -659,7 +661,10 @@ export function drawPerson(ctx, a, t, detail = true) {
 
   // torso (leans in while tending crops)
   ctx.save()
-  if (tend) { ctx.translate(0, hip); ctx.rotate(0.45 + Math.sin(a.phase) * 0.1); ctx.translate(0, -hip) }
+  if (tend || working) {
+    const effort = working ? motion ? Math.sin(a.task.elapsed*10)*.09 : 0 : Math.sin(a.phase)*.1
+    ctx.translate(0, hip); ctx.rotate((tend ? .45 : .08) + effort); ctx.translate(0, -hip)
+  }
   const body = new Path2D()
   if (a.body === 'woman') {
     // narrower shoulders and a waist
@@ -688,7 +693,7 @@ export function drawPerson(ctx, a, t, detail = true) {
     ctx.fillStyle = col('#a8743f'); ctx.fillRect(-2.9, hip - 1.6, 2.4, 2)
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.3; ctx.strokeRect(-2.9, hip - 1.6, 2.4, 2)
   }
-  if (a.carry === 'toolbag') {
+  if (a.carry === 'toolbag' && !working) {
     ctx.fillStyle = col('#6b4426'); ctx.fillRect(1.6, hip - 1.2, 2.2, 1.7)
     line(ctx, 2.2, hip - 1.3, 2.2, hip - 2.6, col('#cbd0dc'), 0.45)
   }
@@ -697,7 +702,9 @@ export function drawPerson(ctx, a, t, detail = true) {
   const armSwing = walking ? -swing * 1.6 : a.act === 'chat' ? Math.sin(a.phase * 1.3) * 1.4 : 0
   const sleeve = col(a.coat ? a.shirt : shade(a.shirt, 0.92))
   const hand = col(a.skin)
-  if (walking && a.carry === 'plank') {
+  if (working) {
+    drawTaskTool(ctx, a.task, top, hip, sleeve, hand, motion)
+  } else if (walking && a.carry === 'plank') {
     // a plank for the bridges, on the shoulder
     ctx.save(); ctx.translate(0, top + 0.6); ctx.rotate(-0.18)
     ctx.fillStyle = col('#c99a5e'); ctx.fillRect(-6, -1.4, 12, 1.4)

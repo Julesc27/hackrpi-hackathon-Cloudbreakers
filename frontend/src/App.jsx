@@ -8,7 +8,7 @@ import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import FlyingResources from './components/hud/FlyingResources.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls } from './components/hud/BottomBar.jsx'
+import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
@@ -63,9 +63,10 @@ function GameScreen() {
         <LeftRail />
         <ProgressionCard />
         <BottomNav />
-        <SettingsButton />
-        <CameraControls />
-        <PlayerControls />
+        <div className="corner-tools">
+          <PlayerControls />
+          <SettingsButton />
+        </div>
         <PlacingHint />
       </div>
 

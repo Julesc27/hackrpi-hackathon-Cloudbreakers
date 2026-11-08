@@ -15,7 +15,9 @@
   },
   "deposits": {
     "wood": 36,
-    "stone": 18
+    "stone": 18,
+    "water": 18,
+    "food": 10
   },
   "lastInteraction": null,
   "happiness": 62,
