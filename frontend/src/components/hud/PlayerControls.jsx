@@ -11,7 +11,8 @@ export default function PlayerControls() {
     const refresh = () => {
       const p = player.current, a = p.avatar
       if (!a) return
-      setView({ x: a.x, y: a.y, island: a.isl, busy: Boolean(p.pending) })
+      setView({ x: a.x, y: a.y, island: a.isl, busy: Boolean(p.pending),
+        task: a.task?.kind || '', progress: a.task ? a.task.progress : null })
       if (a.act === 'walk') ui.camera.current?.followPoint(a.x, a.y)
     }
     refresh()
@@ -54,6 +55,8 @@ export default function PlayerControls() {
       data-player-x={view.x.toFixed(1)}
       data-player-y={view.y.toFixed(1)}
       data-player-busy={view.busy}
+      data-player-task={view.task}
+      data-player-progress={view.progress == null ? '' : view.progress.toFixed(3)}
     >
       Center me
     </button>

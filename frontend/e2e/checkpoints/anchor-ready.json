@@ -15,7 +15,8 @@
   },
   "deposits": {
     "wood": 24,
-    "stone": 18
+    "stone": 18,
+    "water": 18
   },
   "lastInteraction": {
     "id": "i17",

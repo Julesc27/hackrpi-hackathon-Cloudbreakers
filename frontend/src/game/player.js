@@ -3,6 +3,7 @@ import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { islandAccess, gatherAvailability, canAfford } from './engine.js'
+import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
 const BEACON = [795, 407]
@@ -63,7 +64,12 @@ export class Player extends Crowd {
 
   task(action) {
     const siteId = action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : action.siteId
-    if (siteId && GATHER_SITES[siteId]) return { island: GATHER_SITES[siteId].island, point: INTERACTION_POINTS[siteId], label: GATHER_SITES[siteId].label }
+    if (siteId && GATHER_SITES[siteId]) {
+      const site = GATHER_SITES[siteId], focus = INTERACTION_POINTS[siteId]
+      // Stand beside the landmark, clear of its floating resource marker.
+      const point = this.recoveryPoint(site.island, focus[0]+32, focus[1]+30)
+      return { island: site.island, point, focus, label: site.label }
+    }
     if (action.type === 'RESTORE_BEACON') return { island: 'newHaven', point: BEACON, label: 'Restore the beacon' }
     if (action.type === 'BUILD') {
       const def = BUILDINGS[action.buildingType]
@@ -88,7 +94,7 @@ export class Player extends Crowd {
   go(island, destination, action = null, label = 'Explore') {
     if (!this.islands.includes(island)) { this.status = 'Build a working bridge to reach this island'; return false }
     if (!this.avatar.isl) { this.status = 'Finish crossing the bridge first'; return false }
-    const point = this.walkPoint(island, ...destination)
+    const point = this.recoveryPoint(island, ...destination)
     if (!point) { this.status = 'That spot is not reachable'; return false }
     const a = this.avatar, queue = [{ island: a.isl, hops: [] }], seen = new Set([a.isl])
     let hops = null
@@ -113,8 +119,8 @@ export class Player extends Crowd {
     if (!walk) { this.status = 'The path is blocked — try another approach'; return false }
     legs.push(walk)
     this.input = [0, 0]; this.manualBridge = null
-    Object.assign(a, { leg: null, legs, wait: 0, act: 'walk' })
-    this.pending = { island, point, action, label, work: 0 }
+    Object.assign(a, { leg: null, legs, wait: 0, act: 'walk', task: null })
+    this.pending = { island, point, action, label, work: 0, animation: taskAnimation(action) }
     this.status = action ? `Walking to ${label.toLowerCase()}` : `Walking around ${ISLANDS[island].name}`
     this.onTaskStart?.()
     return true
@@ -126,7 +132,7 @@ export class Player extends Crowd {
     const a = this.avatar
     if (a.leg?.route) this.manualBridge = { ...a.leg }
     this.pending = null
-    Object.assign(a, { legs: [], leg: null, wait: 0 })
+    Object.assign(a, { legs: [], leg: null, wait: 0, task: null, act: 'idle' })
     this.status = 'Exploring'
   }
 
@@ -135,7 +141,7 @@ export class Player extends Crowd {
     const a = this.avatar
     if (a.leg?.route) this.manualBridge = { ...a.leg }
     this.pending = null; this.input = [0, 0]
-    Object.assign(a, { legs: [], leg: null, wait: 0, act: 'idle' })
+    Object.assign(a, { legs: [], leg: null, wait: 0, act: 'idle', task: null })
     this.status = 'Task cancelled — ready to explore'
     this.remember()
   }
@@ -152,7 +158,7 @@ export class Player extends Crowd {
     const a = this.avatar
     if (!a?.isl) return null
     const choices = Object.entries(GATHER_SITES).filter(([, s]) => s.island === a.isl).map(([id, site]) => ({
-      id, point: INTERACTION_POINTS[id], label: site.label, action: { type: 'GATHER_AT_SITE', siteId: id }, reason: gatherAvailability(this.state, id),
+      id, point: this.task({ type: 'GATHER_AT_SITE', siteId: id }).point || INTERACTION_POINTS[id], label: site.label, action: { type: 'GATHER_AT_SITE', siteId: id }, reason: gatherAvailability(this.state, id),
     }))
     if (a.isl === 'newHaven') {
       choices.push({ id: 'workshop', point: WORKSHOP, label: 'Open workshop', menu: 'build' })
@@ -226,14 +232,24 @@ export class Player extends Crowd {
       a.act = moved ? 'walk' : 'idle'; if (dx) a.dir = dx < 0 ? -1 : 1; a.back = dy < -Math.abs(dx)*.3
       return
     }
-    if (!this.pending) { a.act = 'idle'; return }
+    if (!this.pending) { a.act = 'idle'; a.task = null; return }
     if (a.leg || a.legs.length) { super.update(dt); return }
     if (this.pending.action) {
-      this.pending.work += dt; a.act = 'tend'; a.phase += dt*5
+      const animation = this.pending.animation
+      if (!a.task) {
+        const action = this.pending.action
+        const target = action.type === 'BUILD' && !BUILDINGS[action.buildingType]?.infrastructure
+          ? ISLANDS[action.island]?.plots[action.slot] : this.task(action)?.focus || this.task(action)?.point
+        if (target) { if (Math.abs(target[0]-a.x) > 2) a.dir = target[0] < a.x ? -1 : 1; a.back = target[1] < a.y-3 }
+        a.task = { ...animation, elapsed: 0, progress: 0, label: this.pending.label }
+      }
+      this.pending.work += dt; a.act = 'work'; a.phase += dt*5
+      a.task.elapsed = this.pending.work
+      a.task.progress = Math.min(1, this.pending.work / animation.duration)
       this.status = this.pending.label
-      if (this.pending.work < .65) return
+      if (this.pending.work < animation.duration) return
       const action = this.pending.action
-      this.pending = null; a.act='idle'; this.status='Task complete'
+      this.pending = null; a.act='idle'; a.task=null; this.status='Task complete'
       this.remember(); this.dispatchTask?.(action)
     } else { this.pending=null; a.act='idle'; this.status='Explore or press E nearby'; this.remember() }
   }
