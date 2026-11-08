@@ -51,7 +51,7 @@ class DeployClaimsTests(unittest.TestCase):
         for event, overrides in (
             ("pull_request", {}),
             ("push", {"ref": "refs/heads/feature"}),
-            ("push", {"workflow_ref": "owner/repo/.github/workflows/gameplay.yml@refs/heads/main"}),
+            ("push", {"workflow_ref": "owner/repo/.github/workflows/ci.yml@refs/heads/main"}),
         ):
             with self.subTest(event=event, overrides=overrides):
                 hook._seen_jti.clear()

@@ -1,0 +1,76 @@
+name: CI
+
+# The single set of checks for the repo. Pull requests run it directly; pushes to main run it
+# through deploy.yml (workflow_call) so main is tested once and only deployed if it passes.
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Check committed save checkpoints
+        working-directory: frontend
+        run: |
+          npm run checkpoints
+          git diff --exit-code -- e2e/checkpoints
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+      - name: Agent harness and grader tests (no Gemini calls)
+        working-directory: frontend
+        run: node --test agent-tests/agent.test.mjs
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Playwright gameplay tests
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-evidence
+          path: frontend/test-results/
+          if-no-files-found: ignore
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt pytest pytest-asyncio
+      - name: Check backend imports
+        working-directory: backend
+        run: python -c "from app.main import app; print('backend OK')"
+      - name: Backend tests
+        working-directory: backend
+        # Includes the check that backend/advisor/game matches frontend/src/game;
+        # if it fails, run `python tools/sync_advisor_context.py` and commit the copies.
+        run: python -m pytest -q
+      - name: Deploy hook tests
+        working-directory: backend
+        run: python -m unittest discover -s ../deploy/hook -p test_hook.py

@@ -169,6 +169,25 @@ export function projectProduction(state, weatherKey = state.weather) {
 
   for (const k of ALL_RES) gain[k] = Math.max(0, Math.round(gain[k]))
   const net = Object.fromEntries(ALL_RES.map((k) => [k, gain[k] - use[k]]))
+
+  // Project happiness change on next action
+  const shortages = []
+  for (const k of METERS) {
+    if ((state.resources?.[k] || 0) + net[k] < 0) shortages.push(k)
+  }
+  let dh = 0
+  if (!shortages.length) dh += 1
+  if (net.food > 0) dh += 1
+  for (const k of shortages) dh -= 6
+  const house = housing(state)
+  if (state.population > house) dh -= 3
+  if (w.happiness) dh += w.happiness
+  const bh =
+    state.buildings.reduce((s, b) => s + (access[b.island] ? BUILDINGS[b.type].happiness || 0 : 0), 0) +
+    Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
+  if (bh) dh += bh
+  net.happiness = dh
+
   return { gain, use, net, sources }
 }
 

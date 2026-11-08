@@ -4,7 +4,7 @@ This describes the implemented game, not the aspirational design in `backend/adv
 
 ## Run locally and in CI
 
-From `frontend/`: `npm ci`, `npx playwright install chromium`, `npm test`, `npm run test:e2e`. Playwright launches Vite on `127.0.0.1:4173` with no backend. `.github/workflows/gameplay.yml` runs on pull requests and pushes to main; it checks that the committed save checkpoints match the generator, runs unit tests, then runs Chromium and uploads failure traces/screenshots. This does not trigger production deployment. To update checkpoints after a rules change, run `npm run checkpoints`, review the JSON diff, and commit the fixtures with the change.
+From `frontend/`: `npm ci`, `npx playwright install chromium`, `npm test`, `npm run test:e2e`. Playwright launches Vite on `127.0.0.1:4173` with no backend. `.github/workflows/ci.yml` runs on pull requests; on pushes to main, `.github/workflows/deploy.yml` runs it first and only deploys if it passes. It checks that the committed save checkpoints match the generator, runs frontend and agent-harness unit tests, builds, runs Chromium and uploads failure traces/screenshots, and runs the backend and deploy-hook tests. To update checkpoints after a rules change, run `npm run checkpoints`, review the JSON diff, and commit the fixtures with the change.
 
 ## Saves and setup
 
