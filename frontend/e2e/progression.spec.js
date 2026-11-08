@@ -377,6 +377,9 @@ test('a built storage house shows its capacity and accepts supplies directly', a
   await house.focus(); await page.keyboard.press('Enter')
   const dialog = page.getByRole('dialog', { name: 'Storage House', exact: true })
   await expect(dialog.getByText('125', { exact: true })).toHaveCount(3)
+  // level 2 (+25) and the house itself (+100) on top of a new town's 250
+  await expect(dialog).toContainText('Town storage')
+  await expect(dialog).toContainText(`/${250 + 25 + 100}`)
   await expect(dialog.getByRole('button', { name: 'Deposit All Here' })).toBeEnabled()
   await page.screenshot({ path: testInfo.outputPath('storage-house.png') })
   await dialog.getByRole('button', { name: 'Deposit All Here' }).click()

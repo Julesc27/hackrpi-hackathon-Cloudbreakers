@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, constructionResources, backpackUsed, storageDepots, storageUsed } from '../../game/engine.js'
-import { STORAGE_CAP } from '../../game/data.js'
+import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST, BUILDINGS, STORAGE_PER_LEVEL } from '../../game/data.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, constructionResources, backpackUsed, storageCapacity, storageDepots, storageUsed } from '../../game/engine.js'
 import '../../styles/storage.css'
 import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
@@ -139,8 +138,11 @@ export function StorageHouseModal() {
   const connected = storageDepots(state).some(depot => depot.id === building.id)
   const capacity = caps(state), carried = backpackUsed(state)
   return <Modal title="Storage House" kicker={ISLANDS[building.island].name} onClose={() => ui.setPanel(null)}>
-    <p>This storage house adds <strong>25 capacity each</strong> for food, water and energy. Your current town capacity is:</p>
-    <div className="storage-capacities">{['food','water','energy'].map(key => { const Icon = RES_ICON[key]; return <div key={key}><Icon size={24} /><span>{RESOURCES[key].label}</span><strong>{capacity[key]}</strong></div> })}</div>
+    <p>This storage house adds <strong>{BUILDINGS.storageHouse.storage} town storage</strong> and <strong>{BUILDINGS.storageHouse.capBonus} capacity each</strong> for food, water and energy. Your town now holds:</p>
+    <div className="storage-capacities">
+      <div><ArtIcon name="storage" size={24} /><span>Town storage</span><strong>{storageUsed(state.resources)}/{storageCapacity(state)}</strong></div>
+      {['food','water','energy'].map(key => { const Icon = RES_ICON[key]; return <div key={key}><Icon size={24} /><span>{RESOURCES[key].label}</span><strong>{capacity[key]}</strong></div> })}
+    </div>
     <h3 className="section">Unload supplies here</h3>
     <p>Connected storage houses accept backpack supplies and deliver them to shared town stock for building and upgrades.</p>
     <p><strong>{carried} items</strong> in your backpack.</p>
@@ -161,7 +163,8 @@ export function StorageModal() {
   const { gain, use, net } = projectProduction(state)
   const rows = Object.keys(RESOURCES)
   const used = storageUsed(state.resources)
-  const full = used >= STORAGE_CAP
+  const capacity = storageCapacity(state)
+  const full = used >= capacity
   return (
     <Modal
       title="Storehouse"
@@ -169,13 +172,14 @@ export function StorageModal() {
       onClose={() => ui.setPanel(null)}
     >
       <p className={`storage-total${full ? ' is-full' : ''}`} data-tutorial="storage-total" role="status">
-        <strong>{used}/{STORAGE_CAP}</strong>
-        {used > STORAGE_CAP
-          ? ' Storage is over 250. These supplies stay. Spend some before anything new can be stored.'
+        <strong>{used}/{capacity}</strong>
+        {used > capacity
+          ? ` Storage is over ${capacity}. These supplies stay. Spend some before anything new can be stored.`
           : full
             ? ' Storage is full. Spend wood, stone, food, water, seeds, fish, materials, or crystals to make room.'
             : ' Shared storage for wood, stone, food, seeds, water, fish, materials, and crystals. Energy and coins are separate.'}
       </p>
+      <p className="muted small" data-tutorial="storage-growth">Storage grows by {STORAGE_PER_LEVEL} every level, and each Storage House adds {BUILDINGS.storageHouse.storage}.</p>
       <p className="muted small">Town stock is available for building and upgrades. Supplies in your backpack become available here after you deposit them.</p>
       <table className="table" data-tutorial="storage-table">
         <thead>

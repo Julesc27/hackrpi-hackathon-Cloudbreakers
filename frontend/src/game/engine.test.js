@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORED_MATERIALS } from './data.js'
+import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORAGE_PER_LEVEL, STORED_MATERIALS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
+import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageCapacity, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -1222,4 +1222,47 @@ test('every save version up to the current one loads, including saves just writt
   for (let v = 2; v <= SAVE_VERSION; v++) assert.ok(isSupportedSave({ version: v }))
   for (const bad of [null, {}, { version: 1 }, { version: SAVE_VERSION + 1 }, { version: '7' }]) assert.equal(isSupportedSave(bad), false)
   assert.equal(migrateSave({ ...fresh, xp: 123 }).xp, 123)
+})
+
+test('town storage grows with the town: every level and every Storage House adds room', () => {
+  const base = createInitialState()
+  assert.equal(storageCapacity(base), STORAGE_CAP)
+  const level3 = { ...base, xp: LEVELS.find(l => l.level === 3).xp }
+  assert.equal(storageCapacity(level3), STORAGE_CAP + 2 * STORAGE_PER_LEVEL)
+  const house = { id: 'h1', type: 'storageHouse', island: 'newHaven', slot: 0, builtLevel: 2 }
+  const withHouse = { ...level3, buildings: [...level3.buildings, house] }
+  assert.equal(storageCapacity(withHouse), STORAGE_CAP + 2 * STORAGE_PER_LEVEL + BUILDINGS.storageHouse.storage)
+  assert.ok(BUILDINGS.storageHouse.storage >= 100)
+
+  // a pile that is full for a new town still has room once the town has grown
+  const pile = { ...base.resources, wood: base.resources.wood + (STORAGE_CAP - storageUsed(base.resources)) }
+  assert.equal(storageUsed(pile), STORAGE_CAP)
+  const atCollector = { player: { island: 'newHaven', x: 635, y: 610 } }
+  assert.match(gatherAvailability({ ...base, ...atCollector, resources: pile }, 'collector', 1), /Storage is full \(250\/250\)/)
+  const grown = { ...withHouse, ...atCollector, resources: pile }
+  assert.equal(gatherAvailability(grown, 'collector', 1), null)
+  const gathered = gameReducer(grown, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
+  assert.ok(gathered.resources.water > pile.water)
+  assert.ok(storageUsed(gathered.resources) > STORAGE_CAP && storageUsed(gathered.resources) <= storageCapacity(gathered))
+
+  // removing the house shrinks the room again, but nothing already stored is thrown away
+  const crowded = { ...withHouse, resources: { ...base.resources, wood: base.resources.wood + storageCapacity(withHouse) - storageUsed(base.resources) } }
+  const shrunk = { ...crowded, buildings: base.buildings }
+  assert.ok(storageUsed(shrunk.resources) > storageCapacity(shrunk))
+  assert.equal(storageAccepts(shrunk.resources, { wood: 1 }, storageCapacity(shrunk)), false)
+  assert.equal(storageAccepts(shrunk.resources, { wood: -5 }, storageCapacity(shrunk)), true)
+})
+
+test('passive production keeps filling a grown town past the starting 250', () => {
+  const base = createInitialState()
+  const house = { id: 'h1', type: 'storageHouse', island: 'newHaven', slot: 0, builtLevel: 2 }
+  const garden = { id: 'g1', type: 'garden', island: 'newHaven', slot: 1, builtLevel: 2 }
+  const town = { ...base, xp: 100, buildings: [...base.buildings, house, garden] }
+  const start = { ...town.resources, food: 20, water: 80 }
+  start.wood += STORAGE_CAP + 20 - storageUsed(start) // over the starting cap, well under this town's
+  assert.ok(storageUsed(start) > STORAGE_CAP && storageUsed(start) < storageCapacity(town) - 10)
+  const after = gameReducer({ ...town, resources: start }, { type: 'END_TURN' })
+  const ticked = after.resources.food !== start.food ? after : gameReducer({ ...town, resources: start }, { type: 'GATHER_AT_SITE', siteId: 'grove', now: 1 })
+  assert.ok(ticked.resources.food > start.food, `food ${start.food} -> ${ticked.resources.food}`)
+  assert.ok(storageUsed(ticked.resources) <= storageCapacity(ticked))
 })

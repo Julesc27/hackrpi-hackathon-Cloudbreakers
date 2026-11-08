@@ -1,8 +1,8 @@
 // Regenerate committed checkpoints from real game actions, never from manually edited stats.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { GATHER_SITES, ROUTE_MAP, ISLANDS, BRIDGE_TYPES, STORAGE_CAP } from '../src/game/data.js'
-import { backpackUsed, backpackCapacity, bridgeCost, createInitialState, gameReducer, storageAccepts, storageUsed } from '../src/game/engine.js'
+import { GATHER_SITES, ROUTE_MAP, ISLANDS, BRIDGE_TYPES } from '../src/game/data.js'
+import { backpackUsed, backpackCapacity, bridgeCost, createInitialState, gameReducer, storageAccepts, storageCapacity, storageUsed } from '../src/game/engine.js'
 import { Player } from '../src/game/player.js'
 
 // A fixed clock keeps regrowth deterministic. Date.now() would change every
@@ -17,7 +17,7 @@ export function generateTowns() {
   // player, so they count towards town stock.
   const depositBackpack = () => {
     if (!backpackUsed(town)) return true
-    if (!storageAccepts(town.resources, town.backpack)) return false
+    if (!storageAccepts(town.resources, town.backpack, storageCapacity(town))) return false
     const captain = new Player(town)
     captain.onSave = (position) => act({ type: 'PLAYER_POSITION', position })
     if (!captain.request({ type: 'DEPOSIT_BACKPACK' }, (action) => { act(action); captain.sync(town) })) throw new Error('Cannot reach town storage')
@@ -87,7 +87,7 @@ export function generateTowns() {
     act({ type: 'BUILD_BRIDGE', routeId, bridgeType: 'rope' })
     if (!town.bridges.some((b) => b.route === routeId)) throw new Error(`Could not build ${routeId}`)
   }
-  if (storageUsed(town.resources) + backpackCapacity(town) > STORAGE_CAP) throw new Error(`all-bridges checkpoint is too full to deposit a backpack (${storageUsed(town.resources)}/${STORAGE_CAP})`)
+  if (storageUsed(town.resources) + backpackCapacity(town) > storageCapacity(town)) throw new Error(`all-bridges checkpoint is too full to deposit a backpack (${storageUsed(town.resources)}/${storageCapacity(town)})`)
   towns['all-bridges'] = snap()
 
   act({ type: 'RESTORE_BEACON' })

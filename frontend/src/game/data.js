@@ -7,7 +7,10 @@ export const BASE_HOUSING = 6
 export const BASE_CAP = 100
 export const GATHER_AMOUNT = 6
 // One shared pile for gathered goods. Not per material, and not energy, coins, or XP.
+// STORAGE_CAP is a new town's room; it grows as the town does (see storageCapacity in engine.js):
+// every level after the first adds STORAGE_PER_LEVEL and each Storage House adds its `storage`.
 export const STORAGE_CAP = 250
+export const STORAGE_PER_LEVEL = 25
 export const STORED_MATERIALS = ['wood', 'stone', 'food', 'seeds', 'water', 'fish', 'materials', 'crystals']
 
 export const RESOURCES = {
@@ -158,8 +161,8 @@ export const BUILDINGS = {
     desc: 'Raised beds of greens and roots.',
   },
   storageHouse: {
-    name: 'Storage House', category: 'Survival', cost: { wood: 12, stone: 4 }, capBonus: 25,
-    desc: 'Adds 25 capacity each for water, food and energy. Drop off backpack supplies here while its island is connected.',
+    name: 'Storage House', category: 'Survival', cost: { wood: 12, stone: 4 }, capBonus: 25, storage: 100,
+    desc: 'Adds 100 town storage and 25 capacity each for water, food and energy. Drop off backpack supplies here while its island is connected.',
   },
   solarFarm: {
     name: 'Solar Farm', category: 'Renewable', cost: { wood: 12, coins: 30, crystals: 3, materials: 2 }, prod: { energy: 5 }, renewable: true,

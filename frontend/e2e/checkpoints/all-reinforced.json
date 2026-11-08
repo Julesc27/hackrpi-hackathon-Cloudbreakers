@@ -17,15 +17,15 @@
   "avatarSet": false,
   "resources": {
     "wood": 9,
-    "water": 73,
+    "water": 95,
     "food": 82,
     "energy": 62,
     "coins": 151,
     "stone": 35,
     "seeds": 14,
-    "crystals": 12,
-    "materials": 18,
-    "fish": 7
+    "crystals": 23,
+    "materials": 33,
+    "fish": 11
   },
   "backpack": {
     "wood": 0,

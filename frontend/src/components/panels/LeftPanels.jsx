@@ -162,7 +162,8 @@ export function BuildPanel() {
             const fx = []
 
             if (def.housing) fx.push(`Houses ${def.housing}`)
-            if (def.capBonus) fx.push(`+${def.capBonus} storage`)
+            if (def.storage) fx.push(`+${def.storage} town storage`)
+            if (def.capBonus) fx.push(`+${def.capBonus} water, food & energy cap`)
             if (def.energyCap) fx.push(`+${def.energyCap} energy storage`)
             if (def.happiness) fx.push(`${def.happiness > 0 ? '+' : ''}${def.happiness} happiness`)
 
