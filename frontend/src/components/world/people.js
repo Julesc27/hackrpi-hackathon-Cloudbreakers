@@ -559,8 +559,14 @@ function drawPersonFar(ctx, a) {
 const EYES = [[0.5, 0.12, 0.26], [1.45, 0.08, 0.25]]
 function drawEyes(ctx, a, hy) {
   const ink = '#2a1f2e', iris = a.eyeColor || ink, style = a.eyes || 'round'
-  for (const [i, [ex, dy, r0]] of EYES.entries()) {
+  const man = a.body === 'man', woman = a.body === 'woman'
+  const browCol = col(shade(a.hair || '#3b2a1e', 0.75))
+  for (const [i, [ex, dy, base]] of EYES.entries()) {
     const ey = hy + dy
+    const r0 = base * (man ? 0.82 : woman ? 1.08 : 1)
+    // brows: thick and straight for men, thin and arched for women
+    if (man) line(ctx, ex - 0.36, ey - 0.6 - (i ? 0.02 : 0.06), ex + 0.36, ey - 0.62, browCol, 0.26, 'round')
+    else if (woman) { ctx.beginPath(); ctx.arc(ex, ey + 0.08, 0.5, Math.PI * 1.25, Math.PI * 1.75); ctx.strokeStyle = browCol; ctx.lineWidth = 0.11; ctx.lineCap = 'round'; ctx.stroke() }
     if (style === 'happy') {
       ctx.beginPath(); ctx.arc(ex, ey + 0.12, r0 * 1.15, Math.PI * 1.1, Math.PI * 1.9)
       ctx.strokeStyle = ink; ctx.lineWidth = 0.2; ctx.lineCap = 'round'; ctx.stroke()
@@ -568,9 +574,16 @@ function drawEyes(ctx, a, hy) {
     }
     const r = style === 'wide' ? r0 * 1.45 : r0
     if (style === 'wide') circle(ctx, ex, ey, r + 0.08, '#ffffff')
-    circle(ctx, ex, ey, r, iris)
-    if (iris !== ink) circle(ctx, ex + 0.03, ey + 0.02, r * 0.5, ink)
-    circle(ctx, ex + r * 0.35, ey - r * 0.4, r * 0.32, 'rgba(255,255,255,.95)')
+    if (man) {
+      // a little narrower: an oval rather than a round dot
+      ctx.beginPath(); ctx.ellipse(ex, ey, r, r * 0.8, 0, 0, TAU); ctx.fillStyle = iris; ctx.fill()
+      if (iris !== ink) { ctx.beginPath(); ctx.ellipse(ex + 0.03, ey + 0.02, r * 0.5, r * 0.42, 0, 0, TAU); ctx.fillStyle = ink; ctx.fill() }
+      circle(ctx, ex + r * 0.35, ey - r * 0.3, r * 0.24, 'rgba(255,255,255,.9)')
+    } else {
+      circle(ctx, ex, ey, r, iris)
+      if (iris !== ink) circle(ctx, ex + 0.03, ey + 0.02, r * 0.5, ink)
+      circle(ctx, ex + r * 0.35, ey - r * 0.4, r * 0.32, 'rgba(255,255,255,.95)')
+    }
     if (style === 'sleepy') {
       // a heavy upper lid over the top half
       ctx.beginPath(); ctx.arc(ex, ey, r + 0.06, Math.PI, Math.PI * 2); ctx.closePath()
@@ -667,15 +680,20 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
   }
   const body = new Path2D()
   if (a.body === 'woman') {
-    // narrower shoulders and a waist
-    body.moveTo(-2.2, hip + 0.6); body.quadraticCurveTo(-1.3, hip - 2.3, -1.85, top + 1.2)
-    body.quadraticCurveTo(0, top - 0.8, 1.85, top + 1.2); body.quadraticCurveTo(1.3, hip - 2.3, 2.2, hip + 0.6)
+    // narrow, rounded shoulders, a pinched waist and a hem that flares over the hips
+    body.moveTo(-2.55, hip + 0.7); body.quadraticCurveTo(-1.0, hip - 1.6, -1.65, top + 1.3)
+    body.quadraticCurveTo(0, top - 0.7, 1.65, top + 1.3); body.quadraticCurveTo(1.0, hip - 1.6, 2.55, hip + 0.7)
+    body.quadraticCurveTo(0, hip + 1.5, -2.55, hip + 0.7)
+  } else if (a.body === 'man') {
+    // broad, square shoulders and a straight cut
+    body.moveTo(-2.3, hip + 0.6); body.lineTo(-2.6, top + 1.5); body.quadraticCurveTo(-2.55, top + 0.4, -1.6, top + 0.25)
+    body.lineTo(1.6, top + 0.25); body.quadraticCurveTo(2.55, top + 0.4, 2.6, top + 1.5); body.lineTo(2.3, hip + 0.6)
+    body.quadraticCurveTo(0, hip + 1.2, -2.3, hip + 0.6)
   } else {
-    const sh = a.body === 'man' ? 2.35 : 2.1
-    body.moveTo(-2.4, hip + 0.6); body.lineTo(-sh, top + 1.2)
-    body.quadraticCurveTo(0, top - 0.9, sh, top + 1.2); body.lineTo(2.4, hip + 0.6)
+    body.moveTo(-2.4, hip + 0.6); body.lineTo(-2.1, top + 1.2)
+    body.quadraticCurveTo(0, top - 0.9, 2.1, top + 1.2); body.lineTo(2.4, hip + 0.6)
+    body.quadraticCurveTo(0, hip + 1.4, -2.4, hip + 0.6)
   }
-  body.quadraticCurveTo(0, hip + 1.4, a.body === 'woman' ? -2.2 : -2.4, hip + 0.6)
   ctx.fillStyle = col(a.shirt); ctx.fill(body)
   // soft shading on the side away from the light, then the painted outline
   ctx.save(); ctx.clip(body)
@@ -700,6 +718,8 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
 
   // arms
   const armSwing = walking ? -swing * 1.6 : a.act === 'chat' ? Math.sin(a.phase * 1.3) * 1.4 : 0
+  // arms hang from the shoulders: wider and a touch thicker on the man, narrower on the woman
+  const armX = a.body === 'man' ? 2.0 : a.body === 'woman' ? 1.5 : 1.7, armW = a.body === 'man' ? 1.4 : a.body === 'woman' ? 1.1 : 1.2
   const sleeve = col(a.coat ? a.shirt : shade(a.shirt, 0.92))
   const hand = col(a.skin)
   if (working) {
@@ -744,11 +764,11 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     }
   } else {
     const wave = a.act === 'chat' ? -1.6 : 0
-    line(ctx, 1.7, top + 1.6, 2.3 + armSwing * 0.6, hip - 0.4 + wave, sleeve, 1.2)
-    circle(ctx, 2.3 + armSwing * 0.6, hip - 0.1 + wave, 0.55, hand)
+    line(ctx, armX, top + 1.6, armX + 0.6 + armSwing * 0.6, hip - 0.4 + wave, sleeve, armW)
+    circle(ctx, armX + 0.6 + armSwing * 0.6, hip - 0.1 + wave, 0.55, hand)
   }
-  line(ctx, -1.7, top + 1.6, -2.3 - armSwing * 0.6, hip - 0.4, col(shade(a.shirt, 0.75)), 1.2)
-  circle(ctx, -2.3 - armSwing * 0.6, hip - 0.1, 0.55, hand)
+  line(ctx, -armX, top + 1.6, -armX - 0.6 - armSwing * 0.6, hip - 0.4, col(shade(a.shirt, 0.75)), armW)
+  circle(ctx, -armX - 0.6 - armSwing * 0.6, hip - 0.1, 0.55, hand)
 
   // scarf tails streaming behind
   if (a.scarf) {
@@ -790,9 +810,14 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
   if (!a.back) {
     // a face: two eyes (see drawEyes), a rosy cheek and a small smile
     drawEyes(ctx, a, hy)
-    circle(ctx, 1.6, hy + 0.75, 0.38, 'rgba(232,120,110,.45)')
-    ctx.beginPath(); ctx.arc(1.0, hy + 0.85, 0.38, Math.PI * 0.2, Math.PI * 0.8)
-    ctx.strokeStyle = 'rgba(90,40,40,.75)'; ctx.lineWidth = 0.2; ctx.lineCap = 'round'; ctx.stroke()
+    if (a.body !== 'man') {
+      ctx.save(); ctx.beginPath(); ctx.arc(0, hy, 1.95, 0, TAU); ctx.clip()
+      ctx.beginPath(); ctx.ellipse(1.45, hy + 0.62, 0.42, 0.22, 0, 0, TAU); ctx.fillStyle = 'rgba(236,128,128,.32)'; ctx.fill()
+      ctx.beginPath(); ctx.ellipse(0.3, hy + 0.66, 0.32, 0.18, 0, 0, TAU); ctx.fillStyle = 'rgba(236,128,128,.22)'; ctx.fill()
+      ctx.restore()
+    }
+    ctx.beginPath(); ctx.arc(0.95, hy + 0.82, a.body === 'woman' ? 0.36 : 0.3, Math.PI * 0.2, Math.PI * 0.8)
+    ctx.strokeStyle = a.body === 'woman' ? '#b8505e' : 'rgba(80,40,36,.8)'; ctx.lineWidth = a.body === 'woman' ? 0.24 : 0.17; ctx.lineCap = 'round'; ctx.stroke()
     if (a.beard && a.beard !== 'none') {
       // along the jaw, below the cheeks, leaving a little gap for the mouth
       ctx.beginPath(); ctx.arc(0, hy, 2.15, Math.PI * 0.08, Math.PI * 0.82)
@@ -810,9 +835,9 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
       ctx.fillStyle = col('#bfe3ff'); ctx.fill(); ctx.strokeStyle = col('#e3c27a'); ctx.lineWidth = 0.35; ctx.stroke()
     }
   } else if (a.hat === 'straw') {
-    ellipse(ctx, 0, hy - 1.3, 3.6, 1.05, col('#e8c77a'), OUTLINE, 0.3)
-    ellipse(ctx, 0, hy - 1.9, 1.9, 1.15, col('#f3d98f'))
-    ctx.fillStyle = col('#c0603e'); ctx.fillRect(-1.9, hy - 1.8, 3.8, 0.5)
+    ellipse(ctx, 0, hy - 1.55, 3.6, 0.95, col('#e8c77a'), OUTLINE, 0.3)
+    ellipse(ctx, 0, hy - 2.15, 1.9, 1.15, col('#f3d98f'))
+    ctx.fillStyle = col('#c0603e'); ctx.fillRect(-1.9, hy - 2.05, 3.8, 0.5)
   } else if (a.hat === 'cap') {
     ctx.beginPath(); ctx.arc(0, hy - 0.5, 2.2, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath()
     ctx.fillStyle = col('#1f2d6a'); ctx.fill()
@@ -820,11 +845,12 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     ellipse(ctx, 1.4, hy - 0.7, 1.6, 0.4, col('#1f2d6a'))
   } else if (a.hat === 'captain') {
     // a navy captain's hat with gold trim
-    ctx.beginPath(); ctx.moveTo(-1.9, hy - 0.8); ctx.quadraticCurveTo(-2.1, hy - 3.3, 0, hy - 3.4); ctx.quadraticCurveTo(2.1, hy - 3.3, 1.9, hy - 0.8); ctx.closePath()
+    // sits on the crown of the head, brim above the brows
+    ctx.beginPath(); ctx.moveTo(-1.85, hy - 1.3); ctx.quadraticCurveTo(-2.05, hy - 3.7, 0, hy - 3.8); ctx.quadraticCurveTo(2.05, hy - 3.7, 1.85, hy - 1.3); ctx.closePath()
     ctx.fillStyle = col('#24357a'); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.35; ctx.stroke()
-    ctx.fillStyle = col('#e3c27a'); ctx.fillRect(-1.95, hy - 1.45, 3.9, 0.5)
-    ellipse(ctx, 0.5, hy - 0.75, 3, 0.7, col('#1a2766'), col('#e3c27a'), 0.35)
-    if (!a.back) circle(ctx, 0.5, hy - 2.25, 0.5, col('#f3d98f'))
+    ctx.fillStyle = col('#e3c27a'); ctx.fillRect(-1.9, hy - 1.9, 3.8, 0.45)
+    ellipse(ctx, 0.45, hy - 1.22, 2.85, 0.55, col('#1a2766'), col('#e3c27a'), 0.35)
+    if (!a.back) circle(ctx, 0.5, hy - 2.65, 0.45, col('#f3d98f'))
   } else if (a.hat === 'hood') {
     // the hood's rim frames the face instead of covering it
     ctx.beginPath()
