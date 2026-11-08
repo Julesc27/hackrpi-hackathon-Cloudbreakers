@@ -31,13 +31,20 @@ test('a step budget outlasts one slow answer, so a timeout is retried instead of
 })
 
 // Stubbed Gemini: plays back a script of responses; 'timeout' waits until the request's own abort signal fires.
+// AbortSignal.timeout's timer does not keep Node alive (a real socket would), so the stub holds a timer open itself;
+// without it Node 20 exits mid-test and cancels every later test.
 async function withGemini(script, run) {
   const realFetch = globalThis.fetch
   const realLog = console.log
   let calls = 0
   globalThis.fetch = (url, { signal }) => {
     const next = script[Math.min(calls++, script.length - 1)]
-    if (next === 'timeout') return new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)))
+    if (next === 'timeout') {
+      return new Promise((_, reject) => {
+        const keepAlive = setInterval(() => {}, 1_000)
+        signal.addEventListener('abort', () => { clearInterval(keepAlive); reject(signal.reason) })
+      })
+    }
     const [status, payload] = next
     return Promise.resolve(new Response(JSON.stringify(payload), { status }))
   }
