@@ -1,6 +1,20 @@
 {
   "version": 6,
   "townName": "New Haven",
+  "avatar": {
+    "body": "woman",
+    "skin": "#e2b08a",
+    "eyes": "lashes",
+    "eyeColor": "#5a3a24",
+    "hairStyle": "ponytail",
+    "hair": "#6b4426",
+    "beard": "none",
+    "outfit": "coat",
+    "top": "#2c4fb0",
+    "bottom": "#3a3550",
+    "hat": "captain"
+  },
+  "avatarSet": false,
   "resources": {
     "wood": 24,
     "water": 30,

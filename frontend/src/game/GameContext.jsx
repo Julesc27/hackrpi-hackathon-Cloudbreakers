@@ -44,7 +44,7 @@ export function GameProvider({ children }) {
   useEffect(() => {
     if (resetPlayer.current) { Object.assign(player.current, new Player(state)); resetPlayer.current = false }
     else player.current.sync(state)
-  }, [state.bridges, state.connected, state.buildings])
+  }, [state.bridges, state.connected, state.buildings, state.avatar])
 
   // Local backup on every change; CloudSync also saves logged-in towns to the server.
   useEffect(() => {

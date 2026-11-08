@@ -97,6 +97,8 @@
 .route-btn { transition: transform 0.15s; transform-box: fill-box; transform-origin: 50% 35%; transform: scale(var(--ui-k, 1)); }
 .ghost-route:hover .route-btn { transform: scale(calc(var(--ui-k, 1) * 1.1)); }
 .ui-scale { transform: scale(var(--ui-k, 1)); transform-box: fill-box; transform-origin: center; }
+.travel-hint { pointer-events: none; }
+.travel-hint-text { font-family: var(--font-body); font-weight: 700; font-size: 13px; fill: #ffe5a8; }
 @keyframes pulse { from { transform: scale(0.85); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
 .route-cost { font-family: var(--font-body); font-weight: 800; font-size: 13px; fill: #f3e6c4; }
 .ghost-route.is-locked .route-cost { fill: #a9b4dd; }

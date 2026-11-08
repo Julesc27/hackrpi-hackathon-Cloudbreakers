@@ -24,11 +24,13 @@ import {
 } from './components/panels/Modals.jsx'
 import Tutorial from './components/tutorial/Tutorial.jsx'
 import PlayerControls from './components/hud/PlayerControls.jsx'
+import { CaptainModal, useCaptainOnboarding } from './components/panels/CaptainModal.jsx'
 
 function GameScreen() {
   const { state } = useGame()
   const ui = useUI()
   const auth = useAuth()
+  useCaptainOnboarding()
 
   useEffect(() => {
     const onKey = (e) => {
@@ -77,16 +79,17 @@ function GameScreen() {
       {ui.panel === 'store' && <StoreModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
+      {ui.panel === 'captain' && <CaptainModal />}
       {ui.panel === 'bridges' && <BridgeAnchorModal />}
       {ui.bridgeRoute && <BridgeModal />}
 
       {auth.loginOpen && <AuthModal />}
 
-      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && (
+      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && ui.panel !== 'captain' && (
         <IntroModal />
       )}
 
-      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && (
+      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && ui.panel !== 'captain' && (
         <Tutorial />
       )}
 

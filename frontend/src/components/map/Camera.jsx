@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import { ISLANDS } from '../../game/data.js'
+import { DRAG_THRESHOLD } from '../../game/travelInput.js'
 
 // The playable world is larger than the painted art: the 1600x900 concept frame sits in
 // the middle of a WORLD-sized sky the player can pan around, like Dragon City / Homescapes.
 export const WORLD = { x: -520, y: -380, w: 2840, h: 1660 }
 const HOME = { x: 810, y: 540 }
-const DRAG_THRESHOLD = 6
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
@@ -274,6 +274,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     }
 
     const onDbl = (e) => {
+      if (suppressClick) { e.stopPropagation(); e.preventDefault(); return }
       const p = local(e)
       if (e.target.closest?.('.no-dblzoom, [role=button], button, a, input, select, textarea')) return
       stop()
