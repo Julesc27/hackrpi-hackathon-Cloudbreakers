@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { generateTowns } from './generate-checkpoints.js'
-import { backpackCapacity, backpackUsed, gameReducer, migrateSave, storageUsed } from '../src/game/engine.js'
+import { backpackCapacity, backpackUsed, gameReducer, migrateSave, storageUsed, storageCapacity } from '../src/game/engine.js'
 import { STORAGE_CAP, MISSIONS } from '../src/game/data.js'
 import { Player } from '../src/game/player.js'
 
