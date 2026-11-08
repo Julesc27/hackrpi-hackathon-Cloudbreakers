@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS } from './data.js'
+import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORED_MATERIALS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, removalInfo, bridgeCost, openRoutes } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -1035,4 +1035,100 @@ test('player level progression supports levels 1 to 20 with increasing XP requir
   assert.equal(beyondInfo.level, 20)
   assert.equal(beyondInfo.next, null)
   assert.equal(beyondInfo.progress, 1)
+})
+
+test('town storage is one shared pile of 250 gathered materials', () => {
+  const base = createInitialState()
+  assert.deepEqual(STORED_MATERIALS, ['wood', 'stone', 'food', 'seeds', 'water', 'fish', 'materials', 'crystals'])
+  assert.equal(storageUsed(base.resources), 88)
+  const room = STORAGE_CAP - storageUsed(base.resources)
+  const full = { ...base, resources: { ...base.resources, wood: base.resources.wood + room }, player: { island: 'newHaven', x: 635, y: 610 } }
+  assert.equal(storageUsed(full.resources), 250)
+  assert.equal(storageAccepts(full.resources, { water: 3 }), false)
+  assert.equal(storageAccepts(full.resources, { wood: -10, stone: -2 }), true)
+  const blockedWater = gameReducer(full, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
+  assert.equal(blockedWater.resources.water, full.resources.water)
+  assert.equal(blockedWater.deposits.collector.stock, full.deposits.collector.stock)
+  assert.equal(blockedWater.xp, full.xp)
+  assert.match(gatherAvailability(full, 'collector', 1), /Storage is full \(250\/250\)/)
+  const near = { ...base, resources: { ...base.resources, wood: base.resources.wood + room - 2 } }
+  assert.equal(storageUsed(near.resources), 248)
+  const short = gameReducer(near, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
+  assert.equal(short.resources.water, near.resources.water)
+  assert.equal(short.deposits.collector.stock, near.deposits.collector.stock)
+  const exact = { ...base, resources: { ...base.resources, wood: base.resources.wood + room - 3 } }
+  const filled = gameReducer(exact, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
+  assert.equal(filled.lastInteraction.siteId, 'collector')
+  assert.equal(filled.deposits.collector.stock, exact.deposits.collector.stock - 3)
+  assert.ok(filled.resources.water > exact.resources.water)
+  assert.ok(storageUsed(filled.resources) <= STORAGE_CAP)
+  const fisher = { ...full, connected: ['newHaven', 'rain'], bridges: [{ route: 'rain-haven', type: 'rope', condition: 100 }] }
+  const blockedFish = gameReducer(fisher, { type: 'GATHER_AT_SITE', siteId: 'fishing', now: 1 })
+  assert.equal(blockedFish.resources.food, fisher.resources.food)
+  assert.equal(blockedFish.backpack.fish || 0, 0)
+  assert.equal(blockedFish.deposits.fishing.stock, fisher.deposits.fishing.stock)
+  assert.equal(blockedFish.xp, fisher.xp)
+  const noGarden = gameReducer(full, { type: 'GATHER_AT_SITE', siteId: 'garden', now: 1 })
+  assert.equal(noGarden.resources.seeds, full.resources.seeds)
+  assert.equal(noGarden.resources.food, full.resources.food)
+  assert.equal(noGarden.deposits.garden.stock, full.deposits.garden.stock)
+  assert.equal(noGarden.xp, full.xp)
+  const carrying = { ...full, backpack: { ...full.backpack, wood: 6 } }
+  const kept = gameReducer(carrying, { type: 'DEPOSIT_BACKPACK' })
+  assert.equal(kept.backpack.wood, 6)
+  assert.equal(kept.resources.wood, carrying.resources.wood)
+  const spent = gameReducer(carrying, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
+  assert.equal(spent.resources.wood, carrying.resources.wood - 10)
+  assert.equal(spent.backpack.wood, 6)
+  assert.ok(storageUsed(spent.resources) < STORAGE_CAP)
+  const unloaded = gameReducer(spent, { type: 'DEPOSIT_BACKPACK' })
+  assert.equal(unloaded.backpack.wood || 0, 0)
+  assert.equal(unloaded.resources.wood, spent.resources.wood + 6)
+  const over = { ...base, resources: { ...base.resources, wood: 400 } }
+  assert.ok(storageUsed(over.resources) > STORAGE_CAP)
+  const migrated = migrateSave(over)
+  assert.equal(migrated.resources.wood, 400)
+  const stillOver = gameReducer(migrated, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
+  assert.equal(stillOver.resources.wood, 400)
+  assert.equal(stillOver.resources.water, migrated.resources.water)
+  const reduced = gameReducer(migrated, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
+  assert.equal(reduced.resources.wood, 390)
+  const mixed = { wood: 40, stone: 40, food: 40, seeds: 40, water: 40, fish: 20, materials: 20, crystals: 10, energy: 99, coins: 500, happiness: 80 }
+  assert.equal(storageUsed(mixed), 250)
+  assert.equal(storageAccepts(mixed, { crystals: 1 }), false)
+  assert.equal(storageAccepts(mixed, { energy: 40, coins: 40 }), true)
+  const verdant = { ...full, connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }] }
+  const foraged = gameReducer(verdant, { type: 'GATHER_AT_SITE', siteId: 'forage', now: 1 })
+  assert.equal(foraged.resources.food, verdant.resources.food)
+  assert.equal(foraged.resources.seeds, verdant.resources.seeds)
+  assert.equal(foraged.backpack.seeds || 0, 0)
+  assert.equal(foraged.deposits.forage.stock, verdant.deposits.forage.stock)
+  assert.equal(foraged.xp, verdant.xp)
+  assert.equal(foraged.resources.coins, verdant.resources.coins)
+  const pinned = {
+    ...full,
+    connected: ['newHaven', 'verdant', 'prism'],
+    bridges: [
+      { route: 'verdant-haven', type: 'rope', condition: 100 },
+      { route: 'prism-haven', type: 'rope', condition: 100 },
+    ],
+  }
+  const salvaged = gameReducer(pinned, { type: 'GATHER_AT_SITE', siteId: 'salvage', now: 1 })
+  assert.equal(salvaged.backpack.materials, 3)
+  assert.equal(salvaged.backpack.stone, 2)
+  assert.equal(salvaged.deposits.salvage.stock, pinned.deposits.salvage.stock - 3)
+  assert.ok(storageUsed(salvaged.resources) <= STORAGE_CAP)
+  const stillPacked = gameReducer({ ...salvaged, player: { island: 'newHaven', x: 635, y: 610 } }, { type: 'DEPOSIT_BACKPACK' })
+  assert.equal(stillPacked.backpack.materials, 3)
+  assert.equal(stillPacked.backpack.stone, 2)
+  assert.equal(storageUsed(stillPacked.resources), storageUsed(salvaged.resources))
+  const rich = { ...full, resources: { ...full.resources, energy: 40, coins: 80 } }
+  const unpaid = gameReducer(rich, { type: 'CONSULT_GODS', poem: '  ' })
+  assert.equal(unpaid.resources.coins, rich.resources.coins)
+  assert.equal(unpaid.resources.energy, rich.resources.energy)
+  const paid = gameReducer(rich, { type: 'CONSULT_GODS', poem: 'The grove keeps its own counsel.', focus: 'wood' })
+  assert.equal(paid.resources.coins, rich.resources.coins - 50)
+  assert.equal(paid.resources.energy, rich.resources.energy - 25)
+  assert.equal(storageUsed(paid.resources), STORAGE_CAP)
+  assert.equal(paid.resources.wood, rich.resources.wood)
 })

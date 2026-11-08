@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { GATHER_SITES, ROUTE_MAP } from '../src/game/data.js'
-import { backpackUsed, bridgeCost, createInitialState, gameReducer } from '../src/game/engine.js'
+import { backpackUsed, bridgeCost, createInitialState, gameReducer, storageAccepts, storageUsed } from '../src/game/engine.js'
 import { Player } from '../src/game/player.js'
 
 // A fixed clock keeps regrowth deterministic. Date.now() would change every
@@ -16,12 +16,14 @@ export function generateTowns() {
   // Materials go into the Captain's backpack; walk them home and deposit them, just like a
   // player, so they count towards town stock.
   const depositBackpack = () => {
-    if (!backpackUsed(town)) return
+    if (!backpackUsed(town)) return true
+    if (!storageAccepts(town.resources, town.backpack)) return false
     const captain = new Player(town)
     captain.onSave = (position) => act({ type: 'PLAYER_POSITION', position })
     if (!captain.request({ type: 'DEPOSIT_BACKPACK' }, (action) => { act(action); captain.sync(town) })) throw new Error('Cannot reach town storage')
     for (let i = 0; captain.pending && i < 2000; i++) captain.update(0.1)
     if (backpackUsed(town)) throw new Error('Checkpoint supplies were not deposited')
+    return true
   }
 
   const readyStock = (siteId) => {
@@ -57,9 +59,6 @@ export function generateTowns() {
     }
   }
 
-  const woodSites = () => (town.connected.includes('verdant') ? ['forest', 'grove'] : ['grove'])
-  const stoneSites = () => (town.connected.includes('prism') ? ['salvage', 'stone'] : ['stone'])
-
   const towns = {}
   towns['new-town'] = snap()
 
@@ -73,25 +72,34 @@ export function generateTowns() {
   if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')
   towns['anchor-ready'] = snap()
 
-  for (const routeId of ['verdant-haven', 'rain-haven', 'prism-haven', 'mercy-haven', 'hearth-haven']) {
-    fill('wood', ROUTE_MAP[routeId].wood, woodSites())
+  // Bank stone and the wood for every rope and reinforcement while only New
+  // Haven is producing. Once the outer islands are open, each gather also
+  // deposits their yields and the shared pile pins at 250 before the last
+  // reinforcement can be paid for. Leave enough free space that the rope-only
+  // town can still take a full backpack.
+  const routes = ['verdant-haven', 'rain-haven', 'prism-haven', 'mercy-haven', 'hearth-haven']
+  const ropeWood = routes.reduce((sum, id) => sum + ROUTE_MAP[id].wood, 0)
+  const upgradeWood = routes.reduce((sum, id) => sum + Math.ceil(bridgeCost(ROUTE_MAP[id], 'reinforced').wood / 2), 0)
+  fill('stone', 40, ['stone'])
+  fill('wood', ropeWood + upgradeWood, ['grove'])
+  for (const routeId of routes) {
     act({ type: 'BUILD_BRIDGE', routeId, bridgeType: 'rope' })
     if (!town.bridges.some((b) => b.route === routeId)) throw new Error(`Could not build ${routeId}`)
   }
+  if (storageUsed(town.resources) + 20 > 250) throw new Error(`all-bridges checkpoint is too full to deposit a backpack (${storageUsed(town.resources)}/250)`)
   towns['all-bridges'] = snap()
 
-  fill('materials', 2, ['salvage'])
-  fill('wood', 15, woodSites())
+  act({ type: 'RESTORE_BEACON' })
+  if (!town.beaconRestored) throw new Error(`Beacon was not restored (wood ${town.resources.wood}, energy ${town.resources.energy})`)
+  // The reinforced checkpoint has always included a market. Build it from
+  // stock already in town so the action does not depend on another deposit.
   act({ type: 'BUILD', buildingType: 'market', island: 'newHaven', slot: 1 })
-  if (!town.buildings.some((b) => b.type === 'market')) throw new Error('Could not build the upgrade checkpoint market')
-  for (const bridge of town.bridges) {
-    const full = bridgeCost(ROUTE_MAP[bridge.route], 'reinforced')
-    const cost = { wood: Math.ceil(full.wood / 2), coins: full.coins, stone: full.stone }
-    fill('wood', cost.wood, woodSites())
-    fill('stone', cost.stone, stoneSites())
-    fill('coins', cost.coins, woodSites())
-    act({ type: 'UPGRADE_BRIDGE', routeId: bridge.route })
-    if (!town.bridges.some((b) => b.route === bridge.route && b.type === 'reinforced')) throw new Error(`Could not reinforce ${bridge.route}`)
+  if (!town.buildings.some((b) => b.type === 'market')) throw new Error(`Could not build the market (wood ${town.resources.wood}, coins ${town.resources.coins}, materials ${town.resources.materials})`)
+  for (const routeId of routes) {
+    act({ type: 'UPGRADE_BRIDGE', routeId })
+    if (!town.bridges.some((b) => b.route === routeId && b.type === 'reinforced')) {
+      throw new Error(`Could not reinforce ${routeId} (wood ${town.resources.wood}, stone ${town.resources.stone}, coins ${town.resources.coins}, stored ${storageUsed(town.resources)})`)
+    }
   }
   towns['all-reinforced'] = snap()
   return towns
