@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
 import { Player } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -445,4 +445,29 @@ test('Friendly Cloud points to the Store and notices when the gods disagree', as
   assert.equal(godsWord(agree, tip).kind, 'agree')
   assert.equal(godsWord({ ...agree, xp: agree.xp + GODS_FRESH_XP }, tip).kind, 'nudge') // stale
   assert.ok(getAdvice(start).every((t) => t.focus))
+})
+
+test('happiness depletion: food or water below 25% causes -1 per action', () => {
+  // cap=100; 25% threshold; clear weather adds +1
+  // After action net water=-1, so water=24 -> nextRes=23 (23% < 25%) -> lowSupplies: -1 + weather(+1) = 0
+  const base = createInitialState()
+
+  // Low water (24->23, 23% < 25%)
+  const lowWater = { ...base, happiness: 60, resources: { ...base.resources, water: 24, food: 60, energy: 50 } }
+  assert.equal(projectProduction(lowWater).net.happiness, 0)   // -1 penalty + 1 clear weather
+  assert.equal(gameReducer(lowWater, { type: 'GATHER_WOOD' }).happiness, 60)
+
+  // Low food (24->23, 23% < 25%)
+  const lowFood = { ...base, happiness: 60, resources: { ...base.resources, water: 60, food: 24, energy: 50 } }
+  assert.equal(projectProduction(lowFood).net.happiness, 0)
+  assert.equal(gameReducer(lowFood, { type: 'GATHER_WOOD' }).happiness, 60)
+})
+
+test('happiness depletion: food and water at 25%+ follow normal rules', () => {
+  // water=26->25 (25% = not < 25%), food=60->59 (59%) => no depletion
+  // normal: needs met (+1) + clear weather (+1) = +2; happiness 60->62
+  const base = createInitialState()
+  const ok = { ...base, happiness: 60, resources: { ...base.resources, water: 26, food: 60, energy: 50 } }
+  assert.equal(projectProduction(ok).net.happiness, 2)
+  assert.equal(gameReducer(ok, { type: 'GATHER_WOOD' }).happiness, 62)
 })
