@@ -203,3 +203,26 @@
   .intro-quote { font-size: 16px; padding: 10px 12px; margin-bottom: 12px; }
   .steps { font-size: 14px; }
 }
+
+/* ---------- Town Workshop: ‹ › buttons instead of a horizontal scroll bar ---------- */
+.ws-cards { scrollbar-width: none; }
+.ws-cards::-webkit-scrollbar:horizontal { height: 0; }
+.ws-cards:focus-visible { outline: 3px solid #405b93; outline-offset: 2px; border-radius: 10px; }
+.ws-nav { flex: none; display: flex; align-items: center; justify-content: center; gap: 18px; padding-top: 10px; }
+.ws-nav-label { display: grid; justify-items: center; gap: 6px; min-width: 150px; color: #5e4c31; }
+.ws-nav-label strong { font-size: 13px; letter-spacing: 0.02em; }
+.ws-dots { display: flex; gap: 5px; }
+.ws-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(120, 90, 40, 0.28); transition: background 0.2s; }
+.ws-dots i.on { background: #a8792a; }
+@media (max-width: 800px) {
+  .ws-nav { gap: 10px; padding-top: 6px; }
+  .ws-nav-btn { width: 44px; height: 40px; }
+  .ws-nav-label { min-width: 0; gap: 4px; }
+  .ws-nav-label strong { font-size: 12px; }
+  .ws-dots i { width: 6px; height: 6px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .ws-nav { padding-top: 4px; }
+  .ws-nav-btn { height: 32px; font-size: 26px; }
+  .ws-dots { display: none; }
+}

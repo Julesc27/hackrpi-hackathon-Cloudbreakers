@@ -6,6 +6,7 @@ import { getAdvice } from '../../game/advisor.js'
 import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
 import { Check, Lock, Close, ArtIcon, Plus } from '../icons.jsx'
 import BuildingArt from '../BuildingArt.jsx'
+import useCardScroller from './useCardScroller.js'
 import Vignette from '../vignettes.jsx'
 import GodsLine from '../GodsLine.jsx'
 
@@ -132,6 +133,8 @@ export function BuildPanel() {
   const ui = useUI()
   const close = () => ui.setPanel(null)
   useEsc(close)
+  const cards = useCardScroller(BUILD_ORDER.length)
+  const { first, last, total } = cards.range
 
   return (
     <aside className="workshop" role="dialog" aria-label="Town Workshop">
@@ -142,7 +145,7 @@ export function BuildPanel() {
           <div className="ws-sub"><span className="spark">✦</span>Build something bright<span className="spark">✦</span></div>
           <p>Every new building changes the skyline of New Haven. Earn XP as you build and complete quests to unlock more.</p>
         </header>
-        <div className="ws-cards">
+        <div className="ws-cards" ref={cards.ref} role="region" aria-label="Buildings" tabIndex={0} onKeyDown={cards.onKeyDown}>
           {BUILD_ORDER.map((key) => {
             const def = BUILDINGS[key]
             const unlocked = isUnlocked(state, key)
@@ -187,6 +190,17 @@ export function BuildPanel() {
               </div>
             )
           })}
+        </div>
+        {/* ‹ › page through the buildings instead of dragging a scroll bar */}
+        <div className="ws-nav" aria-label="Browse buildings">
+          <button type="button" className="chart-scroll-btn ws-nav-btn" aria-label="Previous buildings" disabled={cards.edges.start} onClick={() => cards.page(-1)}>‹</button>
+          <div className="ws-nav-label" aria-live="polite">
+            <strong>{first === last ? `${first}` : `${first}–${last}`} of {total} buildings</strong>
+            <span className="ws-dots" aria-hidden="true">
+              {BUILD_ORDER.map((key, i) => <i key={key} className={i + 1 >= first && i + 1 <= last ? 'on' : ''} />)}
+            </span>
+          </div>
+          <button type="button" className="chart-scroll-btn ws-nav-btn" aria-label="Next buildings" disabled={cards.edges.end} onClick={() => cards.page(1)}>›</button>
         </div>
       </div>
     </aside>
