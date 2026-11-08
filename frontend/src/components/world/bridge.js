@@ -32,18 +32,45 @@ function crossVector(a, b) {
 
 // Reuse the island's own painted masonry for the new lower-terrace gateway.
 // Render the threshold below the deck and its front pier above it.
+const gatewayLayers = new Map()
+function gatewayLayer(atlas, foreground) {
+  if (gatewayLayers.has(foreground)) return gatewayLayers.get(foreground)
+  // Include the whole lamp and foliage, then soften the surrounding terrain.
+  // Cache the composite so masking never runs in the animation loop.
+  const bounds = foreground ? [1138, 656, 39, 64] : [1106, 552, 151, 230]
+  const [x, y, w, h] = bounds
+  const canvas = document.createElement('canvas')
+  canvas.width = w; canvas.height = h
+  const brush = canvas.getContext('2d')
+  brush.drawImage(atlas.image, x, y, w, h, 0, 0, w, h)
+  brush.globalCompositeOperation = 'destination-in'
+  const feather = (x0, y0, x1, y1, fade) => {
+    const gradient = brush.createLinearGradient(x0, y0, x1, y1)
+    gradient.addColorStop(0, 'rgba(0,0,0,0)')
+    gradient.addColorStop(fade, 'rgba(0,0,0,1)')
+    gradient.addColorStop(1, 'rgba(0,0,0,1)')
+    brush.fillStyle = gradient
+    brush.fillRect(0, 0, w, h)
+  }
+  feather(0, 0, w, 0, foreground ? 8/w : 40/w)
+  feather(w, 0, 0, 0, foreground ? 8/w : 12/w)
+  feather(0, 0, 0, h, foreground ? 6/h : 34/h)
+  feather(0, h, 0, 0, foreground ? 14/h : 36/h)
+  const layer = { canvas, bounds }
+  gatewayLayers.set(foreground, layer)
+  return layer
+}
+
 export function drawPrismGateway(ctx, progress = 1, foreground = false) {
   const atlas = getPaintedAtlas('starter')
   if (!atlas.ready || progress <= 0) return
   const sx = 660 / 1204, sy = 645 / 1211
-  const draw = ([x, y, w, h]) => ctx.drawImage(atlas.image, x, y, w, h,
-    PRISM_GATE[0] + (x - 1186) * sx, PRISM_GATE[1] + (y - 650) * sy,
-    w * sx, h * sy)
+  const { canvas, bounds: [x, y, w, h] } = gatewayLayer(atlas, foreground)
   ctx.save()
   ctx.translate(0, WORLD_ISLANDS.newHaven._bob || 0)
   ctx.globalAlpha = Math.min(1, progress * 5)
-  if (foreground) draw([1138, 656, 39, 64])
-  else draw([1135, 607, 106, 130])
+  ctx.drawImage(canvas, PRISM_GATE[0] + (x - 1186) * sx,
+    PRISM_GATE[1] + (y - 650) * sy, w * sx, h * sy)
   ctx.restore()
 }
 
