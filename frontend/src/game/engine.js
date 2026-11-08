@@ -171,13 +171,26 @@ export function projectProduction(state, weatherKey = state.weather) {
   const net = Object.fromEntries(ALL_RES.map((k) => [k, gain[k] - use[k]]))
 
   // Project happiness change on next action
+  const cap = caps(state)
+  const nextRes = {}
   const shortages = []
   for (const k of METERS) {
-    if ((state.resources?.[k] || 0) + net[k] < 0) shortages.push(k)
+    const val = (state.resources?.[k] || 0) + net[k]
+    if (val < 0) shortages.push(k)
+    nextRes[k] = Math.max(0, Math.min(cap[k] || 0, val))
   }
+
+  const waterRatio = cap.water > 0 ? nextRes.water / cap.water : 1
+  const foodRatio = cap.food > 0 ? nextRes.food / cap.food : 1
+  const lowSupplies = waterRatio < 0.25 || foodRatio < 0.25
+
   let dh = 0
-  if (!shortages.length) dh += 1
-  if (net.food > 0) dh += 1
+  if (lowSupplies) {
+    dh -= 1
+  } else {
+    if (!shortages.length) dh += 1
+    if (net.food > 0) dh += 1
+  }
   for (const k of shortages) dh -= 6
   const house = housing(state)
   if (state.population > house) dh -= 3
@@ -293,9 +306,19 @@ function progressSettlement(state, xp) {
   // Happiness
   const access = islandAccess(state)
   const reasons = []
+
+  const waterRatio = cap.water > 0 ? res.water / cap.water : 1
+  const foodRatio = cap.food > 0 ? res.food / cap.food : 1
+  const lowSupplies = waterRatio < 0.25 || foodRatio < 0.25
+
   let dh = 0
-  if (!shortages.length) { dh += 1; reasons.push(['Needs met', 1]) }
-  if (proj.net.food > 0) { dh += 1; reasons.push(['Food surplus', 1]) }
+  if (lowSupplies) {
+    dh -= 1
+    reasons.push(['Low supplies', -1])
+  } else {
+    if (!shortages.length) { dh += 1; reasons.push(['Needs met', 1]) }
+    if (proj.net.food > 0) { dh += 1; reasons.push(['Food surplus', 1]) }
+  }
   for (const k of shortages) { dh -= 6; reasons.push([`${k[0].toUpperCase() + k.slice(1)} shortage`, -6]) }
   const house = housing(state)
   if (state.population > house) { dh -= 3; reasons.push(['Overcrowding', -3]) }
