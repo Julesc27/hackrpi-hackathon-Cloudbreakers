@@ -76,6 +76,29 @@ class OracleUnavailable(Exception):
     """The gods could not be reached or gave no usable answer."""
 
 
+NO_POSSIBLE_COUNSEL = "The gods would only counsel what cannot be done right now, so they stay silent. Nothing was charged."
+
+
+def allowed_focuses(possible) -> tuple[str, ...] | None:
+    """The moves the player can actually make right now, as sent by the game (possibleMoves.js).
+    Unknown words are dropped; None means the game sent no list (older clients): no limit."""
+    if not isinstance(possible, list):
+        return None
+    allowed = tuple(dict.fromkeys(f for f in possible if f in FOCUSES))
+    return allowed or ("balance",)
+
+
+def possible_section(allowed: tuple[str, ...]) -> str:
+    return (
+        "Only these moves are possible for this player right now, worked out by the game itself "
+        "after they pay for this consultation (affordable, unlocked, reachable, with a free plot):\n"
+        f"{', '.join(allowed)}\n"
+        "Your strategy must be one of these, and \"focus\" must be exactly one of these words. "
+        "Never counsel a move that is not on this list, even as a later goal. If nothing better fits, "
+        "choose \"gather\" or \"balance\"."
+    )
+
+
 def _config() -> tuple[str, str, str]:
     host = os.getenv("DATABRICKS_HOST", "").strip().rstrip("/")
     token = os.getenv("DATABRICKS_TOKEN", "").strip()
@@ -104,11 +127,12 @@ def forbidden_names() -> tuple[str, ...]:
     return tuple(sorted(names))
 
 
-def build_messages(town: dict) -> list[dict]:
+def build_messages(town: dict, allowed: tuple[str, ...] | None = None) -> list[dict]:
     state = json.dumps(town, separators=(",", ":"))
+    possible = f"\n\n{possible_section(allowed)}" if allowed else ""
     return [
         {"role": "system", "content": system_prompt()},
-        {"role": "user", "content": f"The player's town right now (game state JSON):\n{state}\n\nThe lantern is lit. Speak."},
+        {"role": "user", "content": f"The player's town right now (game state JSON):\n{state}{possible}\n\nThe lantern is lit. Speak."},
     ]
 
 
@@ -190,10 +214,14 @@ async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str,
     return text
 
 
-async def consult(town: dict) -> dict:
-    """Ask the gods. Returns {"strategy", "poem", "focus"}; raises OracleUnavailable."""
+async def consult(town: dict, allowed: tuple[str, ...] | None = None) -> dict:
+    """Ask the gods. Returns {"strategy", "poem", "focus"}; raises OracleUnavailable.
+
+    With `allowed` (the moves possible right now), an answer whose focus is not one of them is
+    never returned: it is retried, and if no attempt gives a possible move the gods stay silent."""
     host, token, endpoint = _config()
-    messages = build_messages(town)
+    messages = build_messages(town, allowed)
+    impossible = False
     effort = os.getenv("DATABRICKS_REASONING_EFFORT", "").strip().lower() or None
     best = None
     async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
@@ -210,6 +238,11 @@ async def consult(town: dict) -> dict:
                 if not text.strip() and effort in EFFORTS[1:]:
                     effort = EFFORTS[EFFORTS.index(effort) - 1]  # thought itself out of room: think less next time
                 continue
+            if allowed is not None and reply["focus"] not in allowed:
+                impossible = True
+                log.info("oracle: advice not possible right now (focus=%s, possible=%s, attempt %s)",
+                         reply["focus"], ",".join(allowed), attempt)
+                continue
             leaked = leaks(reply["poem"])
             if short(reply["poem"]):
                 leaked.append("too short")
@@ -218,6 +251,6 @@ async def consult(town: dict) -> dict:
                 break
             log.info("oracle: poem gave away %s (attempt %s)", leaked, attempt)
     if best is None:
-        raise OracleUnavailable("The gods are silent")
+        raise OracleUnavailable(NO_POSSIBLE_COUNSEL if impossible else "The gods are silent")
     log.info("oracle: focus=%s strategy=%r", best["focus"], best["strategy"])
     return best
