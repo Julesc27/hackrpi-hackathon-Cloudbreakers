@@ -113,6 +113,9 @@ export default function Tutorial() {
       wasInQuests: false,
       wasOpen: false,
     }
+    if (tutorialStep === 2) {
+      ui.camera.current?.home(400)
+    }
   }, [tutorialStep])
 
   // Determine current active target selector and copy based on tutorialStep & current UI state
@@ -129,21 +132,21 @@ export default function Tutorial() {
     // Rendered as full centered modal
   }
 
-  // --- Step 2: Gather Resources ---
+  // --- Step 2: Gather Wood (Click New Haven Island -> Click Gather Wood in popup) ---
   else if (tutorialStep === 2) {
     const isNewHavenDrawer = ui.panel === 'island' && ui.selected === 'newHaven'
     if (!isNewHavenDrawer) {
       targetSelector = '[data-tutorial="island-newHaven"]'
-      title = 'Gather Resources'
-      text = "Let's start by gathering some resources! Click New Haven to see what you can collect."
+      title = 'Explore New Haven'
+      text = "Let's gather some wood for building! Click on New Haven island to open its menu."
       hint = 'Click the New Haven island on the map'
-      // No continue button: player must click New Haven
+      showNextBtn = false
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
-      text = 'Click Gather wood to collect materials for building structures!'
+      text = 'Click the Gather wood button in the panel to collect timber for building structures!'
       hint = 'Click the Gather wood button'
-      // No continue button: player must click Gather wood
+      showNextBtn = false
     }
   }
 
@@ -153,7 +156,7 @@ export default function Tutorial() {
     title = 'Town Workshop'
     text = 'Buildings help your village grow and survive. Click Build to open the Town Workshop!'
     hint = 'Click the Build button in the left rail'
-    // No continue button: player must click Build
+    // No Next button — player must click Build; auto-advances when panel opens
   }
 
   // --- Step 4: Select a Shelter ---
@@ -162,7 +165,7 @@ export default function Tutorial() {
     title = 'Choose a Building'
     text = 'A Shelter gives your villagers a place to live. Click the + button to select it!'
     hint = 'Click the gold + button on the Shelter card'
-    // No continue button: player must click the Shelter + button
+    // No Next button — player must click the Shelter +; auto-advances when placing starts
   }
 
   // --- Step 5: Place the Shelter ---
@@ -172,13 +175,13 @@ export default function Tutorial() {
       title = 'Place the Shelter'
       text = 'Now click a glowing plot on New Haven to place your Shelter!'
       hint = 'Click a glowing diamond building plot on the island'
-      // No continue button: player must click a plot
     } else {
       targetSelector = '[data-tutorial="rail-build"]'
       title = 'Select Shelter'
       text = 'Shelter placement was cancelled. Click Build to open Town Workshop and select Shelter again!'
       hint = 'Click Build to select Shelter'
     }
+    // No Next button — placement or re-select auto-advances
   }
 
   // --- Step 6: Explore the Quest Book ---
@@ -188,7 +191,7 @@ export default function Tutorial() {
       title = 'Explore Missions'
       text = 'Quests give you goals to work toward and rewards for completing them. Click Quest Book to see your missions!'
       hint = 'Click the Quest Book button in the left rail'
-      // No continue button: player must click Quest Book
+      // No Next button — player must click Quest Book
     } else {
       targetSelector = '[data-tutorial="quest-featured"]'
       title = "Captain's Log"
@@ -206,7 +209,7 @@ export default function Tutorial() {
   else if (tutorialStep === 7) {
     targetSelector = '[data-tutorial="hud-resources"]'
     title = 'Resource Management'
-    text = 'These boxes show your wood, water, food, energy, and Cloud Coins. Keep food and water stocked so your villagers can survive. Building and gathering resources helps your village grow!'
+    text = 'These boxes show your wood, water, food, energy, stone, and Cloud Coins. Keep food and water stocked so your villagers can survive!'
     showNextBtn = true
     nextBtnLabel = 'Continue ›'
     onNext = () => {
@@ -215,14 +218,18 @@ export default function Tutorial() {
     }
   }
 
-  // --- Step 8: Learn About Weather ---
+  // --- Step 8: Resource Flow & Next Action Changes ---
   else if (tutorialStep === 8) {
-    targetSelector = '[data-tutorial="hud-weather"]'
-    title = 'Weather Forecast'
-    text = 'Weather can change as you take actions and affect your village. Watch the forecast and prepare for storms!'
+    targetSelector = '[data-tutorial="hud-resources"]'
+    title = 'Resource Flow & Actions'
+    text = 'Notice the small numbers next to some of the resources (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount of resources on the next action! Green (+) means production, red (−) means upkeep.'
+    hint = 'Watch these numbers as you build to keep your town balanced'
     showNextBtn = true
     nextBtnLabel = 'Next ›'
-    onNext = () => setTutorialStep(9)
+    onNext = () => {
+      ui.setPanel(null)
+      setTutorialStep(9)
+    }
   }
 
   // --- Steps 11-14: Advisor, Map, Journal, Storehouse ---
@@ -267,17 +274,15 @@ export default function Tutorial() {
   useEffect(() => {
     if (!tutorialActive) return
 
-    // Step 2: Auto-advance when wood is gathered
+    // Step 2: Auto-advance when wood is gathered from the popup
     if (tutorialStep === 2) {
-      const isNewHavenDrawer = ui.panel === 'island' && ui.selected === 'newHaven'
-      if (isNewHavenDrawer) {
-        const snap = stepSnapshot.current
-        if (state.resources.wood > snap.wood) {
-          const timer = setTimeout(() => {
-            setTutorialStep(3)
-          }, 350)
-          return () => clearTimeout(timer)
-        }
+      const snap = stepSnapshot.current
+      if (state.resources.wood > snap.wood) {
+        const timer = setTimeout(() => {
+          if (ui.panel === 'island') ui.setPanel(null)
+          setTutorialStep(3)
+        }, 350)
+        return () => clearTimeout(timer)
       }
     }
 
@@ -291,7 +296,7 @@ export default function Tutorial() {
       }
     }
 
-     // Step 4: Auto-advance when shelter is selected for placing
+    // Step 4: Auto-advance when shelter is selected for placing
     if (tutorialStep === 4) {
       if (ui.placing === 'shelter') {
         const timer = setTimeout(() => {
@@ -313,7 +318,7 @@ export default function Tutorial() {
       }
     }
 
-    // Steps 11-14: if the player opened the panel and then closed it (X / Esc), move on
+    // Steps 12-15: if the player opened the panel and then closed it (X / Esc), move on
     const panelCfg = PANEL_STEPS[tutorialStep]
     if (panelCfg) {
       if (ui.panel === panelCfg.panel) {
@@ -328,8 +333,6 @@ export default function Tutorial() {
     // or any other means, advance to step 7. This catches the case where "Continue Quest"
     // navigates away from quests, or the user clicks the close button.
     if (tutorialStep === 6 && ui.panel !== 'quests') {
-      // Only advance if we were previously on the 6b sub-step (quests was open).
-      // We track this via the stepSnapshot — if it had `wasInQuests` set.
       if (stepSnapshot.current.wasInQuests) {
         const timer = setTimeout(() => {
           ui.setPanel(null)
@@ -362,7 +365,12 @@ export default function Tutorial() {
       const el = document.querySelector(targetSelector)
       if (el !== currentEl) {
         if (currentEl) currentEl.removeAttribute('data-tutorial-active')
-        if (el) el.setAttribute('data-tutorial-active', 'true')
+        if (el) {
+          el.setAttribute('data-tutorial-active', 'true')
+          if (typeof el.scrollIntoView === 'function') {
+            try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }) } catch (_) {}
+          }
+        }
         currentEl = el
       }
     }
@@ -380,110 +388,91 @@ export default function Tutorial() {
       setTargetRect(null)
       return
     }
-    let rafId
-    const update = () => {
-      setViewWidth(window.innerWidth)
-      setViewHeight(window.innerHeight)
 
+    let rafId = null
+    const updateTarget = () => {
       const el = document.querySelector(targetSelector)
       if (el) {
-        const r = el.getBoundingClientRect()
-        if (r.width > 0 && r.height > 0) {
-          setTargetRect((prev) => {
-            if (
-              !prev ||
-              Math.abs(prev.top - r.top) > 0.5 ||
-              Math.abs(prev.left - r.left) > 0.5 ||
-              Math.abs(prev.width - r.width) > 0.5 ||
-              Math.abs(prev.height - r.height) > 0.5
-            ) {
-              return {
-                top: r.top,
-                left: r.left,
-                width: r.width,
-                height: r.height,
-                right: r.right,
-                bottom: r.bottom,
-              }
-            }
+        const rect = el.getBoundingClientRect()
+        setTargetRect((prev) => {
+          if (!prev) return rect
+          // Avoid triggering re-renders if position hasn't meaningfully changed
+          if (
+            Math.abs(prev.left - rect.left) < 0.5 &&
+            Math.abs(prev.top - rect.top) < 0.5 &&
+            Math.abs(prev.width - rect.width) < 0.5 &&
+            Math.abs(prev.height - rect.height) < 0.5
+          ) {
             return prev
-          })
-        } else {
-          setTargetRect(null)
-        }
+          }
+          return rect
+        })
       } else {
         setTargetRect(null)
       }
-      rafId = requestAnimationFrame(update)
+      rafId = requestAnimationFrame(updateTarget)
     }
 
-    rafId = requestAnimationFrame(update)
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-
+    updateTarget()
     return () => {
-      cancelAnimationFrame(rafId)
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
+      if (rafId) cancelAnimationFrame(rafId)
     }
   }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
 
-  // Measure the real tooltip so placement never guesses its size
+  // --- Track viewport size on resize ---
+  useEffect(() => {
+    const onResize = () => {
+      setViewWidth(window.innerWidth)
+      setViewHeight(window.innerHeight)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  // --- Measure tooltip element size on render ---
   useLayoutEffect(() => {
-    const el = tooltipRef.current
-    if (!el) return
-    // offsetHeight ignores the entry/shake animations (getBoundingClientRect would not)
-    const h = el.offsetHeight
-    if (h && Math.abs(h - tooltipSize.h) > 1) setTooltipSize((s) => ({ ...s, h }))
+    if (tooltipRef.current) {
+      const r = tooltipRef.current.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        setTooltipSize((prev) => (prev.w === r.width && prev.h === r.height ? prev : { w: r.width, h: r.height }))
+      }
+    }
   })
 
-  // If the target sits below the fold of a scrolling panel (e.g. "Gather wood" in the island drawer),
-  // scroll that panel so the target is visible. The map camera is not a scroll container, so it is unaffected.
-  useEffect(() => {
-    if (!tutorialActive || !targetSelector) return
-    const t = setTimeout(() => {
-      const el = document.querySelector(targetSelector)
-      if (!el) return
-      let box = el.parentElement
-      while (box && box !== document.body) {
-        const cs = getComputedStyle(box)
-        if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) && (box.scrollHeight > box.clientHeight || box.scrollWidth > box.clientWidth)) break
-        box = box.parentElement
-      }
-      if (!box || box === document.body) return
-      const br = box.getBoundingClientRect(), er = el.getBoundingClientRect()
-      if (er.bottom > br.bottom) box.scrollTop += er.bottom - br.bottom + 12
-      else if (er.top < br.top) box.scrollTop -= br.top - er.top + 12
-      if (er.right > br.right) box.scrollLeft += er.right - br.right + 12
-      else if (er.left < br.left) box.scrollLeft -= br.left - er.left + 12
-    }, 260)
-    return () => clearTimeout(t)
-  }, [tutorialActive, targetSelector, tutorialStep, ui.panel])
+  // Prevent interactions with rest of screen; shake tooltip on invalid click
+  const handleBackdropClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsShaking(true)
+    setTimeout(() => setIsShaking(false), 500)
+  }
 
   if (!tutorialActive) return null
 
-  const handleBackdropClick = (e) => {
-    e.stopPropagation()
-    e.preventDefault()
-    setIsShaking(true)
-    setTimeout(() => setIsShaking(false), 450)
-  }
-
+  // Render centered full-screen modal for Step 1 (Welcome)
   if (tutorialStep === 1) {
     return (
-      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Welcome" aria-live="polite">
-        <div className="tutorial-backdrop-panel" style={{ top: 0, left: 0, width: '100vw', height: '100vh' }} onClick={handleBackdropClick} />
-        <div className="tutorial-modal-wrap">
+      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Welcome">
+        <div className="tutorial-modal-overlay tutorial-modal-wrap">
           <div className="tutorial-modal-card">
-            <div className="tutorial-modal-crest"><CloudIcon size={46} /></div>
-            <div className="tutorial-modal-kicker">✦ Flight School ✦</div>
+            <div className="tutorial-modal-crest"><ArtIcon name="cloud" size={44} /></div>
+            <div className="tutorial-modal-kicker">✦ Welcome, Navigator ✦</div>
             <h2 className="tutorial-modal-title">Welcome to Cloudbreakers!</h2>
             <blockquote className="tutorial-modal-quote">
-              “Welcome to Cloudbreakers! Your village floats high above the clouds. Your goal is to gather resources, build your town, and keep your villagers happy and healthy.”
+              “Welcome to the archipelago, Captain! I’m Cloud, your airborne advisor. Our islands drift in a vast sky, waiting to be explored, connected, and rebuilt. Let’s walk through the basics together!”
             </blockquote>
             <div className="tutorial-modal-actions">
-              <button className="btn-gold" onClick={() => setTutorialStep(2)} autoFocus>Let's Begin ➔</button>
-              <button className="btn-ghost" onClick={() => endTutorial(true)}>Skip Tutorial</button>
+              <button
+                type="button"
+                className="btn-gold"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setTutorialStep(2)
+                }}
+                autoFocus
+              >
+                Let's Begin ➔
+              </button>
             </div>
           </div>
         </div>
@@ -491,11 +480,11 @@ export default function Tutorial() {
     )
   }
 
+  // Render centered celebratory modal for Final Step
   if (tutorialStep === FINAL_STEP) {
     return (
-      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Complete" aria-live="polite">
-        <div className="tutorial-backdrop-panel" style={{ top: 0, left: 0, width: '100vw', height: '100vh' }} onClick={handleBackdropClick} />
-        <div className="tutorial-modal-wrap">
+      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Complete">
+        <div className="tutorial-modal-overlay tutorial-modal-wrap">
           <div className="tutorial-modal-card">
             <div className="tutorial-modal-crest"><ArtIcon name="cloud" size={44} /></div>
             <div className="tutorial-modal-kicker">✦ Certified Navigator ✦</div>
@@ -504,7 +493,17 @@ export default function Tutorial() {
               “You’re ready to explore the skies! Gather resources, build your village, complete quests, and discover new islands. Good luck, Captain!”
             </blockquote>
             <div className="tutorial-modal-actions">
-              <button className="btn-gold" onClick={() => endTutorial(true)} autoFocus>Start Playing ➔</button>
+              <button
+                type="button"
+                className="btn-gold"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  endTutorial(true)
+                }}
+                autoFocus
+              >
+                Start Playing ➔
+              </button>
             </div>
           </div>
         </div>
@@ -548,7 +547,8 @@ export default function Tutorial() {
     }
     // On phones there is no room beside things, so only go above or below.
     let order = viewWidth < 640 ? ['bottom', 'top'] : ['bottom', 'top', 'right', 'left']
-    if (tutorialStep === 7) order = ['bottom']
+    if (tutorialStep === 7 || tutorialStep === 8) order = ['bottom']
+    else if (tutorialStep === 2 && ui.panel === 'island') order = ['left', 'top', 'bottom']
     else if (viewWidth >= 640 && targetRect.left > viewWidth * 0.6) order = ['left', 'bottom', 'top', 'right']
     else if (viewWidth >= 640 && targetRect.right < viewWidth * 0.25) order = ['right', 'bottom', 'top', 'left']
     placement = order.find(fits)
