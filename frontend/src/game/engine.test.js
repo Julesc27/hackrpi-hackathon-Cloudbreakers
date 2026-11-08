@@ -1,12 +1,76 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GATHER_SITES, ISLANDS, ROUTES } from './data.js'
+import { GATHER_SITES, ISLANDS, ROUTES, BUILD_ORDER, BUILDINGS } from './data.js'
+import { buildingLayout } from '../components/world/buildingLayout.js'
+import { Crowd } from '../components/world/people.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots, projectProduction } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
 
 const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
+
+test('every physical build blocks its whole base and the captain routes around it', () => {
+  const plot = ISLANDS.newHaven.plots[0]
+  for (const type of BUILD_ORDER.filter(type => !BUILDINGS[type].infrastructure)) {
+    const initial = createInitialState(), state = { ...initial, buildings: [...initial.buildings, { id: 'obstacle', type, island: 'newHaven', slot: 0 }] }
+    const player = new Player(state), { width } = buildingLayout(type, 'newHaven', 0)
+    for (const [dx,dy] of [[0,0], [.44,0], [-.44,0], [0,.22], [0,-.22]]) {
+      const point = [plot[0]+dx*width,plot[1]+dy*width]
+      assert.equal(player.canStep('newHaven', point, point), false, `${type} has an open part of its base`)
+    }
+    const start = player.recoveryPoint('newHaven', plot[0]-55,plot[1])
+    const goal = player.recoveryPoint('newHaven', plot[0]+65,plot[1])
+    Object.assign(player.avatar, { isl: 'newHaven', x: start[0], y: start[1] })
+    player.setInput(1,0)
+    for (let i=0;i<100;i++) player.update(.05)
+    assert.ok(player.avatar.x < plot[0], `${type} can be walked through using the keyboard`)
+    assert.equal(player.go('newHaven', goal), true)
+    let detoured = false
+    for (let i=0;player.pending && i<1000;i++) {
+      player.update(.05)
+      const a = player.avatar, outside = Math.abs(a.x-plot[0])/(width/2)+Math.abs(a.y-plot[1])/(width/4)
+      assert.ok(outside >= 1, `The captain entered ${type}`)
+      if (Math.abs(a.y-plot[1]) > width*.25) detoured = true
+    }
+    assert.equal(player.pending, null)
+    assert.ok(detoured, `The route did not go around ${type}`)
+    assert.ok(Math.hypot(player.avatar.x-goal[0],player.avatar.y-goal[1]) < 1)
+  }
+})
+
+test('resident route offsets and blocked destinations never cut through a building', () => {
+  const initial = createInitialState(), plot = ISLANDS.newHaven.plots[0]
+  const state = { ...initial, buildings: [...initial.buildings, { id: 'obstacle', type: 'shelter', island: 'newHaven', slot: 0 }] }
+  const crowd = new Crowd(); crowd.setState(state, { newHaven: 1 }, 1)
+  const start = crowd.recoveryPoint('newHaven',plot[0]-55,plot[1]), goal = crowd.recoveryPoint('newHaven',plot[0]+65,plot[1])
+  for (let attempt=0;attempt<100;attempt++) {
+    const leg = crowd.gridLeg('newHaven',...start,...(attempt%2 ? plot : goal))
+    assert.ok(leg)
+    let previous = start
+    for (const point of leg.pts) { assert.equal(crowd.canStep('newHaven',previous,point),true); previous = point }
+    assert.equal(crowd.canStep('newHaven',previous,previous),true)
+  }
+})
+
+test('walking guards reroute stale routes for both the captain and residents', () => {
+  const initial = createInitialState(), plot = ISLANDS.newHaven.plots[0]
+  const state = { ...initial, buildings: [...initial.buildings, { id: 'obstacle', type: 'shelter', island: 'newHaven', slot: 0 }] }
+  for (const captain of [true,false]) {
+    const walker = captain ? new Player(state) : new Crowd()
+    if (!captain) walker.setState(state, { newHaven: 1 }, 1)
+    const a = walker.agents[0], start = walker.recoveryPoint('newHaven',plot[0]-55,plot[1]), goal = walker.recoveryPoint('newHaven',plot[0]+65,plot[1])
+    Object.assign(a, { isl: 'newHaven', x: start[0], y: start[1], wait: 0 })
+    if (captain) walker.go('newHaven',goal)
+    // Simulate an already queued route from before a building appeared.
+    a.leg = { isl: 'newHaven', pts: [goal], i: 0 }; a.legs = []
+    for (let i=0;i<600;i++) {
+      walker.update(.05)
+      assert.ok(Math.abs(a.x-plot[0])/26+Math.abs(a.y-plot[1])/13 >= 1, 'A stale route entered the shelter')
+    }
+    if (captain) { assert.equal(walker.pending,null); assert.ok(Math.hypot(a.x-goal[0],a.y-goal[1]) < 1) }
+  }
+})
 
 test('backpack capacity is shared and partial harvests never consume extra deposits', () => {
   const initial = { ...createInitialState(), backpack: { wood: 19 } }
