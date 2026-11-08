@@ -8,11 +8,12 @@ const PANTS = ['#3a3550', '#5b4636', '#2b3a66', '#6b5a44', '#44506e']
 const SKIN = ['#f1c9a5', '#e0ac85', '#c68b62', '#9a6646', '#f5d6bc']
 const HAIR = ['#3b2a1e', '#6b4426', '#1f1a24', '#c99a5e', '#8a4a2a', '#d9d2c4']
 
-export function bridgeCurve(routeId, n = 10) {
+export function bridgeCurve(routeId, n = 10, type = 'rope') {
   const p = bridgePoints(routeId)
   if (!p) return []
   const out = []
-  const sag = Math.min(24, Math.max(10, Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]) * .065))
+  const length = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1])
+  const sag = type === 'reinforced' ? Math.min(6, Math.max(3, length * .012)) : Math.min(24, Math.max(10, length * .065))
   for (let i = 0; i <= n; i++) {
     const t = i / n
     const x = p.a[0] + (p.b[0] - p.a[0]) * t
@@ -49,7 +50,7 @@ export function buildGraph(state, access) {
     if (b.condition <= 0) continue
     const e = BRIDGE_ENDS[b.route]
     if (!e || !access[e.a[0]] || !access[e.b[0]]) continue
-    const pts = bridgeCurve(b.route, 8)
+    const pts = bridgeCurve(b.route, 8, b.type)
     let prev = `${e.a[0]}:${e.a[1]}`
     for (let i = 1; i < pts.length - 1; i++) {
       const k = `br:${b.route}:${i}`

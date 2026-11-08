@@ -2,6 +2,20 @@ import { bridgeCurve } from './people.js'
 import { WORLD_ISLANDS, PRISM_GATE, BRIDGE_GATE_INSETS, BRIDGE_GATEWAYS } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
+import { cloudBank } from './island.js'
+
+const supportClouds = new Map()
+function supportCloud(seed) {
+  if (!supportClouds.has(seed)) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 80; canvas.height = 40
+    const brush = canvas.getContext('2d')
+    brush.filter = 'blur(1.4px)'
+    cloudBank(brush, 40, 23, 32, seed, false)
+    supportClouds.set(seed, canvas)
+  }
+  return supportClouds.get(seed)
+}
 
 // The painted grain is projected onto the live deck, so islands can still float.
 function paintedPlank(ctx, atlas, index, a, b, c) {
@@ -68,7 +82,7 @@ export function drawPrismGateway(ctx, progress = 1, foreground = false) {
 
 export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const materials = getPaintedAtlas('bridge')
-  const points = bridgeCurve(bridge.route, 48).reverse()
+  const points = bridgeCurve(bridge.route, 48, bridge.type).reverse()
   if (points.length < 2 || progress <= 0) return
   const start = points[0], end = points.at(-1)
   const length = Math.hypot(end[0] - start[0], end[1] - start[1])
@@ -104,17 +118,61 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   if (progress < 1) {
     const angle = Math.atan2(tangent[1], tangent[0])
     ctx.translate(...start); ctx.rotate(angle)
-    ctx.beginPath(); ctx.rect(-22, -70, (length + 44) * progress, 140); ctx.clip()
+    ctx.beginPath(); ctx.rect(-22, -80, (length + 44) * progress, stone ? 210 : 150); ctx.clip()
     ctx.rotate(-angle); ctx.translate(-start[0], -start[1])
   }
 
   ctx.globalAlpha = .14
   trace(points.slice(3, -3).map(([x, y]) => [x, y + 13]), '#141d38', halfWidth * 1.3)
   ctx.globalAlpha = 1
+  if (stone) {
+    const supportCount = Math.max(1, Math.ceil(length / 180) - 1)
+    const bays = [homeGate, ...Array.from({ length: supportCount }, (_, i) =>
+      homeGate + (awayGate - homeGate) * (i + 1) / (supportCount + 1)), awayGate]
+    // Curved timber braces rise from the piers to the heavier deck frame.
+    for (let bay = 0; bay < bays.length - 1; bay++) {
+      const leftDepth = bay === 0 ? 8 : 34, rightDepth = bay === bays.length-2 ? 8 : 34
+      const archDepth = u => 10 + (leftDepth-10)*Math.max(0, 1-2*u)**2 + (rightDepth-10)*Math.max(0, 2*u-1)**2
+      const arch = Array.from({ length: 17 }, (_, i) => {
+        const u = i / 16, p = sample(bays[bay] + (bays[bay+1] - bays[bay]) * u, near)
+        return [p[0], p[1] + archDepth(u)]
+      })
+      trace(arch, '#594534', 6)
+      trace(arch.map(([x,y]) => [x,y-1]), '#b08b57', 3)
+      for (const u of [.25, .5, .75]) {
+        const p = sample(bays[bay] + (bays[bay+1] - bays[bay]) * u, near)
+        line(ctx, p[0], p[1]+5, p[0], p[1]+archDepth(u), col('#745536'), 2.8)
+      }
+      for (const u of [.25, .75]) {
+        const p = sample(bays[bay] + (bays[bay+1] - bays[bay]) * u, near)
+        const anchor = sample(u < .5 ? bays[bay] : bays[bay+1], near)
+        const bottom = anchor[1] + (u < .5 ? leftDepth : rightDepth)
+        line(ctx, anchor[0], bottom, p[0], p[1]+6, col('#654c34'), 4)
+        line(ctx, anchor[0], bottom-1, p[0], p[1]+5, col('#b38e59'), 1.4)
+      }
+    }
+    for (const t of bays.slice(1, -1)) {
+      const [x, y] = sample(t, near), base = y + 48
+      poly(ctx, [[x-10,y+6],[x+7,y+6],[x+13,y+2],[x-4,y+2]], col('#d8d0bd'), col('#908c8c'), .7)
+      poly(ctx, [[x+7,y+6],[x+13,y+2],[x+13,base],[x+7,base+4]], col('#8e8fa1'), col('#686d84'), .6)
+      poly(ctx, [[x-10,y+6],[x+7,y+6],[x+7,base+4],[x-10,base+4]], col('#c4bda8'))
+      if (materials.ready) {
+        const [sx, sy, sw, sh] = materials.cells[3]
+        ctx.drawImage(materials.image, sx+sw*.77, sy+sh*.35, sw*.14, sh*.43, x-10, y+6, 17, 42)
+      }
+      for (let row = 1; row < 6; row++) line(ctx, x-10, y+6+row*7, x+7, y+6+row*7, col('#93909a'), .65)
+      poly(ctx, [[x-13,base],[x+7,base],[x+16,base-4],[x+16,base+3],[x+7,base+7],[x-13,base+7]], col('#b9b7b4'), col('#7e8192'), .6)
+      ctx.drawImage(supportCloud(Math.round(t*1000)), x-39, base-14)
+      // Warm lamps on the support columns match the gateway lanterns.
+      line(ctx, x-2, y+12, x-2, y+20, col('#a27e45'), 2.8)
+      line(ctx, x-2, y+13, x-2, y+18, col('#ffe0a0'), 1.6)
+      if (lights) lights.push([x-2, y+15, 8])
+    }
+  }
   // Solid near fascia gives the deck thickness, with a continuous supporting stringer.
   const front = edge(near)
   const depth = t => Math.min(1, t * length / 20, (1-t) * length / 20)
-  poly(ctx, [...front, ...front.map(([x, y],i) => [x, y + 5 * depth(i/(front.length-1))]).reverse()], col('#755336'))
+  poly(ctx, [...front, ...front.map(([x, y],i) => [x, y + (stone ? 9 : 5) * depth(i/(front.length-1))]).reverse()], col(stone ? '#625144' : '#755336'))
   trace(edge(-near), '#88633e', 2.2)
 
   // Deck boards follow the route, but their width follows the island's ground projection.
@@ -125,6 +183,14 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     else poly(ctx, [sample(t0, -1), sample(t1, -1), sample(t1, 1), sample(t0, 1)], col(i % 2 ? '#c49560' : '#d4aa75'), col('#86613e'), .35)
   }
   trace(front, '#8c613b', 1.5)
+  if (stone) {
+    trace(front.map(([x,y]) => [x,y+3]), '#c1a272', 1.4)
+    trace(front.map(([x,y],i) => [x,y+8*depth(i/(front.length-1))]), '#4d4540', 2.5)
+    for (let i = 1; i < postCount; i++) {
+      const p = sample(i/postCount, near)
+      circle(ctx, p[0], p[1]+4, 1.05, col('#c4b5a0'))
+    }
+  }
   // A slim curved timber frame follows the sagging deck, without a rigid truss.
   trace(front.map(([x, y], i) => [x, y + 4 * depth(i / (front.length - 1))]), '#8a6945', 2)
 
@@ -167,6 +233,18 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     }
   }
   const drawRail = (side) => {
+    if (stone) {
+      // Reinforced bridges have short posts and rigid rails instead of tall suspension ropes.
+      for (let i = 0; i <= postCount; i++) {
+        const p = sample(i/postCount, side)
+        line(ctx, p[0], p[1], p[0], p[1]-9, col('#665d53'), 2.2)
+        circle(ctx, p[0], p[1]-9, 1.6, col('#aaa393'))
+      }
+      trace(edge(side).map(([x,y]) => [x,y-8]), '#68665f', 2.5)
+      trace(edge(side).map(([x,y]) => [x,y-8.5]), '#b4a688', .9)
+      trace(edge(side).map(([x,y]) => [x,y-3.5]), '#987b52', 1)
+      return
+    }
     const cable = u => {
       const t = homeGate + (awayGate - homeGate) * u
       const height = 11 + 19 * (2*u-1)**2

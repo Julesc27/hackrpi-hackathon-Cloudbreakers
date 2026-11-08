@@ -180,6 +180,10 @@ test('every bridge span stays attached to both independently floating islands', 
       assert.ok(Math.abs(points.at(-1)[1] - (base.b[1] - 1.8)) < 1e-8)
       const midpoint = points[10], straightY = (points[0][1] + points.at(-1)[1]) / 2
       assert.ok(midpoint[1] > straightY + 9, 'suspension decks must sag below their shore anchors')
+      const reinforced = bridgeCurve(route.id, 20, 'reinforced')
+      assert.deepEqual(reinforced[0], points[0])
+      assert.deepEqual(reinforced.at(-1), points.at(-1))
+      assert.ok(reinforced[10][1] > straightY && reinforced[10][1] < midpoint[1], 'reinforced decks must stay shallower and share the same landings')
     } finally { a._bob = oldA; b._bob = oldB }
   }
 })

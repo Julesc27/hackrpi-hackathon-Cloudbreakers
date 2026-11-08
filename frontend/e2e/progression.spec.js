@@ -23,45 +23,47 @@ async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page))).toBeTruthy()
 }
 
-test('the complete bridge network renders and both eastern crossings can be managed', async ({ page }, testInfo) => {
-  const errors = []
-  page.on('pageerror', error => errors.push(error.message))
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await startAt(page, 'all-bridges')
-  await expect(page.locator('.skymap .bridge')).toHaveCount(5)
-  await page.getByRole('button', { name: 'Fold Cloud away' }).click()
-  await page.waitForFunction(async () => {
-    const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
-    return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)
+for (const checkpointName of ['all-bridges', 'all-reinforced']) {
+  test(`the complete bridge network (${checkpointName}) renders and both eastern crossings can be managed`, async ({ page }, testInfo) => {
+    const errors = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await startAt(page, checkpointName)
+    await expect(page.locator('.skymap .bridge')).toHaveCount(5)
+    await page.getByRole('button', { name: 'Fold Cloud away' }).click()
+    await page.waitForFunction(async () => {
+      const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
+      return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)
+    })
+    // The world fills its sprite cache over several animation frames after decoding.
+    await page.evaluate(() => new Promise(resolve => {
+      let frames = 20
+      const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
+      requestAnimationFrame(painted)
+    }))
+    await page.screenshot({ path: testInfo.outputPath('complete-network.png') })
+    for (const island of ['Hearthside', 'Prism Shelf']) {
+      const crossing = page.getByRole('button', { name: `Manage New Haven ↔ ${island} bridge`, exact: true })
+      await crossing.focus()
+      await crossing.press('Enter')
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await page.keyboard.press('Escape')
+    }
+    await page.mouse.move(915, 480)
+    await page.mouse.wheel(0, -400)
+    await page.screenshot({ path: testInfo.outputPath('eastern-landings.png') })
+    await page.keyboard.press('0')
+    await page.evaluate(() => new Promise(resolve => {
+      let frames = 30
+      const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
+      requestAnimationFrame(painted)
+    }))
+    await page.mouse.move(520, 465)
+    await page.mouse.wheel(0, -600)
+    await page.screenshot({ path: testInfo.outputPath('western-landings.png') })
+    expect(errors).toEqual([])
   })
-  // The world fills its sprite cache over several animation frames after decoding.
-  await page.evaluate(() => new Promise(resolve => {
-    let frames = 20
-    const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
-    requestAnimationFrame(painted)
-  }))
-  await page.screenshot({ path: testInfo.outputPath('complete-network.png') })
-  for (const island of ['Hearthside', 'Prism Shelf']) {
-    const crossing = page.getByRole('button', { name: `Manage New Haven ↔ ${island} bridge`, exact: true })
-    await crossing.focus()
-    await crossing.press('Enter')
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await page.keyboard.press('Escape')
-  }
-  await page.mouse.move(915, 480)
-  await page.mouse.wheel(0, -400)
-  await page.screenshot({ path: testInfo.outputPath('eastern-landings.png') })
-  await page.keyboard.press('0')
-  await page.evaluate(() => new Promise(resolve => {
-    let frames = 30
-    const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
-    requestAnimationFrame(painted)
-  }))
-  await page.mouse.move(520, 465)
-  await page.mouse.wheel(0, -600)
-  await page.screenshot({ path: testInfo.outputPath('western-landings.png') })
-  expect(errors).toEqual([])
-})
+}
 
 test('the tutorial advances through gathering, building and the quest book', async ({ page }) => {
   const fresh = checkpoint('new-town')
