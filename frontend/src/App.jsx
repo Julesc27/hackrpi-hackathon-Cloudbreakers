@@ -14,6 +14,7 @@ import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
 import { BuildingModal, RemovalModal } from './components/panels/Removal.jsx'
+import { WeatherWatch, WeatherModal } from './components/panels/Weather.jsx'
 import {
   JournalModal,
   StorageModal,
@@ -62,6 +63,7 @@ function GameScreen() {
         </header>
 
         <ObjectiveRibbon />
+        <WeatherWatch />
         <WeatherCard />
         <LeftRail />
         <ProgressionCard />
@@ -81,6 +83,7 @@ function GameScreen() {
       {ui.panel === 'storage' && <StorageModal />}
       {ui.panel === 'storageHouse' && <StorageHouseModal />}
       {ui.panel === 'building' && <BuildingModal />}
+      {ui.panel === 'weather' && <WeatherModal />}
       {ui.panel === 'remove' && <RemovalModal />}
       {ui.panel === 'backpack' && <BackpackModal />}
       {ui.panel === 'store' && <StoreModal />}

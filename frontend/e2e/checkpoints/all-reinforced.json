@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -17,14 +17,14 @@
   "avatarSet": false,
   "resources": {
     "wood": 12,
-    "water": 80,
+    "water": 83,
     "food": 58,
-    "energy": 90,
+    "energy": 100,
     "coins": 129,
-    "stone": 8,
+    "stone": 17,
     "seeds": 22,
-    "crystals": 28,
-    "materials": 46,
+    "crystals": 37,
+    "materials": 55,
     "fish": 18
   },
   "backpack": {
@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i87",
+    "id": "i83",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
@@ -144,7 +144,7 @@
       }
     },
     {
-      "id": "b67",
+      "id": "b64",
       "type": "market",
       "island": "newHaven",
       "slot": 1,
@@ -230,8 +230,15 @@
       }
     }
   ],
-  "weather": "cloudDrought",
-  "forecast": "clear",
+  "weather": "clear",
+  "forecast": "heatWave",
+  "weatherCycle": {
+    "phase": "warning",
+    "remaining": 6,
+    "seed": 1562119389,
+    "events": 0,
+    "lastWeather": null
+  },
   "completed": [
     "firstSteps",
     "anchor",
@@ -278,163 +285,142 @@
       "text": "Unlocked Food Garden, Water Collector, Storage House."
     },
     {
-      "id": "j13",
-      "level": 2,
-      "type": "event",
-      "title": "Heavy Rain",
-      "text": "Collectors overflow. Rope bridges creak."
-    },
-    {
-      "id": "j16",
+      "id": "j15",
       "level": 2,
       "type": "mission",
       "title": "A Place for Water",
       "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     },
     {
-      "id": "j23",
+      "id": "j22",
       "level": 2,
       "type": "discovery",
       "title": "Reached Verdant Reach",
       "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
     },
     {
-      "id": "j25",
+      "id": "j24",
       "level": 2,
       "type": "mission",
       "title": "The First Bridge",
       "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
     },
     {
-      "id": "j27",
+      "id": "j26",
       "level": 3,
       "type": "level",
       "title": "Reached level 3: Builder",
       "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
     },
     {
-      "id": "j29",
+      "id": "j28",
       "level": 3,
       "type": "mission",
       "title": "A Garden in the Sky",
       "text": "Achieve a food surplus after an action. Reward: 75 XP · Starter Garden upgrade (+2 food)."
     },
     {
-      "id": "j31",
+      "id": "j30",
       "level": 3,
       "type": "mission",
       "title": "Keep the Lights On",
       "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
     },
     {
-      "id": "j33",
+      "id": "j32",
       "level": 4,
       "type": "level",
       "title": "Reached level 4: Steward",
       "text": "Unlocked Clinic, Community Hall."
     },
     {
-      "id": "j34",
-      "level": 4,
-      "type": "event",
-      "title": "Crosswind",
-      "text": "Bridges sway. Turbines sing."
-    },
-    {
-      "id": "j39",
+      "id": "j37",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j44",
+      "id": "j42",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j46",
+      "id": "j44",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j48",
+      "id": "j46",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j49",
-      "level": 5,
-      "type": "event",
-      "title": "Solar Storm",
-      "text": "Panels flicker; solar output is halved."
-    },
-    {
-      "id": "j57",
+      "id": "j54",
       "level": 5,
       "type": "discovery",
       "title": "Reached Mercy Rise",
       "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
     },
     {
-      "id": "j62",
+      "id": "j59",
       "level": 5,
       "type": "discovery",
       "title": "Reached Hearthside",
       "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
     },
     {
-      "id": "j64",
+      "id": "j61",
       "level": 5,
       "type": "event",
       "title": "Harvest timber is resting",
       "text": "Harvest timber is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j71",
+      "id": "j68",
       "level": 5,
       "type": "mission",
       "title": "The Long Span",
       "text": "Have a bridge with stability above 70%. Reward: 80 XP · Storm Bracing (halves bridge damage)."
     },
     {
-      "id": "j74",
+      "id": "j70",
       "level": 5,
       "type": "mission",
       "title": "Higher Tomorrows",
       "text": "Water, food, energy and happiness all ≥ 50, and sustainability ≥ 60. Reward: 300 XP · the Skystead is founded."
     },
     {
-      "id": "j76",
+      "id": "j72",
       "level": 6,
       "type": "level",
       "title": "Reached level 6: Cloud Mayor",
       "text": ""
     },
     {
-      "id": "j77",
+      "id": "j73",
       "level": 6,
       "type": "story",
       "title": "A Skystead is founded",
       "text": "Water, food, energy and spirits are all holding. The sky network glows from end to end. Higher tomorrows."
     },
     {
-      "id": "j78",
+      "id": "j88",
       "level": 6,
       "type": "event",
-      "title": "Cloud Drought",
-      "text": "The clouds are holding on to their water."
+      "title": "Weather warning",
+      "text": "Heat Wave arrives after 6 completed jobs. Prepare level 2 shelters and stock food, water and energy."
     }
   ],
-  "journalUnread": 26,
+  "journalUnread": 23,
   "seenIntro": true,
-  "nextId": 91,
+  "nextId": 89,
   "player": {
     "island": "newHaven",
     "x": 642.5,

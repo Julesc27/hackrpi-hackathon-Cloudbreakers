@@ -1,8 +1,8 @@
 // Cloud's advice follows the four-island resource loop and never mutates game state.
 // Each tip has a `focus` using the same words as the gods (backend/app/oracle.py FOCUSES),
 // so Cloud can notice when the gods have said something different.
-import { ISLANDS, BUILDINGS, BEACON_COST } from './data.js'
-import { projectProduction, actionsOfSupply, hasAnchor, countType, openRoutes, otherEnd, bridgeCost, canAfford, getLevelInfo } from './engine.js'
+import { ISLANDS, BUILDINGS, BEACON_COST, WEATHER } from './data.js'
+import { projectProduction, actionsOfSupply, hasAnchor, countType, openRoutes, otherEnd, bridgeCost, canAfford, getLevelInfo, weatherReadiness, shelterCondition } from './engine.js'
 import { viewDeposit } from './deposits.js'
 
 export function getAdvice(state) {
@@ -12,6 +12,9 @@ export function getAdvice(state) {
   const situation = `Level ${getLevelInfo(state.xp).level}. ${state.population} residents. Starter timber: ${timber}. Stone deposits: ${stone}.`
   const tips = []
   const add = (recommendation, reason, tradeoff, confidence = 88, extra = {}) => tips.push({ situation, recommendation, reason, tradeoff, confidence, alternative: null, ...extra })
+  const readiness = weatherReadiness(state)
+  if (state.weatherCycle?.phase !== 'calm' && readiness.vulnerable) add(`Prepare level ${readiness.required} shelters`, `${WEATHER[readiness.key].name}: ${readiness.vulnerable} homes need protection. Open Weather readiness to upgrade them before they lose condition.`, 'Upgrades use wood and stone; stormproof homes also use building materials.', 99, { art:'shelter', focus:'shelter' })
+  else if (state.buildings.some(b => b.type === 'shelter' && shelterCondition(b) === 0)) add('Repair uninhabitable shelters', 'Damaged homes cannot house residents until repaired or upgraded. Open their panels to restore the beds.', 'Repairs use 4 wood and 2 stone.', 99, { art:'shelter', focus:'shelter' })
   const connect = (id, reason, confidence) => {
     const route = openRoutes(state).find((r) => otherEnd(r, state.connected) === id)
     if (!route) return

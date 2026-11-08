@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -17,7 +17,7 @@
   "avatarSet": false,
   "resources": {
     "wood": 18,
-    "water": 31,
+    "water": 21,
     "food": 15,
     "energy": 12,
     "coins": 65,
@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i19",
+    "id": "i18",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
@@ -93,9 +93,9 @@
       "wood": 6
     }
   },
-  "happiness": 60,
+  "happiness": 62,
   "population": 10,
-  "sustainability": 50,
+  "sustainability": 40,
   "sustainPenalty": 0,
   "xp": 180,
   "blueprints": [
@@ -153,8 +153,15 @@
     "hearth"
   ],
   "bridges": [],
-  "weather": "heavyRain",
-  "forecast": "heatWave",
+  "weather": "clear",
+  "forecast": "clear",
+  "weatherCycle": {
+    "phase": "calm",
+    "remaining": 20,
+    "seed": 1821285621,
+    "events": 0,
+    "lastWeather": null
+  },
   "completed": [
     "firstSteps",
     "anchor",
@@ -195,23 +202,16 @@
       "text": "Unlocked Food Garden, Water Collector, Storage House."
     },
     {
-      "id": "j13",
-      "level": 2,
-      "type": "event",
-      "title": "Heavy Rain",
-      "text": "Collectors overflow. Rope bridges creak."
-    },
-    {
-      "id": "j16",
+      "id": "j15",
       "level": 2,
       "type": "mission",
       "title": "A Place for Water",
       "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     }
   ],
-  "journalUnread": 6,
+  "journalUnread": 5,
   "seenIntro": true,
-  "nextId": 22,
+  "nextId": 21,
   "player": {
     "island": "newHaven",
     "x": 642.5,

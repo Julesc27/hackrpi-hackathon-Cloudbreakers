@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -130,7 +130,14 @@
   ],
   "bridges": [],
   "weather": "clear",
-  "forecast": "heavyRain",
+  "forecast": "clear",
+  "weatherCycle": {
+    "phase": "calm",
+    "remaining": 23,
+    "seed": 1821285621,
+    "events": 0,
+    "lastWeather": null
+  },
   "completed": [
     "firstSteps"
   ],

@@ -2,6 +2,8 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { removalInfo } from '../../game/engine.js'
 import { BUILDINGS, ISLANDS, RESOURCES } from '../../game/data.js'
 import { Modal, YieldChips } from './Panel.jsx'
+import { ShelterCare } from './Weather.jsx'
+import { shelterCondition } from '../../game/engine.js'
 
 export function RemoveButton({ buildingId, routeId }) {
   const { state } = useGame(), ui = useUI()
@@ -39,7 +41,8 @@ export function BuildingModal() {
   return <Modal title={def.name} kicker={ISLANDS[building.island].name} onClose={() => ui.setPanel(null)}>
     <p>{def.desc}</p>
     {def.prod && <p>Production <YieldChips yields={def.prod} /></p>}
-    {def.housing && <p>Provides {def.housing} beds.</p>}
+    {def.housing && <p>Provides {building.type === 'shelter' && shelterCondition(building) === 0 ? 0 : def.housing} beds.</p>}
+    {building.type === 'shelter' && <ShelterCare building={building} />}
     <RemoveButton buildingId={building.id} />
   </Modal>
 }

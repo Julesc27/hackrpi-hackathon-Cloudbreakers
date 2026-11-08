@@ -597,7 +597,7 @@ test('resource quests advance through actions and interface actions do not simul
 test('old saves preserve town progress and resume even with zero former actions', () => {
   const old = { ...createInitialState(), version: 2, xp: 250, turn: 9, actionsLeft: 0, report: {}, showReport: true }
   const state = migrateSave(old)
-  assert.equal(state.version, 6)
+  assert.equal(state.version, 7)
   assert.equal(state.xp, old.xp)
   assert.deepEqual(state.resources, old.resources)
   for (const key of ['turn', 'actionsLeft', 'report', 'showReport']) assert.equal(key in state, false)
@@ -958,7 +958,7 @@ test('old saves keep partial world stock and outer nodes start full', () => {
     deposits: { wood: 12, stone: 0, water: 18, food: 10 },
   }
   const loaded = migrateSave(legacy)
-  assert.equal(loaded.version, 6)
+  assert.equal(loaded.version, 7)
   assert.equal(loaded.deposits.grove.stock, 12)
   assert.equal(loaded.deposits.stone.stock, 0)
   assert.ok(loaded.deposits.stone.regrowAt > Date.now())

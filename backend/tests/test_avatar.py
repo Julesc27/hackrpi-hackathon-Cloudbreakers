@@ -82,3 +82,24 @@ def test_bad_avatar_is_refused_and_nothing_is_stored(player):
     res = TestClient(app).put("/town", json={**TOWN, "avatar": {**AVATAR, "hat": "crown"}})
     assert res.status_code == 422
     assert player.avatar is None and player.town is None
+
+
+def test_cloud_save_preserves_weather_schedule_and_damaged_upgraded_homes(player):
+    cycle = {"phase": "warning", "remaining": 4, "seed": 3912381249,
+             "events": 3, "lastWeather": "crosswind"}
+    building = {"id": "house", "type": "shelter", "island": "newHaven", "slot": 0,
+                "builtLevel": 1, "shelterLevel": 3, "condition": 0,
+                "paidCost": {"wood": 26, "stone": 11, "materials": 2}}
+    town = {**TOWN, "version": 7, "forecast": "solarStorm", "weatherCycle": cycle,
+            "buildings": [building]}
+    client = TestClient(app)
+    response = client.put("/town", json=town)
+    assert response.status_code == 200, response.text
+    saved = player.town.model_dump()
+    assert saved["weatherCycle"] == cycle
+    assert saved["buildings"][0]["shelterLevel"] == 3
+    assert saved["buildings"][0]["condition"] == 0
+    assert saved["buildings"][0]["paidCost"] == building["paidCost"]
+    loaded = client.get("/town").json()
+    assert loaded["town"]["weatherCycle"] == cycle
+    assert loaded["town"]["buildings"][0]["condition"] == 0

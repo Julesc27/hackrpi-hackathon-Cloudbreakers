@@ -1,7 +1,7 @@
 // Deterministic, action-driven game rules with XP and level unlocks.
 import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
-  GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
+  GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER, SHELTER_LEVELS, SHELTER_REPAIR_COST,
 } from './data.js'
 import { freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
 import { DEFAULT_AVATAR, normalizeAvatar } from './avatar.js'
@@ -21,9 +21,45 @@ export const atTownStorage = (state, storageId = null) => storageDepots(state).s
 const ALL_RES = Object.keys(RESOURCES)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
-export function createInitialState() {
+const freshWeather = (seed = 0x6c8e9cf5) => ({ phase: 'calm', remaining: 24, seed: (seed >>> 0) || 1, events: 0, lastWeather: null })
+function normalizeWeatherSave(saved) {
+  const cycle = saved.weatherCycle
+  const phase = cycle?.phase
+  const key = phase === 'warning' ? saved.forecast : saved.weather
+  if (saved.version !== 7 || !['calm','warning','active'].includes(phase) || !Number.isFinite(cycle.remaining) ||
+      (phase !== 'calm' && (!WEATHER[key] || key === 'clear'))) {
+    return { weather: 'clear', forecast: 'clear', weatherCycle: freshWeather() }
+  }
+  return { weather: phase === 'active' ? key : 'clear', forecast: phase === 'calm' ? 'clear' : key,
+    weatherCycle: { phase, remaining: clamp(Math.floor(cycle.remaining),1,phase === 'calm' ? 24 : phase === 'warning' ? 6 : 5),
+      seed: Number.isFinite(cycle.seed) ? (cycle.seed >>> 0) || 1 : freshWeather().seed,
+      events: Number.isFinite(cycle.events) ? Math.max(0,Math.floor(cycle.events)) : 0,
+      lastWeather: WEATHER[cycle.lastWeather] && cycle.lastWeather !== 'clear' ? cycle.lastWeather : null } }
+}
+export const shelterLevel = building => clamp(Math.floor(Number(building.shelterLevel) || 1), 1, 3)
+export const shelterCondition = building => Number.isFinite(building.condition) ? clamp(building.condition, 0, 100) : 100
+export function shelterWork(state, buildingId, repair = false) {
+  const building = state.buildings.find(b => b.id === buildingId && b.type === 'shelter')
+  if (!building) return null
+  const next = SHELTER_LEVELS[shelterLevel(building)+1]
+  const cost = repair ? SHELTER_REPAIR_COST : next?.cost
+  const reason = !islandAccess(state)[building.island] ? 'Reconnect this island first.'
+    : repair ? (shelterCondition(building) >= 100 ? 'This shelter is already in good condition.' : null)
+    : !next ? 'This shelter is already stormproof.' : getLevelInfo(state.xp).level < next.unlock ? `Reach player level ${next.unlock} first.` : null
+  return { building, next, cost, reason: reason || (!canAfford(state.resources,cost) ? 'Deposit more construction supplies in Town Storage.' : null) }
+}
+export function weatherReadiness(state) {
+  const cycle = state.weatherCycle || freshWeather()
+  const key = cycle.phase === 'warning' ? state.forecast : state.weather
+  const required = WEATHER[key]?.shelterLevel || 1
+  const shelters = state.buildings.filter(b => b.type === 'shelter')
+  const ready = shelters.filter(b => shelterLevel(b) >= required && shelterCondition(b) > 0).length
+  return { key, required, total: shelters.length, ready, vulnerable: shelters.length-ready }
+}
+
+export function createInitialState(weatherSeed) {
   return {
-    version: 6,
+    version: 7,
     townName: 'New Haven',
     avatar: { ...DEFAULT_AVATAR },
     avatarSet: false, // true once the player has designed their Captain
@@ -48,6 +84,7 @@ export function createInitialState() {
     bridges: [],
     weather: 'clear',
     forecast: 'clear',
+    weatherCycle: freshWeather(weatherSeed),
     completed: [],
     counters: { waterStreak: 0, energyStreak: 0, foodSurplus: 0 },
     journal: [
@@ -83,7 +120,7 @@ export const hasAnchor = (state) => countType(state, 'bridgeAnchor') > 0
 export function housing(state) {
   const access = islandAccess(state)
   const islandHomes = Object.keys(access).reduce((s, id) => s + (ISLANDS[id].housing || 0), 0)
-  return BASE_HOUSING + islandHomes + state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].housing || 0), 0)
+  return BASE_HOUSING + islandHomes + state.buildings.reduce((s, b) => s + (b.type === 'shelter' && shelterCondition(b) === 0 ? 0 : BUILDINGS[b.type].housing || 0), 0)
 }
 
 export function caps(state) {
@@ -253,6 +290,7 @@ export function projectProduction(state, weatherKey = state.weather) {
     Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
   if (bh) dh += bh
   net.happiness = dh
+  if (w.shelterLevel) net.happiness -= Math.min(8,weatherReadiness(state).vulnerable*2)
 
   return { gain, use, net, sources }
 }
@@ -342,8 +380,49 @@ export function checkMissions(state) {
 
 /* ---------- automatic settlement updates ---------- */
 
+function advanceWeather(state) {
+  let cycle = { ...(state.weatherCycle || freshWeather()) }
+  cycle.remaining -= 1
+  if (cycle.remaining > 0) return { ...state, weatherCycle: cycle }
+  // A saved random stream makes reloads resume the same warning and recovery period.
+  const random = () => {
+    let seed = cycle.seed >>> 0
+    seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5
+    cycle.seed = (seed >>> 0) || 1
+    return cycle.seed / 4294967296
+  }
+  if (cycle.phase === 'calm') {
+    const keys = Object.keys(WEATHER).filter(key => key !== 'clear' && key !== cycle.lastWeather &&
+      (key !== 'solarStorm' || (cycle.events >= 2 && getLevelInfo(state.xp).level >= 5 && state.connected.includes('prism'))))
+    let roll = random()*keys.reduce((sum,key) => sum+WEATHER[key].weight,0)
+    const next = keys.find(key => (roll -= WEATHER[key].weight) < 0) || keys.at(-1)
+    cycle = { ...cycle, phase: 'warning', remaining: 6 }
+    const text = `${WEATHER[next].name} arrives after 6 completed jobs. Prepare level ${WEATHER[next].shelterLevel} shelters and stock food, water and energy.`
+    return { ...journal(toast(state,'warn',text,'Weather warning'),'event','Weather warning',text), weather: 'clear', forecast: next, weatherCycle: cycle }
+  }
+  if (cycle.phase === 'warning') {
+    cycle = { ...cycle, phase: 'active', remaining: 5 }
+    const text = `${WEATHER[state.forecast].text} This event lasts 5 completed jobs. Shelters need level ${WEATHER[state.forecast].shelterLevel} protection.`
+    return { ...journal(toast(state,'warn',text,WEATHER[state.forecast].name),'event',WEATHER[state.forecast].name,text), weather: state.forecast, weatherCycle: cycle }
+  }
+  const recovery = 12+Math.floor(random()*9)
+  cycle = { ...cycle, phase: 'calm', remaining: recovery, events: cycle.events+1, lastWeather: state.weather }
+  const text = `The weather has passed. You have ${recovery} calm jobs before another warning. Repair homes and replenish supplies.`
+  return { ...journal(toast(state,'story',text,'Clear skies return'),'event','Clear skies return',text), weather: 'clear', forecast: 'clear', weatherCycle: cycle }
+}
+
 function progressSettlement(state, xp) {
   const w = WEATHER[state.weather]
+  const damaged = []
+  if (w.shelterLevel) {
+    const buildings = state.buildings.map(b => {
+      if (b.type !== 'shelter' || shelterLevel(b) >= w.shelterLevel || shelterCondition(b) === 0) return b
+      const condition = Math.max(0,shelterCondition(b)-(w.shelterLevel === 3 ? 25 : 20))
+      if (condition === 0) damaged.push(b)
+      return { ...b, condition }
+    })
+    state = { ...state, buildings }
+  }
   const proj = projectProduction(state)
   const cap = caps(state)
   const res = { ...state.resources }
@@ -376,6 +455,7 @@ function progressSettlement(state, xp) {
   const house = housing(state)
   if (state.population > house) { dh -= 3; reasons.push(['Overcrowding', -3]) }
   if (w.happiness) { dh += w.happiness; reasons.push([w.name, w.happiness]) }
+  if (w.shelterLevel) dh -= Math.min(8,weatherReadiness(state).vulnerable*2)
   const bh =
     state.buildings.reduce((s, b) => s + (access[b.island] ? BUILDINGS[b.type].happiness || 0 : 0), 0) +
     Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
@@ -435,18 +515,13 @@ function progressSettlement(state, xp) {
   }
 
   if (shortages.length) s = journal(s, 'event', 'Shortage', `New Haven ran out of ${shortages.join(' and ')}. Residents are worried.`)
+  for (const b of damaged) s = journal(toast(s,'warn','A shelter is uninhabitable. Repair or upgrade it to restore its 4 beds.'),'event','Shelter damaged',`A shelter on ${ISLANDS[b.island].name} lost its protection during ${w.name}. Its residents need repairs before their home can be used again.`)
   for (const n of bridgeNotes) {
     if (n.to === 0 && n.from > 0) s = journal(s, 'event', 'A bridge has closed', `${bridgeLabel(n.route)} is closed until repaired.`)
   }
 
   s = checkMissions(awardXP(s, xp))
-  // Weather changes with level progression, without a separate turn cycle.
-  const weatherKeys = Object.keys(WEATHER)
-  const level = getLevelInfo(s.xp).level
-  const weather = weatherKeys[(level - 1) % weatherKeys.length]
-  const forecast = weatherKeys[level % weatherKeys.length]
-  if (weather !== state.weather) s = journal(s, 'event', WEATHER[weather].name, WEATHER[weather].text)
-  return { ...s, weather, forecast }
+  return advanceWeather(s)
 
 }
 
@@ -528,6 +603,18 @@ function gatherAtSite(state, siteId, now = Date.now()) {
 
 export function gameReducer(state, action) {
   switch (action.type) {
+    case 'UPGRADE_SHELTER':
+    case 'REPAIR_SHELTER': {
+      const repair = action.type === 'REPAIR_SHELTER'
+      const work = shelterWork(state,action.buildingId,repair)
+      if (!work) return state
+      if (work.reason) return toast(state,'warn',work.reason)
+      const buildings = state.buildings.map(b => b !== work.building ? b : {
+        ...b, condition: 100, shelterLevel: repair ? shelterLevel(b) : shelterLevel(b)+1,
+        ...(!repair && { paidCost: addCosts(recordedCost(b,BUILDINGS.shelter.cost),work.cost) }),
+      })
+      return progressSettlement(toast({ ...state, buildings, resources: pay(state.resources,work.cost) },'build',repair ? 'Shelter repaired.' : `Shelter upgraded to level ${work.next === SHELTER_LEVELS[3] ? 3 : 2}: ${work.next.name}.`),10)
+    }
     case 'REMOVE_BUILDING':
     case 'REMOVE_BRIDGE': {
       const target = action.type === 'REMOVE_BUILDING' ? { buildingId: action.buildingId } : { routeId: action.routeId }
@@ -662,7 +749,7 @@ export function gameReducer(state, action) {
     case 'READ_JOURNAL':
       return { ...state, journalUnread: 0 }
     case 'NEW_GAME':
-      return createInitialState()
+      return createInitialState(action.seed)
     case 'LOAD':
       return migrateSave(action.state)
     default:
@@ -672,7 +759,7 @@ export function gameReducer(state, action) {
 
 // Map the older eight-island town into the current chapter without losing buildings.
 export function migrateSave(saved) {
-  if (!saved || ![2, 3, 4, 5, 6].includes(saved.version)) return createInitialState()
+  if (!saved || ![2, 3, 4, 5, 6, 7].includes(saved.version)) return createInitialState()
   const { turn, actionsLeft, report, showReport, ...rest } = saved
   const islandMap = { mistral: 'prism', gardens: 'verdant', skyport: 'prism' }
   const remap = (id) => islandMap[id] || id
@@ -691,7 +778,7 @@ export function migrateSave(saved) {
     }
     if (building.slot >= 0 && slot < 0 && !BUILDINGS[building.type].infrastructure) continue
     occupied.add(`${island}:${slot}`)
-    buildings.set(building.id, { builtLevel: 1, ...building, island, slot })
+    buildings.set(building.id, { builtLevel: 1, ...building, island, slot, ...(building.type === 'shelter' && { shelterLevel: shelterLevel(building), condition: shelterCondition(building) }) })
   }
   const bridges = new Map()
   for (const { builtTurn, ...b } of saved.bridges || []) {
@@ -704,7 +791,8 @@ export function migrateSave(saved) {
     })
   }
   return {
-    ...createInitialState(), ...rest, version: 6, toasts: [],
+    ...createInitialState(), ...rest, version: 7, toasts: [],
+    ...normalizeWeatherSave(saved),
     avatar: normalizeAvatar(saved.avatar),
     avatarSet: saved.avatarSet === true,
     resources: { ...createInitialState().resources, ...saved.resources },

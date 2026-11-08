@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -17,14 +17,14 @@
   "avatarSet": false,
   "resources": {
     "wood": 12,
-    "water": 70,
+    "water": 55,
     "food": 44,
-    "energy": 41,
+    "energy": 48,
     "coins": 95,
-    "stone": 17,
+    "stone": 22,
     "seeds": 12,
-    "crystals": 7,
-    "materials": 17,
+    "crystals": 12,
+    "materials": 22,
     "fish": 8
   },
   "backpack": {
@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i58",
+    "id": "i55",
     "siteId": "forest",
     "island": "verdant",
     "kind": "wood",
@@ -93,9 +93,9 @@
       "wood": 8
     }
   },
-  "happiness": 83,
+  "happiness": 95,
   "population": 12,
-  "sustainability": 81,
+  "sustainability": 87,
   "sustainPenalty": 0,
   "xp": 805,
   "blueprints": [
@@ -164,7 +164,7 @@
     {
       "route": "verdant-haven",
       "type": "rope",
-      "condition": 90,
+      "condition": 100,
       "builtLevel": 2,
       "paidCost": {
         "wood": 14
@@ -173,7 +173,7 @@
     {
       "route": "rain-haven",
       "type": "rope",
-      "condition": 94,
+      "condition": 100,
       "builtLevel": 4,
       "paidCost": {
         "wood": 20
@@ -182,7 +182,7 @@
     {
       "route": "prism-haven",
       "type": "rope",
-      "condition": 98,
+      "condition": 100,
       "builtLevel": 4,
       "paidCost": {
         "wood": 18
@@ -207,8 +207,15 @@
       }
     }
   ],
-  "weather": "solarStorm",
-  "forecast": "cloudDrought",
+  "weather": "clear",
+  "forecast": "clear",
+  "weatherCycle": {
+    "phase": "calm",
+    "remaining": 10,
+    "seed": 1821285621,
+    "events": 0,
+    "lastWeather": null
+  },
   "completed": [
     "firstSteps",
     "anchor",
@@ -253,121 +260,100 @@
       "text": "Unlocked Food Garden, Water Collector, Storage House."
     },
     {
-      "id": "j13",
-      "level": 2,
-      "type": "event",
-      "title": "Heavy Rain",
-      "text": "Collectors overflow. Rope bridges creak."
-    },
-    {
-      "id": "j16",
+      "id": "j15",
       "level": 2,
       "type": "mission",
       "title": "A Place for Water",
       "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     },
     {
-      "id": "j23",
+      "id": "j22",
       "level": 2,
       "type": "discovery",
       "title": "Reached Verdant Reach",
       "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
     },
     {
-      "id": "j25",
+      "id": "j24",
       "level": 2,
       "type": "mission",
       "title": "The First Bridge",
       "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
     },
     {
-      "id": "j27",
+      "id": "j26",
       "level": 3,
       "type": "level",
       "title": "Reached level 3: Builder",
       "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
     },
     {
-      "id": "j29",
+      "id": "j28",
       "level": 3,
       "type": "mission",
       "title": "A Garden in the Sky",
       "text": "Achieve a food surplus after an action. Reward: 75 XP · Starter Garden upgrade (+2 food)."
     },
     {
-      "id": "j31",
+      "id": "j30",
       "level": 3,
       "type": "mission",
       "title": "Keep the Lights On",
       "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
     },
     {
-      "id": "j33",
+      "id": "j32",
       "level": 4,
       "type": "level",
       "title": "Reached level 4: Steward",
       "text": "Unlocked Clinic, Community Hall."
     },
     {
-      "id": "j34",
-      "level": 4,
-      "type": "event",
-      "title": "Crosswind",
-      "text": "Bridges sway. Turbines sing."
-    },
-    {
-      "id": "j39",
+      "id": "j37",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j44",
+      "id": "j42",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j46",
+      "id": "j44",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j48",
+      "id": "j46",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j49",
-      "level": 5,
-      "type": "event",
-      "title": "Solar Storm",
-      "text": "Panels flicker; solar output is halved."
-    },
-    {
-      "id": "j57",
+      "id": "j54",
       "level": 5,
       "type": "discovery",
       "title": "Reached Mercy Rise",
       "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
     },
     {
-      "id": "j62",
+      "id": "j59",
       "level": 5,
       "type": "discovery",
       "title": "Reached Hearthside",
       "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
     }
   ],
-  "journalUnread": 20,
+  "journalUnread": 17,
   "seenIntro": true,
-  "nextId": 63,
+  "nextId": 60,
   "player": {
     "island": "newHaven",
     "x": 642.5,

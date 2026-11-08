@@ -1,0 +1,26 @@
+.weather-watch { position: absolute; top: 142px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; width: min(410px, calc(100% - 230px)); padding: 9px 14px; border-radius: 16px; text-align: left; pointer-events: auto; }
+.weather-watch > svg { flex: none; }
+.weather-watch > span:first-of-type { flex: 1; min-width: 0; }
+.weather-watch strong, .weather-watch small { display: block; }
+.weather-watch strong { font-size: 12px; }
+.weather-watch small { font-size: 10px; color: #b9cce4; margin-top: 2px; }
+.weather-watch.weather-warning { border-color: #ecc777; }
+.weather-watch.weather-active { border-color: #e99b7d; }
+.weather-summary { border: 1px solid #ad9259; border-radius: 12px; padding: 12px; margin-bottom: 14px; background: #dfc99544; }
+.weather-summary p:last-child { margin-bottom: 0; }
+.weather-home { border-top: 1px solid #ad925955; padding: 14px 0; }
+.weather-home h4 { margin: 0 0 8px; }
+.shelter-care { margin: 12px 0 18px; }
+.shelter-care p { margin-top: 5px; }
+.shelter-care label { display: block; font-size: 13px; margin: 10px 0; }
+.shelter-care .action-stack { margin-top: 12px; }
+.shelter-level { pointer-events: none; font: 600 10px var(--font-body); }
+@media (max-width: 800px) {
+  .weather-watch { top: auto; bottom: 150px; left: 76px; right: 12px; transform: none; width: auto; max-width: 340px; padding: 7px 10px; gap: 7px; }
+  .weather-watch strong { font-size: 10px; }
+  .weather-watch small { font-size: 9px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .weather-watch { top: 85px; bottom: auto; left: 118px; right: auto; transform: none; width: 245px; padding: 6px 10px; }
+  .game.has-panel .weather-watch { opacity: 0; pointer-events: none; }
+}
