@@ -3,6 +3,7 @@
 // Without it the game still runs fully offline, saving to localStorage only.
 
 import { possibleMoves } from '../game/possibleMoves.js'
+import { localOracle } from '../game/localOracle.js'
 
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const TOKEN_KEY = 'cloudbreakers-token'
@@ -23,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, keepalive = false } = {}) {
+async function request(path, { method = 'GET', body, keepalive = false, timeoutMs = 0 } = {}) {
   if (!API_URL) throw new ApiError(0, 'VITE_API_URL is not set')
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()
@@ -35,6 +36,7 @@ async function request(path, { method = 'GET', body, keepalive = false } = {}) {
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       keepalive,
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
     })
   } catch {
     throw new ApiError(0, 'Can’t reach the server')
@@ -62,7 +64,15 @@ export const saveTown = (state, { keepalive = false } = {}) => request('/town', 
 // Consult the Gods (store item). Sends the live town; the journal is left out to save tokens.
 // -> { poem }
 // The gods may only advise moves the player can actually make right now (see possibleMoves.js).
-export const consultGods = (state) => {
+export const consultGods = async (state) => {
+  if (!hasBackend() || !getToken()) return localOracle(state)
   const { journal, toasts, lastInteraction, ...town } = state
-  return request('/advisor', { method: 'POST', body: { ...town, possibleMoves: possibleMoves(state) } })
+  try {
+    const result = await request('/advisor', { method: 'POST', body: { ...town, possibleMoves: possibleMoves(state) }, timeoutMs: 20_000 })
+    if (typeof result?.poem !== 'string' || !result.poem.trim()) return localOracle(state)
+    return result
+  } catch (error) {
+    if ([0, 401, 429, 500, 502, 503, 504].includes(error.status)) return localOracle(state)
+    throw error
+  }
 }

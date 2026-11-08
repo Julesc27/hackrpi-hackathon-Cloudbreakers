@@ -426,18 +426,19 @@ function RevealPoem({ poem }) {
 
 function ConsultGodsCard({ item }) {
   const { state, dispatch } = useGame()
-  const auth = useAuth()
   const [phase, setPhase] = useState('idle') // idle | asking | spoken | silent
   const [poem, setPoem] = useState('')
+  const [local, setLocal] = useState(false)
   const [error, setError] = useState('')
   const affordable = canAfford(state.resources, item.cost)
-  const loggedIn = auth.backend && auth.status === 'authed'
 
   const ask = async () => {
+    if (!affordable || phase === 'asking') return
     setPhase('asking')
     setError('')
     try {
       const res = await consultGods(state)
+      setLocal(res.source === 'local')
       setPoem(res.poem)
       setPhase('spoken')
       dispatch({ type: 'CONSULT_GODS', poem: res.poem, focus: res.focus }) // charged only once a poem arrives
@@ -449,8 +450,8 @@ function ConsultGodsCard({ item }) {
     }
   }
 
-  const label = !loggedIn ? 'Log in to consult' : phase === 'asking' ? 'The gods are considering…' : phase === 'spoken' ? 'Ask again' : 'Consult'
-  const blocked = !auth.backend || (loggedIn && (!affordable || phase === 'asking'))
+  const label = phase === 'asking' ? 'The gods are considering…' : phase === 'spoken' ? 'Ask again' : 'Consult'
+  const blocked = !affordable || phase === 'asking'
 
   return (
     <div className="store-card" data-tutorial={`store-${item.id}`}>
@@ -464,12 +465,12 @@ function ConsultGodsCard({ item }) {
       <button
         className="btn-gold store-btn"
         disabled={blocked}
-        onClick={!loggedIn ? auth.openLogin : ask}
-        title={!loggedIn ? 'The gods only answer logged-in stewards' : !affordable ? 'Not enough energy or coins' : item.name}
+        onClick={ask}
+        title={!affordable ? 'Not enough energy or coins' : item.name}
       >
         {label}
       </button>
-      {phase === 'spoken' && <RevealPoem key={poem} poem={poem} />}
+      {phase === 'spoken' && <>{local && <p className="muted small" role="status">Local oracle counsel · the online oracle is unavailable or you are playing as a guest.</p>}<RevealPoem key={poem} poem={poem} /></>}
       {phase === 'silent' && <p className="oracle-silent">{error}</p>}
     </div>
   )

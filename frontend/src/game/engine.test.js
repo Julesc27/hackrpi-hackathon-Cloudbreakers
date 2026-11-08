@@ -1317,3 +1317,18 @@ test('closed crossings cannot earn working transit or power milestones', () => {
   const town = { ...initial, connected: ['newHaven', 'verdant', 'rain', 'prism'], bridges: ['verdant', 'rain', 'prism'].map(id => ({ route: `${id}-haven`, type: 'reinforced', condition: 0 })), buildings: [...initial.buildings, { id: 'solar', type: 'solarFarm', island: 'prism', slot: 0 }] }
   for (const id of ['firstBridge', 'longSpan', 'cleanRoute', 'prismPower']) assert.equal(MISSIONS.find(m => m.id === id).progress(town)[0], 0, id)
 })
+
+test('offline oracle gives achievable counsel and a paid consultation records its poem', async () => {
+  const { localOracle } = await import('./localOracle.js')
+  const { possibleMoves } = await import('./possibleMoves.js')
+  const initial = createInitialState()
+  const town = { ...initial, resources: { ...initial.resources, energy: 30, coins: 80 } }
+  const reply = localOracle(town)
+  assert.ok(possibleMoves(town).includes(reply.focus))
+  assert.equal(reply.source, 'local')
+  assert.equal(reply.poem.split('\n').length, 4)
+  const result = gameReducer(town, { type: 'CONSULT_GODS', ...reply })
+  assert.equal(result.resources.energy, 5)
+  assert.equal(result.resources.coins, 30)
+  assert.equal(result.journal.at(-1).text, reply.poem)
+})
