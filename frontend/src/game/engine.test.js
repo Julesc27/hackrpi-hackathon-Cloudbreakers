@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORED_MATERIALS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -1154,17 +1154,17 @@ test('town storage is one shared pile of 250 gathered materials', () => {
   assert.equal(noGarden.resources.food, full.resources.food)
   assert.equal(noGarden.deposits.garden.stock, full.deposits.garden.stock)
   assert.equal(noGarden.xp, full.xp)
-  const carrying = { ...full, backpack: { ...full.backpack, wood: 6 } }
+  const carrying = { ...full, backpack: { ...full.backpack, wood: 14 } }
   const kept = gameReducer(carrying, { type: 'DEPOSIT_BACKPACK' })
-  assert.equal(kept.backpack.wood, 6)
+  assert.equal(kept.backpack.wood, 14)
   assert.equal(kept.resources.wood, carrying.resources.wood)
   const spent = gameReducer(carrying, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
-  assert.equal(spent.resources.wood, carrying.resources.wood - 10)
-  assert.equal(spent.backpack.wood, 6)
+  assert.equal(spent.resources.wood, carrying.resources.wood)
+  assert.equal(spent.backpack.wood, 4)
   assert.ok(storageUsed(spent.resources) < STORAGE_CAP)
   const unloaded = gameReducer(spent, { type: 'DEPOSIT_BACKPACK' })
   assert.equal(unloaded.backpack.wood || 0, 0)
-  assert.equal(unloaded.resources.wood, spent.resources.wood + 6)
+  assert.equal(unloaded.resources.wood, spent.resources.wood + 4)
   const over = { ...base, resources: { ...base.resources, wood: 400 } }
   assert.ok(storageUsed(over.resources) > STORAGE_CAP)
   const migrated = migrateSave(over)

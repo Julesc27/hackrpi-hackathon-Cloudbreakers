@@ -2,7 +2,7 @@
 import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
   GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
-  STORAGE_CAP, STORED_MATERIALS,
+  STORAGE_CAP, STORED_MATERIALS, SHELTER_LEVELS, SHELTER_REPAIR_COST,
 } from './data.js'
 import { freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
 import { DEFAULT_AVATAR, normalizeAvatar } from './avatar.js'

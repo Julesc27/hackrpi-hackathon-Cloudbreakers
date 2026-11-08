@@ -1,8 +1,8 @@
 // Regenerate committed checkpoints from real game actions, never from manually edited stats.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { GATHER_SITES, ROUTE_MAP } from '../src/game/data.js'
-import { backpackUsed, bridgeCost, createInitialState, gameReducer, storageAccepts, storageUsed } from '../src/game/engine.js'
+import { GATHER_SITES, ROUTE_MAP, ISLANDS, BRIDGE_TYPES, STORAGE_CAP } from '../src/game/data.js'
+import { backpackUsed, backpackCapacity, bridgeCost, createInitialState, gameReducer, storageAccepts, storageUsed } from '../src/game/engine.js'
 import { Player } from '../src/game/player.js'
 
 // A fixed clock keeps regrowth deterministic. Date.now() would change every
@@ -72,21 +72,22 @@ export function generateTowns() {
   if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')
   towns['anchor-ready'] = snap()
 
-  // Bank stone and the wood for every rope and reinforcement while only New
-  // Haven is producing. Once the outer islands are open, each gather also
-  // deposits their yields and the shared pile pins at 250 before the last
-  // reinforcement can be paid for. Leave enough free space that the rope-only
-  // town can still take a full backpack.
+  // Bank supplies before opening the islands, when gathering does not also
+  // produce their yields. Verdant opens first and produces wood after every
+  // bridge job: count that income toward reinforcement stock instead of
+  // banking it twice. The rope-only town must still accept a full backpack.
   const routes = ['verdant-haven', 'rain-haven', 'prism-haven', 'mercy-haven', 'hearth-haven']
   const ropeWood = routes.reduce((sum, id) => sum + ROUTE_MAP[id].wood, 0)
   const upgradeWood = routes.reduce((sum, id) => sum + Math.ceil(bridgeCost(ROUTE_MAP[id], 'reinforced').wood / 2), 0)
-  fill('stone', 40, ['stone'])
-  fill('wood', ropeWood + upgradeWood, ['grove'])
+  const upgradeStone = routes.reduce((sum, id) => sum + bridgeCost(ROUTE_MAP[id], 'reinforced').stone, 0)
+  const openingWood = routes.length * Math.floor(ISLANDS.verdant.yields.wood * BRIDGE_TYPES.rope.yieldMult)
+  fill('stone', upgradeStone, ['stone'])
+  fill('wood', ropeWood + Math.max(0, upgradeWood - openingWood), ['grove'])
   for (const routeId of routes) {
     act({ type: 'BUILD_BRIDGE', routeId, bridgeType: 'rope' })
     if (!town.bridges.some((b) => b.route === routeId)) throw new Error(`Could not build ${routeId}`)
   }
-  if (storageUsed(town.resources) + 20 > 250) throw new Error(`all-bridges checkpoint is too full to deposit a backpack (${storageUsed(town.resources)}/250)`)
+  if (storageUsed(town.resources) + backpackCapacity(town) > STORAGE_CAP) throw new Error(`all-bridges checkpoint is too full to deposit a backpack (${storageUsed(town.resources)}/${STORAGE_CAP})`)
   towns['all-bridges'] = snap()
 
   act({ type: 'RESTORE_BEACON' })
