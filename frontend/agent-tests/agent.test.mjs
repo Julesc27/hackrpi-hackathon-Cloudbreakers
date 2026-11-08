@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
+import { GATHER_SITES } from '../src/game/data.js'
 import { defaultModel, parseAction, requestGemini, requestTimeoutMs, retryableStatus, stepBudgetMs, thinkingLevel } from './agent.mjs'
 import { gradeFirstSteps, gradeGatherWood, gradeHoldFast, scenarios } from './scenarios.mjs'
 
@@ -95,7 +96,30 @@ test('every scenario has a unique id, a committed checkpoint, and fits its CI jo
 test('grader requires a real grove gathering action, not just extra XP or wood', () => {
   assert.equal(gradeGatherWood(start, start), false)
   assert.equal(gradeGatherWood(start, play(buildShelter)), false)
-  assert.equal(gradeGatherWood(start, play({ type: 'GATHER_WOOD' })), true)
+  const gathered = play({ type: 'GATHER_WOOD' })
+  assert.equal(gradeGatherWood(start, gathered), true)
+  assert.equal(gathered.deposits.grove.stock, start.deposits.grove.stock - GATHER_SITES.grove.reward.wood)
+  const padded = {
+    ...gathered,
+    resources: { ...gathered.resources, wood: gathered.resources.wood + 6 },
+    xp: gathered.xp + 10,
+    lastInteraction: { siteId: 'grove' },
+  }
+  assert.equal(gradeGatherWood(gathered, padded), false)
+  const t0 = 1_700_000_000_000
+  let dry = migrateSave(start)
+  for (let i = 0; i < 6; i++) dry = gameReducer(dry, { type: 'GATHER_WOOD', now: t0 })
+  const rejected = gameReducer(dry, { type: 'GATHER_WOOD', now: t0 + 1 })
+  assert.equal(rejected.resources.wood, dry.resources.wood)
+  assert.equal(rejected.xp, dry.xp)
+  assert.equal(rejected.deposits.grove.stock, 0)
+  assert.equal(rejected.deposits.grove.regrowAt, dry.deposits.grove.regrowAt)
+  assert.equal(gradeGatherWood(dry, rejected), false)
+  const refilled = gameReducer(dry, { type: 'GATHER_WOOD', now: dry.deposits.grove.regrowAt })
+  assert.equal(refilled.resources.wood, dry.resources.wood + GATHER_SITES.grove.reward.wood)
+  assert.equal(refilled.deposits.grove.stock, GATHER_SITES.grove.stock - GATHER_SITES.grove.reward.wood)
+  assert.equal(refilled.deposits.grove.regrowAt, 0)
+  assert.equal(gradeGatherWood(dry, refilled), true)
 })
 
 test('First Steps grader requires a newly built shelter, not just gathering or a stale completion', () => {
