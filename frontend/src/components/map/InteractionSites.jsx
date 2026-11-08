@@ -3,7 +3,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { GATHER_SITES, RESOURCES } from '../../game/data.js'
 import { INTERACTION_POINTS } from '../../game/mapLayout.js'
 import { gatherAvailability, islandAccess } from '../../game/engine.js'
-import { formatRemaining, viewDeposit } from '../../game/deposits.js'
+import { viewDeposit } from '../../game/deposits.js'
 import { RES_ICON, Hammer } from '../icons.jsx'
 
 function useNow() {
@@ -19,8 +19,8 @@ function siteStatus(state, id, now) {
   const site = GATHER_SITES[id]
   const view = viewDeposit(state.deposits, id, now)
   const reason = gatherAvailability(state, id, now)
-  const badge = view.regrowing ? formatRemaining(view.remainingMs) : String(view.stock)
-  const label = view.regrowing ? `Regrowing · ${formatRemaining(view.remainingMs)}` : `${view.stock} left`
+  const badge = view.regrowing ? '' : String(view.stock)
+  const label = view.regrowing ? 'Regrowing' : `${view.stock} left`
   return { site, view, reason, badge, label }
 }
 
@@ -52,7 +52,7 @@ export default function InteractionSites() {
       const resource = Object.keys(site.reward)[0], Icon = RES_ICON[resource]
       const { reason, view, badge, label } = siteStatus(state, id, now)
       const depleted = !view.ready
-      return <g key={id} transform={`translate(${x} ${y})`} role="button" tabIndex="0" aria-label={view.regrowing ? `${site.label}, depleted, regrows in ${formatRemaining(view.remainingMs)}` : `${site.label}, ${view.stock} remaining`} aria-disabled={Boolean(reason)}
+      return <g key={id} transform={`translate(${x} ${y})`} role="button" tabIndex="0" aria-label={view.regrowing ? `${site.label}, regrowing` : `${site.label}, ${view.stock} remaining`} aria-disabled={Boolean(reason)}
         data-tutorial={id === 'grove' ? 'gather-wood-site' : undefined}
         className={`resource-site site-${site.kind}${reason ? ' is-unavailable' : ''}${depleted ? ' is-depleted' : ''}${view.regrowing ? ' is-regrowing' : ''}`}
         onClick={() => activate(id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(id) } }}>
@@ -61,12 +61,11 @@ export default function InteractionSites() {
         <ellipse className="site-ground-glow" cy="23" rx="36" ry="15" fill="none" stroke="currentColor" strokeWidth="2" />
         <g key={state.lastInteraction?.siteId === id ? state.lastInteraction.id : id} className={`site-marker ui-scale${state.lastInteraction?.siteId === id ? ' is-harvesting' : ''}`}>
           <path d="M0 24L-5 14A18 18 0 1 1 5 14Z" fill="#142e4ce8" stroke="currentColor" strokeWidth="1.5" />
-          {view.regrowing && <circle className="site-regrow-ring" r="16" pathLength="100" fill="none" stroke="#b7e3a8" strokeWidth="2.4" strokeLinecap="round" strokeDasharray={`${Math.max(4, (1 - view.remainingMs / site.regrowMs) * 100)} 100`} transform="rotate(-90)" />}
           <g transform="translate(-12 -13)" pointerEvents="none">{Icon && <Icon size={24} />}</g>
-          <g transform="translate(15 -15)">
+          {badge && <g transform="translate(15 -15)">
             <rect x={badge.length > 2 ? -16 : -12} y="-8" width={badge.length > 2 ? 36 : 26} height="17" rx="8" fill="#15314c" stroke="currentColor" />
             <text x="1" y="4" textAnchor="middle" className="site-count">{badge}</text>
-          </g>
+          </g>}
           <g className="site-tooltip" transform="translate(0 -40)"><rect x="-96" y="-13" width="192" height="27" rx="12" fill="#0d2645ef" stroke="currentColor" /><text y="5" textAnchor="middle">{label}</text></g>
         </g>
       </g>

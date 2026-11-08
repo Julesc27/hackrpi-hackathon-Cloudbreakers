@@ -3,7 +3,7 @@ import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
   GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
-import { formatRemaining, freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
+import { freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
 
 export const METERS = ['energy', 'water', 'food']
 const ALL_RES = Object.keys(RESOURCES)
@@ -417,7 +417,7 @@ export function gatherAvailability(state, siteId, now = Date.now()) {
   if (!site) return 'Unknown resource site'
   if (!islandAccess(state)[site.island]) return `Connect ${ISLANDS[site.island].name} first`
   const view = viewDeposit(state.deposits, siteId, now)
-  if (!view?.ready) return `Depleted — regrows in ${formatRemaining(view?.remainingMs || site.regrowMs)}`
+  if (!view?.ready) return 'Depleted — regrowing'
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
   const cap = caps(state)
   if (!Object.keys(site.reward).some((key) => (state.resources[key] || 0) < (cap[key] ?? Infinity))) return 'Storage is full'
@@ -454,7 +454,7 @@ function gatherAtSite(state, siteId, now = Date.now()) {
     lastInteraction: { id: `i${ready.nextId}`, siteId, island: site.island, kind: site.kind, reward },
   }
   s = progressSettlement(s, 10)
-  if (node.stock === 0) s = journal(s, 'event', `${site.label} is resting`, `${site.label} is depleted and regrows in ${formatRemaining(site.regrowMs)}. Nothing was added to storage while it waits.`)
+  if (node.stock === 0) s = journal(s, 'event', `${site.label} is resting`, `${site.label} is depleted and will regrow on its own. Nothing is added to storage while it waits.`)
   return s
 }
 

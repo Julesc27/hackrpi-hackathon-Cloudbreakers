@@ -122,7 +122,6 @@
 .resource-site.is-regrowing .site-tooltip,
 .resource-site.is-regrowing .site-ground-glow { opacity: 1; }
 .resource-site.is-regrowing { color: #b7e3a8; }
-.site-regrow-ring { fill: none; }
 .resource-site:active .site-marker { transform: scale(.9); }
 .harvest-ring { transform-box: fill-box; transform-origin: center; animation: harvest-ring 1.5s ease-out both; }
 .harvest-particle { animation: harvest-particle 1.4s cubic-bezier(.15,.65,.3,1) both; }

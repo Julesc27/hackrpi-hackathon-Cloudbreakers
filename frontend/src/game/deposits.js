@@ -46,10 +46,3 @@ export function viewDeposit(deposits, siteId, now = Date.now()) {
     remainingMs: regrowing ? Math.max(0, (regrowAt || now) - now) : 0,
   }
 }
-
-export function formatRemaining(ms) {
-  const total = Math.max(0, Math.ceil(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-}
