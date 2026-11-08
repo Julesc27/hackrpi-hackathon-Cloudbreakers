@@ -118,7 +118,10 @@
 .resource-site:hover .site-ground-glow, .resource-site:focus-visible .site-ground-glow { opacity: 1; }
 .resource-site:hover .site-marker, .resource-site:focus-visible .site-marker { filter: brightness(1.2) drop-shadow(0 0 8px currentColor); }
 .resource-site.is-unavailable { opacity: .62; }
-.resource-site.is-depleted { color: #8295a7; filter: grayscale(.8); }
+.resource-site.is-depleted .site-marker { filter: grayscale(.72); }
+.resource-site.is-regrowing .site-tooltip,
+.resource-site.is-regrowing .site-ground-glow { opacity: 1; }
+.resource-site.is-regrowing { color: #b7e3a8; }
 .resource-site:active .site-marker { transform: scale(.9); }
 .harvest-ring { transform-box: fill-box; transform-origin: center; animation: harvest-ring 1.5s ease-out both; }
 .harvest-particle { animation: harvest-particle 1.4s cubic-bezier(.15,.65,.3,1) both; }
