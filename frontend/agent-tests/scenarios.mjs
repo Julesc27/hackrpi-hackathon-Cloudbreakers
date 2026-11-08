@@ -14,15 +14,12 @@ export function groveStock(town) {
 }
 
 export function gradeGatherWood(start, end) {
-  return Boolean(
-    end && (end.resources?.wood || 0) + (end.backpack?.wood || 0) > start.resources.wood + (start.backpack?.wood || 0) &&
-    end.deposits?.wood < start.deposits.wood &&
-    end.xp > start.xp &&
-    end.lastInteraction?.siteId === 'grove',
   const before = groveStock(start)
   const after = groveStock(end)
   const gathered = end?.lastInteraction?.siteId === 'grove'
-  const progressed = end?.resources?.wood > start?.resources?.wood && end?.xp > start?.xp
+  // gathered wood rides in the Captain's backpack until it is deposited, so count both
+  const wood = (town) => (town?.resources?.wood || 0) + (town?.backpack?.wood || 0)
+  const progressed = wood(end) > wood(start) && end?.xp > start?.xp
   // A normal gather lowers the stock. A gather after the cooldown first refills the
   // empty node, then takes one yield, so the saved stock rises and the timer clears.
   const consumed = Number.isFinite(before) && Number.isFinite(after) && (
@@ -58,8 +55,7 @@ export const scenarios = [
     maxSteps: 8,
     grade: gradeGatherWood,
     expectation: 'wood, grove deposit, XP, and gathering action should change through play',
-    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, backpackWood: end?.backpack?.wood || 0, startingXp: start.xp, finalXp: end?.xp }),
-    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, startingGrove: groveStock(start), finalGrove: groveStock(end), startingXp: start.xp, finalXp: end?.xp }),
+    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, backpackWood: end?.backpack?.wood || 0, startingGrove: groveStock(start), finalGrove: groveStock(end), startingXp: start.xp, finalXp: end?.xp }),
   },
   {
     id: 'first-steps',

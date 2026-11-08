@@ -10,6 +10,8 @@ const checkpoint = (name) => JSON.parse(readFileSync(new URL(`../e2e/checkpoints
 const start = checkpoint('new-town')
 const playFrom = (from, ...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(from))
 const play = (...actions) => playFrom(start, ...actions)
+// Gathered wood rides in the Captain's backpack; drop it at the workshop like a player would.
+const unload = (state) => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
 const buildShelter = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
 
 test('defaults to free-tier Flash, which can tell the wood and stone markers apart better than Flash Lite', () => {
@@ -108,7 +110,7 @@ test('grader requires a real grove gathering action, not just extra XP or wood',
   assert.equal(gradeGatherWood(gathered, padded), false)
   const t0 = 1_700_000_000_000
   let dry = migrateSave(start)
-  for (let i = 0; i < 6; i++) dry = gameReducer(dry, { type: 'GATHER_WOOD', now: t0 })
+  for (let i = 0; i < 6; i++) dry = unload(gameReducer(dry, { type: 'GATHER_WOOD', now: t0 }))
   const rejected = gameReducer(dry, { type: 'GATHER_WOOD', now: t0 + 1 })
   assert.equal(rejected.resources.wood, dry.resources.wood)
   assert.equal(rejected.xp, dry.xp)
@@ -116,7 +118,7 @@ test('grader requires a real grove gathering action, not just extra XP or wood',
   assert.equal(rejected.deposits.grove.regrowAt, dry.deposits.grove.regrowAt)
   assert.equal(gradeGatherWood(dry, rejected), false)
   const refilled = gameReducer(dry, { type: 'GATHER_WOOD', now: dry.deposits.grove.regrowAt })
-  assert.equal(refilled.resources.wood, dry.resources.wood + GATHER_SITES.grove.reward.wood)
+  assert.equal(refilled.backpack.wood, dry.backpack.wood + GATHER_SITES.grove.reward.wood)
   assert.equal(refilled.deposits.grove.stock, GATHER_SITES.grove.stock - GATHER_SITES.grove.reward.wood)
   assert.equal(refilled.deposits.grove.regrowAt, 0)
   assert.equal(gradeGatherWood(dry, refilled), true)

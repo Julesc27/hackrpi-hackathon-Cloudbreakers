@@ -1,22 +1,9 @@
 // Regenerate committed checkpoints from real game actions, never from manually edited stats.
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { createInitialState, gameReducer, backpackUsed } from '../src/game/engine.js'
-import { Player } from '../src/game/player.js'
-
-// Exercise the captain's return journey and physical deposit, just like a player.
-function gatherAndDeposit(state, action) {
-  state = gameReducer(state, action)
-  if (!backpackUsed(state)) return state
-  const captain = new Player(state)
-  captain.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
-  if (!captain.request({ type: 'DEPOSIT_BACKPACK' }, action => { state = gameReducer(state, action) })) throw new Error('Cannot reach town storage')
-  for (let i=0; captain.pending && i<2000; i++) captain.update(.1)
-  if (backpackUsed(state)) throw new Error('Checkpoint supplies were not deposited')
-  return state
-}
 import { pathToFileURL } from 'node:url'
 import { GATHER_SITES, ROUTE_MAP } from '../src/game/data.js'
-import { bridgeCost, createInitialState, gameReducer } from '../src/game/engine.js'
+import { backpackUsed, bridgeCost, createInitialState, gameReducer } from '../src/game/engine.js'
+import { Player } from '../src/game/player.js'
 
 // A fixed clock keeps regrowth deterministic. Date.now() would change every
 // committed checkpoint and would let a reload skip the wait.
@@ -25,6 +12,17 @@ export function generateTowns() {
   let town = { ...createInitialState(), seenIntro: true }
   const act = (action) => { town = gameReducer(town, { ...action, now }) }
   const snap = () => JSON.parse(JSON.stringify((({ toasts, ...rest }) => rest)(town)))
+
+  // Materials go into the Captain's backpack; walk them home and deposit them, just like a
+  // player, so they count towards town stock.
+  const depositBackpack = () => {
+    if (!backpackUsed(town)) return
+    const captain = new Player(town)
+    captain.onSave = (position) => act({ type: 'PLAYER_POSITION', position })
+    if (!captain.request({ type: 'DEPOSIT_BACKPACK' }, (action) => { act(action); captain.sync(town) })) throw new Error('Cannot reach town storage')
+    for (let i = 0; captain.pending && i < 2000; i++) captain.update(0.1)
+    if (backpackUsed(town)) throw new Error('Checkpoint supplies were not deposited')
+  }
 
   const readyStock = (siteId) => {
     const site = GATHER_SITES[siteId]
@@ -42,6 +40,7 @@ export function generateTowns() {
     if (siteId === 'grove') act({ type: 'GATHER_WOOD' })
     else if (siteId === 'forest') act({ type: 'HARVEST_FOREST' })
     else act({ type: 'GATHER_AT_SITE', siteId })
+    depositBackpack()
     return (town.resources[key] || 0) > before
   }
 
@@ -64,23 +63,13 @@ export function generateTowns() {
   const towns = {}
   towns['new-town'] = snap()
 
-town = gameReducer(town, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
-if (!town.completed.includes('anchor')) throw new Error('Anchor checkpoint did not complete Hold Fast')
-for (let i = 0; i < 2; i++) town = gatherAndDeposit(town, { type: 'GATHER_WOOD' })
-if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')
-save('anchor-ready', town)
-
-for (const routeId of ['verdant-haven', 'rain-haven', 'prism-haven', 'mercy-haven', 'hearth-haven']) {
-  // The first bridge unlocks renewable timber for the remaining crossings.
-  for (let i = 0; town.resources.wood < 24 && town.connected.includes('verdant') && i < 8; i++) {
-    town = gatherAndDeposit(town, { type: 'HARVEST_FOREST' })
   act({ type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
   if (!town.completed.includes('firstSteps')) throw new Error('Shelter checkpoint did not complete First Steps')
   towns['shelter-built'] = snap()
 
   act({ type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
   if (!town.completed.includes('anchor')) throw new Error('Anchor checkpoint did not complete Hold Fast')
-  for (let i = 0; i < 2; i++) act({ type: 'GATHER_WOOD' })
+  for (let i = 0; i < 2; i++) gather('grove')
   if (town.resources.wood < 14 || town.bridges.length) throw new Error('Bridge checkpoint is not ready')
   towns['anchor-ready'] = snap()
 
@@ -107,16 +96,6 @@ for (const routeId of ['verdant-haven', 'rain-haven', 'prism-haven', 'mercy-have
   towns['all-reinforced'] = snap()
   return towns
 }
-save('all-bridges', town)
-
-town = gatherAndDeposit(town, { type: 'HARVEST_FOREST' })
-town = gameReducer(town, { type: 'BUILD', buildingType: 'market', island: 'newHaven', slot: 1 })
-if (!town.buildings.some(b => b.type === 'market')) throw new Error('Could not build the upgrade checkpoint market')
-for (const bridge of town.bridges) {
-  for (let i = 0; town.resources.wood < 18 && i < 8; i++) town = gatherAndDeposit(town, { type: 'HARVEST_FOREST' })
-  for (let i = 0; town.resources.stone < 8 && i < 8; i++) town = gatherAndDeposit(town, { type: 'GATHER_AT_SITE', siteId: 'salvage' })
-  town = gameReducer(town, { type: 'UPGRADE_BRIDGE', routeId: bridge.route })
-  if (!town.bridges.some(b => b.route === bridge.route && b.type === 'reinforced')) throw new Error(`Could not reinforce ${bridge.route}`)
 
 const isDirect = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
 if (isDirect) {

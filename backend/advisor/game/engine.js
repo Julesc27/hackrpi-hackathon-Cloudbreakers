@@ -29,7 +29,6 @@ export function createInitialState() {
     avatarSet: false, // true once the player has designed their Captain
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
     backpack: emptyBackpack(),
-    deposits: { ...STARTER_DEPOSITS },
     deposits: freshDeposits(),
     lastInteraction: null,
     happiness: 62,
@@ -435,9 +434,12 @@ export function gatherAvailability(state, siteId, now = Date.now()) {
   const view = viewDeposit(state.deposits, siteId, now)
   if (!view?.ready) return 'Depleted — regrowing'
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
-  if (Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && backpackUsed(state) >= backpackCapacity(state)) return 'Backpack full — return to town and deposit supplies'
+  // Materials ride in the backpack; survival supplies go straight to town storage. A full
+  // backpack only blocks sites whose main reward is a material (water and food still flow).
+  const primary = primaryReward(site)
+  if (BACKPACK_RESOURCES.includes(primary) && backpackUsed(state) >= backpackCapacity(state)) return 'Backpack full — return to town and deposit supplies'
   const cap = caps(state)
-  if (!Object.keys(site.reward).some((key) => (state.resources[key] || 0) < (cap[key] ?? Infinity))) return 'Storage is full'
+  if (!BACKPACK_RESOURCES.includes(primary) && (state.resources[primary] || 0) >= (cap[primary] ?? Infinity)) return 'Storage is full'
   return null
 }
 
@@ -446,45 +448,41 @@ function gatherAtSite(state, siteId, now = Date.now()) {
   const reason = gatherAvailability(ready, siteId, now)
   if (reason) return toast(ready, 'warn', reason)
   const site = GATHER_SITES[siteId]
-  const resources = pay(state.resources, site.cost)
-  const backpack = { ...emptyBackpack(), ...state.backpack }
-  let room = Math.max(0, backpackCapacity(state) - backpackUsed(state))
-  const deposits = { ...STARTER_DEPOSITS, ...state.deposits }
   const primary = primaryReward(site)
   const resources = pay(ready.resources, site.cost)
+  const backpack = { ...emptyBackpack(), ...ready.backpack }
+  let room = Math.max(0, backpackCapacity(ready) - backpackUsed(ready))
   const deposits = { ...ready.deposits }
   const node = { ...deposits[siteId] }
   const cap = caps(ready)
   const reward = {}
-  const taken = Math.min(site.reward[primary], node.stock, (cap[primary] ?? Infinity) - (resources[primary] || 0))
-  if (taken <= 0) return toast(ready, 'warn', 'Storage is full')
-  resources[primary] = (resources[primary] || 0) + taken
-  reward[primary] = taken
-  const fraction = taken / site.reward[primary]
-  for (const [key, value] of Object.entries(site.reward)) {
-    const carried = BACKPACK_RESOURCES.includes(key)
-    const amount = Math.max(0, Math.min(value, site.deposit ? deposits[site.deposit] : Infinity, carried ? room : (cap[key] ?? Infinity) - (resources[key] || 0)))
-    if (carried) { backpack[key] += amount; room -= amount }
+  // where each reward goes, and how much fits: the backpack for materials, town storage otherwise
+  const carried = (key) => BACKPACK_RESOURCES.includes(key)
+  const space = (key) => (carried(key) ? room : (cap[key] ?? Infinity) - (resources[key] || 0))
+  const add = (key, amount) => {
+    if (carried(key)) { backpack[key] = (backpack[key] || 0) + amount; room -= amount }
     else resources[key] = (resources[key] || 0) + amount
-    if (key === primary) continue
-    const amount = Math.min(Math.round(value * fraction), (cap[key] ?? Infinity) - (resources[key] || 0))
-    if (amount <= 0) continue
-    resources[key] = (resources[key] || 0) + amount
     reward[key] = amount
   }
-  let s = { ...state, resources, backpack, deposits, nextId: state.nextId + 1,
-    lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward, carried: Object.fromEntries(Object.entries(reward).filter(([key]) => BACKPACK_RESOURCES.includes(key))) },
+  // the site's main reward sets how much of its stock is used; the rest comes along in proportion
+  const taken = Math.min(site.reward[primary], node.stock, space(primary))
+  if (taken <= 0) return toast(ready, 'warn', carried(primary) ? 'Backpack full — return to town and deposit supplies' : 'Storage is full')
+  add(primary, taken)
+  const fraction = taken / site.reward[primary]
+  for (const [key, value] of Object.entries(site.reward)) {
+    if (key === primary) continue
+    const amount = Math.max(0, Math.min(Math.round(value * fraction), space(key)))
+    if (amount > 0) add(key, amount)
   }
-  s = progressSettlement(s, 10)
-  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Backpack in the side bar to return and deposit your supplies.')
-  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : site.deposit === 'water' ? 'Water source' : site.deposit === 'food' ? 'Food garden' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
   node.stock -= taken
   if (node.stock <= 0) { node.stock = 0; node.regrowAt = now + site.regrowMs }
   deposits[siteId] = node
-  let s = { ...ready, resources, deposits, nextId: ready.nextId + 1,
-    lastInteraction: { id: `i${ready.nextId}`, siteId, island: site.island, kind: site.kind, reward },
+  let s = { ...ready, resources, backpack, deposits, nextId: ready.nextId + 1,
+    lastInteraction: { id: `i${ready.nextId}`, siteId, island: site.island, kind: site.kind, reward,
+      carried: Object.fromEntries(Object.entries(reward).filter(([key]) => carried(key))) },
   }
   s = progressSettlement(s, 10)
+  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Backpack in the side bar to return and deposit your supplies.')
   if (node.stock === 0) s = journal(s, 'event', `${site.label} is resting`, `${site.label} is depleted and will regrow on its own. Nothing is added to storage while it waits.`)
   return s
 }
@@ -661,7 +659,6 @@ export function migrateSave(saved) {
     avatarSet: saved.avatarSet === true,
     resources: { ...createInitialState().resources, ...saved.resources },
     backpack: Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, Number.isFinite(saved.backpack?.[key]) ? Math.max(0, Math.floor(saved.backpack[key])) : 0])),
-    deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
     deposits: normalizeDeposits(saved.deposits),
     connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),
     discovered: Object.keys(ISLANDS),

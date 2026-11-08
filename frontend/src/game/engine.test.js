@@ -1,9 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots, projectProduction } from './engine.js'
 import { GATHER_SITES, ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots, projectProduction } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -16,7 +14,7 @@ test('backpack capacity is shared and partial harvests never consume extra depos
   assert.equal(backpackUsed(gathered), backpackCapacity(gathered))
   assert.equal(gathered.backpack.stone, 1)
   assert.equal(gathered.resources.stone, initial.resources.stone)
-  assert.equal(gathered.deposits.stone, initial.deposits.stone-1)
+  assert.equal(gathered.deposits.stone.stock, initial.deposits.stone.stock-1)
   assert.match(gatherAvailability(gathered, 'grove'), /Backpack full/)
   const rejected = gameReducer(gathered, { type: 'GATHER_WOOD' })
   assert.equal(rejected.xp, gathered.xp)
@@ -465,17 +463,12 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 test('starter timber, stone, water and food deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' }))
-  assert.equal(state.deposits.wood, 0)
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(state.deposits.grove.stock, 0)
   const rejected = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(rejected.xp, state.xp)
   assert.equal(rejected.resources.wood, state.resources.wood)
   assert.equal(rejected.lastInteraction, state.lastInteraction)
   for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' }))
-  assert.equal(state.deposits.stone, 0)
-  assert.match(gatherAvailability(state, 'stone'), /depleted/)
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
   assert.equal(state.deposits.stone.stock, 0)
   assert.match(gatherAvailability(state, 'stone'), /depleted/i)
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
@@ -748,19 +741,21 @@ test('each gather node depletes on its own and grants nothing until its own time
   const t0 = 1_700_000_000_000
   let state = createInitialState()
   const seeds = state.resources.seeds
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: t0 })
+  // wood goes into the 20-slot backpack, so unload it between trips to empty the grove
+  for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: t0 }))
   assert.equal(state.deposits.grove.stock, 0)
   assert.equal(state.deposits.grove.regrowAt, t0 + GATHER_SITES.grove.regrowMs)
   assert.equal(state.deposits.stone.stock, GATHER_SITES.stone.stock)
   assert.equal(state.deposits.forest.stock, GATHER_SITES.forest.stock)
   const empty = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: t0 + 1 })
   assert.equal(empty.resources.wood, state.resources.wood)
+  assert.equal(empty.backpack.wood, state.backpack.wood)
   assert.equal(empty.xp, state.xp)
   assert.equal(empty.deposits.grove.stock, 0)
   const early = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: state.deposits.grove.regrowAt - 1 })
-  assert.equal(early.resources.wood, state.resources.wood)
+  assert.equal(early.backpack.wood, state.backpack.wood)
   const refilled = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove', now: state.deposits.grove.regrowAt })
-  assert.equal(refilled.resources.wood, state.resources.wood + 6)
+  assert.equal(refilled.backpack.wood, state.backpack.wood + 6)
   assert.equal(refilled.deposits.grove.stock, GATHER_SITES.grove.stock - 6)
   assert.equal(refilled.deposits.grove.regrowAt, 0)
   assert.equal(refilled.resources.seeds, seeds)
@@ -783,14 +778,15 @@ test('plants and stone regrow without spending inventory, and a reload cannot sk
   assert.equal(reloaded.deposits.garden.regrowAt, state.deposits.garden.regrowAt)
   const skipped = gameReducer(reloaded, { type: 'GATHER_AT_SITE', siteId: 'garden', now: reloaded.deposits.garden.regrowAt - 1 })
   assert.equal(skipped.resources.food, reloaded.resources.food)
-  let mined = gameReducer(reloaded, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 })
+  let mined = deposit(gameReducer(reloaded, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 }))
   assert.equal(mined.deposits.garden.stock, 0)
   assert.equal(mined.resources.seeds, 0)
-  for (let i = 0; i < 5; i++) mined = gameReducer(mined, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 })
+  // stone rides in the backpack; unload between trips so the next haul always fits
+  for (let i = 0; i < 5; i++) mined = deposit(gameReducer(mined, { type: 'GATHER_AT_SITE', siteId: 'stone', now: t0 }))
   assert.equal(mined.deposits.stone.stock, 0)
   assert.equal(mined.deposits.garden.regrowAt, reloaded.deposits.garden.regrowAt)
   const rested = gameReducer(mined, { type: 'GATHER_AT_SITE', siteId: 'stone', now: mined.deposits.stone.regrowAt })
-  assert.equal(rested.resources.stone, mined.resources.stone + 3)
+  assert.equal(rested.backpack.stone, mined.backpack.stone + 3)
   assert.equal(rested.resources.seeds, 0)
 })
 
@@ -812,7 +808,7 @@ test('old saves keep partial world stock and outer nodes start full', () => {
   assert.equal(again.deposits.stone.stock, 0)
   assert.equal(again.deposits.stone.regrowAt, loaded.deposits.stone.regrowAt)
   const partial = gameReducer(again, { type: 'GATHER_AT_SITE', siteId: 'grove', now: 1_700_000_000_000 })
-  assert.equal(partial.resources.wood, again.resources.wood + 6)
+  assert.equal(partial.backpack.wood, again.backpack.wood + 6)
   assert.equal(partial.deposits.grove.stock, 6)
 })
 

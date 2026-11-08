@@ -82,11 +82,14 @@
     }
   },
   "lastInteraction": {
-    "id": "i67",
+    "id": "i87",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
     "reward": {
+      "wood": 6
+    },
+    "carried": {
       "wood": 6
     }
   },
@@ -133,7 +136,7 @@
       "builtLevel": 1
     },
     {
-      "id": "b51",
+      "id": "b67",
       "type": "market",
       "island": "newHaven",
       "slot": 1,
@@ -300,35 +303,35 @@
       "text": "Bridges sway. Turbines sing."
     },
     {
-      "id": "j33",
+      "id": "j39",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j36",
+      "id": "j44",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j38",
+      "id": "j46",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j40",
+      "id": "j48",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j41",
+      "id": "j49",
       "level": 5,
       "type": "event",
       "title": "Solar Storm",
@@ -349,42 +352,42 @@
       "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
     },
     {
-      "id": "j50",
+      "id": "j64",
       "level": 5,
       "type": "event",
       "title": "Harvest timber is resting",
       "text": "Harvest timber is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j55",
+      "id": "j71",
       "level": 5,
       "type": "mission",
       "title": "The Long Span",
       "text": "Have a bridge with stability above 70%. Reward: 80 XP · Storm Bracing (halves bridge damage)."
     },
     {
-      "id": "j76",
+      "id": "j74",
       "level": 5,
       "type": "mission",
       "title": "Higher Tomorrows",
       "text": "Water, food, energy and happiness all ≥ 50, and sustainability ≥ 60. Reward: 300 XP · the Skystead is founded."
     },
     {
-      "id": "j78",
+      "id": "j76",
       "level": 6,
       "type": "level",
       "title": "Reached level 6: Cloud Mayor",
       "text": ""
     },
     {
-      "id": "j79",
+      "id": "j77",
       "level": 6,
       "type": "story",
       "title": "A Skystead is founded",
       "text": "Water, food, energy and spirits are all holding. The sky network glows from end to end. Higher tomorrows."
     },
     {
-      "id": "j80",
+      "id": "j78",
       "level": 6,
       "type": "event",
       "title": "Cloud Drought",
@@ -393,5 +396,10 @@
   ],
   "journalUnread": 26,
   "seenIntro": true,
-  "nextId": 69
+  "nextId": 91,
+  "player": {
+    "island": "newHaven",
+    "x": 642.5,
+    "y": 612.5
+  }
 }
