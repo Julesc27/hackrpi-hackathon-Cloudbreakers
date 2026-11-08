@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 
 const instructions = readFileSync(new URL('./HOW_TO_PLAY.md', import.meta.url), 'utf8')
-export const defaultModel = 'gemini-3.5-flash-lite'
+export const defaultModel = 'gemini-3.8-flash'
 const model = process.env.GEMINI_MODEL || defaultModel
 const maxSteps = 8
 const maxTokens = 30_000
@@ -24,13 +24,22 @@ export function parseAction(data, viewport) {
   if (!['click', 'scroll', 'done'].includes(action.action) || typeof action.message !== 'string') {
     throw new Error('Model returned an invalid action')
   }
-  if (action.action === 'click' && (!Number.isInteger(action.x) || !Number.isInteger(action.y) || action.x < 0 || action.y < 0 || action.x >= viewport.width || action.y >= viewport.height)) {
-    throw new Error('Model click is outside the browser viewport')
+  if (action.action === 'click') {
+    // Gemini points are normalized to 0-1000 on each axis; convert to viewport pixels.
+    if (!Number.isInteger(action.x) || !Number.isInteger(action.y) || action.x < 0 || action.y < 0 || action.x > coordScale || action.y > coordScale) {
+      throw new Error('Model click is outside the browser viewport')
+    }
+    return { ...action, x: toPixel(action.x, viewport.width), y: toPixel(action.y, viewport.height), modelX: action.x, modelY: action.y }
   }
   if (action.action === 'scroll' && (!Number.isInteger(action.deltaY) || Math.abs(action.deltaY) > 700)) {
     throw new Error('Model scroll is invalid')
   }
   return action
+}
+
+const coordScale = 1000
+function toPixel(value, size) {
+  return Math.min(size - 1, Math.round((value / coordScale) * size))
 }
 
 async function nextAction(page, objective, previous, key) {
@@ -41,9 +50,9 @@ async function nextAction(page, objective, previous, key) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. The screenshot is 1440 by 900 pixels. Use done only when you believe the objective is met.` }] },
+      systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. Give click coordinates as x and y normalized from 0 to 1000 across the screenshot's width and height (0,0 is top-left; 1000,1000 is bottom-right). If an action did not change the screen, try a different target instead of repeating it. Use done only when you believe the objective is met.` }] },
       contents: [{ role: 'user', parts: [
-        { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3))}\nChoose the next action from the screenshot.` },
+        { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3).map(({ step, action, message, modelX, modelY, deltaY }) => ({ step, action, message, x: modelX, y: modelY, deltaY })))}\nChoose the next action from the screenshot.` },
         { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
       ] }],
       generationConfig: {
@@ -88,6 +97,8 @@ export async function runAgent(page, objective, key, onStep) {
     if (action.action === 'click') {
       entry.x = action.x
       entry.y = action.y
+      entry.modelX = action.modelX
+      entry.modelY = action.modelY
       await page.mouse.click(action.x, action.y)
     } else if (action.action === 'scroll') {
       entry.deltaY = action.deltaY
