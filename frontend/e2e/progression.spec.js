@@ -635,3 +635,17 @@ test('after the anchor the player can connect Verdant Reach', async ({ page }) =
   await bridge.locator('.bridge-option').filter({ hasText: 'Rope & Plank' }).getByRole('button', { name: 'Build bridge' }).click()
   await expectSave(page, (town) => town.connected.includes('verdant') && town.completed.includes('firstBridge'))
 })
+
+// "Continue Quest" opens a different panel for each quest (workshop, map, island, storage).
+// Each one must open without crashing the game into a blank page.
+for (const name of ['new-town', 'shelter-built', 'anchor-ready', 'all-bridges', 'all-reinforced']) {
+  test(`Continue Quest on the first quest opens its panel (${name})`, async ({ page }) => {
+    const errors = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await startAt(page, name)
+    await page.getByRole('button', { name: /Quest Book/ }).click()
+    await page.getByRole('button', { name: /Continue Quest/ }).first().click()
+    await expect(page.locator('[data-tutorial="hud-level"]')).toBeVisible()
+    expect(errors).toEqual([])
+  })
+}

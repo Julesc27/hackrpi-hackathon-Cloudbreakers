@@ -226,3 +226,12 @@
   .ws-nav-btn { height: 32px; font-size: 26px; }
   .ws-dots { display: none; }
 }
+
+/* Shown by ErrorBoundary instead of a blank page if something fails to render */
+.crash-screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: #0f1a33; color: #f4ead2; font-family: Nunito, system-ui, sans-serif; }
+.crash-card { max-width: 420px; width: 100%; padding: 28px 24px; border-radius: 18px; background: #fbf3df; color: #2a2f4a; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+.crash-card h1 { margin: 0 0 8px; font-family: Cinzel, Georgia, serif; font-size: 22px; letter-spacing: .04em; }
+.crash-card p { margin: 0 0 18px; }
+.crash-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.crash-card details { margin-top: 16px; font-size: 12px; text-align: left; opacity: .75; }
+.crash-card code { display: block; margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
