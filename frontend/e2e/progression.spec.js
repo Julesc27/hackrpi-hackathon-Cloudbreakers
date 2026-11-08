@@ -560,7 +560,7 @@ test('the tutorial advances through gathering, building and the quest book', asy
   await expect(page.getByRole('region', { name: 'Tutorial Step 2' })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('region', { name: 'Tutorial Step 3' })).toBeVisible({ timeout: 20_000 })
   await page.locator('[data-tutorial="rail-backpack"]').click()
-  await page.getByRole('dialog', { name: 'Backpack' }).getByRole('button', { name: /Next|Got it/ }).click()
+  await page.getByRole('region', { name: 'Tutorial Step 3' }).getByRole('button', { name: /Next|Got it/ }).click()
   await expect(page.getByRole('region', { name: 'Tutorial Step 4' })).toBeVisible()
   await page.locator('[data-tutorial="backpack-deposit-btn"]').click()
   await expect(page.getByRole('region', { name: 'Tutorial Step 5' })).toBeVisible({ timeout: 20_000 })
