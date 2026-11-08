@@ -101,7 +101,8 @@ test('touch controls fit on a phone and tapping a path moves the captain', async
     const page = await context.newPage()
     const town = await startAt(page, 'new-town')
     const controls = page.getByRole('region', { name: 'Captain controls' })
-    await expect(controls.getByRole('button', { name: 'Walk right', exact: true })).toBeVisible()
+    await expect(controls.getByRole('button', { name: 'Walk right', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Find my avatar' })).toBeVisible()
     await page.waitForFunction(async () => {
       const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
       return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)

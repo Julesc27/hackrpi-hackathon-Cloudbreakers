@@ -9,9 +9,16 @@
 .captain-use { min-width:110px; max-width:180px; }
 .captain-use:disabled { opacity:.55; cursor:default; }
 .captain-use kbd { padding:1px 4px; margin-right:4px; border:1px solid #ffe5a866; border-radius:4px; }
-.captain-locate { font-size:24px; padding:4px 9px; }
+.captain-locate { min-height:44px; padding:8px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
 .captain-dpad { display:none; gap:4px; }
-.captain-dpad button { touch-action:none; min-width:34px; min-height:34px; }
-@media (pointer:coarse) { .captain-dpad { display:flex; } .captain-info small { display:none; } }
-@media(max-width:700px) { .player-controls { bottom:144px; padding:8px; gap:6px; width:calc(100vw - 22px); flex-wrap:wrap; } .captain-info { min-width:140px; flex:1; } .captain-badge { width:30px; height:30px; } .captain-use { min-width:90px; max-width:145px; } .captain-dpad { width:100%; justify-content:center; } .captain-info small { font-size:9px; } }
+.captain-dpad button { touch-action:none; min-width:44px; min-height:44px; }
+@media (pointer:coarse) and (min-width:901px) { .captain-dpad { display:flex; } .captain-info small { display:none; } }
+@media(max-width:900px) {
+  .player-controls { bottom:148px; left:8px; right:8px; transform:none; padding:8px; gap:6px; width:auto; max-width:none; flex-wrap:nowrap; }
+  .captain-info { min-width:0; flex:1; }
+  .captain-info small { display:none; }
+  .captain-badge { width:30px; height:30px; font-size:18px; }
+  .captain-use { min-width:0; max-width:120px; min-height:44px; }
+  .captain-locate { flex:none; }
+}
 @media(max-width:700px) { .game .objective { top:112px; bottom:auto; height:auto; max-width:calc(100vw - 30px); } }

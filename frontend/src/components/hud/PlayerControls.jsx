@@ -1,11 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS } from '../../game/data.js'
+import { centerCameraOnAvatar } from '../../game/player.js'
 import '../../styles/player.css'
+
+const MOBILE_WALK = '(max-width: 900px)'
+function useNarrowScreen() {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(MOBILE_WALK).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_WALK)
+    const apply = () => setNarrow(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
+  return narrow
+}
 
 export default function PlayerControls() {
   const { player } = useGame()
   const ui = useUI()
+  const narrow = useNarrowScreen()
   const [view, setView] = useState(null)
   useEffect(() => {
     const refresh = () => {
@@ -44,18 +59,15 @@ export default function PlayerControls() {
     }
   }, [player, ui.camera])
   if (!view || ui.placing) return null
-  const locate = () => {
-    const a = player.current.avatar, camera = ui.camera.current
-    camera?.flyTo(a.x, a.y, Math.max(1.2, camera.view().s), { duration: 300 })
-  }
+  const locate = () => centerCameraOnAvatar(ui.camera.current, player.current.avatar)
   return <section className="player-controls" aria-label="Captain controls" data-player-island={view.island || 'bridge'} data-player-x={view.x.toFixed(1)} data-player-y={view.y.toFixed(1)} data-player-busy={view.busy}>
     <div className="captain-badge" aria-hidden="true">✦</div>
     <div className="captain-info"><strong>Your captain <span>{ISLANDS[view.island]?.name || 'Crossing the sky'}</span></strong>
       <span role="status">{view.status}</span><small>WASD / arrows to walk · E to interact · tap a path to walk</small></div>
     <button className="captain-use" aria-label={view.busy ? 'Cancel task' : undefined} onClick={() => view.busy ? player.current.cancel() : player.current.interact()} disabled={!view.busy && !view.available} title={view.busy ? 'Stop this task without spending resources' : view.target || 'Walk closer to a resource or workshop'}><kbd>{view.busy ? 'Esc' : 'E'}</kbd> {view.busy ? 'Cancel task' : view.target || 'Explore'}</button>
-    <button className="captain-locate" onClick={locate} aria-label="Find my avatar" title="Find my avatar">◎</button>
-    <div className="captain-dpad" aria-label="Walk controls">
+    <button className="captain-locate" onClick={locate} aria-label="Find my avatar" title="Center the view on your captain. They stay where they are.">Center on me</button>
+    {!narrow && <div className="captain-dpad" aria-label="Walk controls">
       {[['↑',0,-1,'up'],['←',-1,0,'left'],['↓',0,1,'down'],['→',1,0,'right']].map(([label,x,y,name]) => <button key={name} aria-label={`Walk ${name}`} onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); player.current.setInput(x,y) }} onPointerUp={() => player.current.setInput(0,0)} onPointerCancel={() => player.current.setInput(0,0)}>{label}</button>)}
-    </div>
+    </div>}
   </section>
 }

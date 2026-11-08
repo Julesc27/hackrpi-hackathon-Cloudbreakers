@@ -2,9 +2,25 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
-import { Player } from './player.js'
+import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+
+test('centering the camera keeps the current zoom and does not move the captain', () => {
+  const avatar = { x: 120.5, y: 40.25, isl: 'verdant' }
+  const calls = []
+  const camera = {
+    view: () => ({ s: 0.62 }),
+    flyTo: (...args) => calls.push(args),
+    home: () => { throw new Error('must not fly home to New Haven') },
+  }
+  assert.equal(centerCameraOnAvatar(camera, avatar), true)
+  assert.deepEqual(calls[0], [120.5, 40.25, 0.62, { duration: 300 }])
+  assert.deepEqual(avatar, { x: 120.5, y: 40.25, isl: 'verdant' })
+  centerCameraOnAvatar({ view: () => ({ s: 1.8 }), flyTo: (...args) => calls.push(args) }, avatar)
+  assert.equal(calls[1][2], 1.8)
+  assert.equal(centerCameraOnAvatar({ view: () => ({ s: 1 }), flyTo() {} }, null), false)
+})
 
 test('every painted stair flight is walkable in both directions using up and down controls', () => {
   const state = { ...createInitialState(), connected: ['newHaven','verdant','prism'], bridges: [
