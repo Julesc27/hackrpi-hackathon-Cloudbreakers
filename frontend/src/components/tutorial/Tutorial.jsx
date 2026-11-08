@@ -15,7 +15,7 @@ const INFO_STEPS = {
     next: 13,
   },
   13: {
-    target: 'hud-resources',
+    target: 'hud-resource-delta',
     title: 'Resource Flow & Actions',
     text: 'Notice the small numbers next to the resources and happiness (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount on the next action! Green (+) means production or a happiness gain, red (−) means upkeep or a penalty.',
     hint: 'Watch these numbers as you build to keep your town balanced',
@@ -240,20 +240,13 @@ export default function Tutorial() {
       title = 'Store Supplies'
       text = 'Your backpack has limited carrying capacity. Unload carried materials into Town Storage at any storage depot to free up space. Click Deposit All!'
       hint = 'Click Deposit All to store your supplies'
-      showNextBtn = true
-      nextBtnLabel = 'Next ›'
-      onNext = () => {
-        ui.setPanel(null)
-        setTutorialStep(7)
-      }
+      showNextBtn = false
     } else {
       targetSelector = '[data-tutorial="rail-backpack"]'
       title = 'Open Backpack'
       text = 'Click Backpack on the left rail to view your carried materials and deposit them.'
       hint = 'Click the Backpack button in the left rail'
-      showNextBtn = true
-      nextBtnLabel = 'Next ›'
-      onNext = () => setTutorialStep(7)
+      showNextBtn = false
     }
   }
 
@@ -481,25 +474,30 @@ export default function Tutorial() {
   // --- Mark active target element with data-tutorial-active="true" ---
   useEffect(() => {
     if (!targetSelector || targetSelector === 'captain') return
-    let currentEl = null
+    const activeEls = new Set()
     const syncActiveAttr = () => {
-      const el = document.querySelector(targetSelector)
-      if (el !== currentEl) {
-        if (currentEl) currentEl.removeAttribute('data-tutorial-active')
-        if (el) {
-          el.setAttribute('data-tutorial-active', 'true')
-          if (typeof el.scrollIntoView === 'function') {
-            try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }) } catch (_) {}
-          }
+      const els = Array.from(document.querySelectorAll(targetSelector))
+      for (const el of activeEls) {
+        if (!els.includes(el)) {
+          el.removeAttribute('data-tutorial-active')
+          activeEls.delete(el)
         }
-        currentEl = el
+      }
+      for (const el of els) {
+        if (!activeEls.has(el)) {
+          el.setAttribute('data-tutorial-active', 'true')
+          activeEls.add(el)
+        }
+      }
+      if (els[0] && typeof els[0].scrollIntoView === 'function') {
+        try { els[0].scrollIntoView({ block: 'nearest', inline: 'nearest' }) } catch (_) {}
       }
     }
     syncActiveAttr()
     const timer = setInterval(syncActiveAttr, 100)
     return () => {
       clearInterval(timer)
-      if (currentEl) currentEl.removeAttribute('data-tutorial-active')
+      for (const el of activeEls) el.removeAttribute('data-tutorial-active')
     }
   }, [targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
 
@@ -546,12 +544,46 @@ export default function Tutorial() {
           setTargetRect(null)
         }
       } else {
-        const el = document.querySelector(targetSelector)
-        if (el) {
-          const rect = el.getBoundingClientRect()
+        const els = Array.from(document.querySelectorAll(targetSelector))
+        if (els.length > 1) {
+          let minLeft = Infinity, minTop = Infinity, maxRight = -Infinity, maxBottom = -Infinity
+          els.forEach((el) => {
+            const r = el.getBoundingClientRect()
+            if (r.width > 0 && r.height > 0) {
+              minLeft = Math.min(minLeft, r.left)
+              minTop = Math.min(minTop, r.top)
+              maxRight = Math.max(maxRight, r.right)
+              maxBottom = Math.max(maxBottom, r.bottom)
+            }
+          })
+          if (minLeft < Infinity) {
+            const rect = {
+              left: minLeft,
+              top: minTop,
+              width: maxRight - minLeft,
+              height: maxBottom - minTop,
+              right: maxRight,
+              bottom: maxBottom,
+            }
+            setTargetRect((prev) => {
+              if (!prev) return rect
+              if (
+                Math.abs(prev.left - rect.left) < 0.5 &&
+                Math.abs(prev.top - rect.top) < 0.5 &&
+                Math.abs(prev.width - rect.width) < 0.5 &&
+                Math.abs(prev.height - rect.height) < 0.5
+              ) {
+                return prev
+              }
+              return rect
+            })
+          } else {
+            setTargetRect(null)
+          }
+        } else if (els.length === 1) {
+          const rect = els[0].getBoundingClientRect()
           setTargetRect((prev) => {
             if (!prev) return rect
-            // Avoid triggering re-renders if position hasn't meaningfully changed
             if (
               Math.abs(prev.left - rect.left) < 0.5 &&
               Math.abs(prev.top - rect.top) < 0.5 &&
