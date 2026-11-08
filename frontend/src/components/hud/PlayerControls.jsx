@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { centerCameraOnAvatar } from '../../game/player.js'
-import { isTypingTarget, keyboardShouldWalk } from '../../game/travelInput.js'
+import { isTypingTarget, isNavigationTarget, keyboardShouldWalk } from '../../game/travelInput.js'
 import '../../styles/player.css'
 
 export default function PlayerControls() {
@@ -29,8 +29,11 @@ export default function PlayerControls() {
     const movement = () => player.current.setInput(
       Number(held.has('d') || held.has('arrowright')) - Number(held.has('a') || held.has('arrowleft')),
       Number(held.has('s') || held.has('arrowdown')) - Number(held.has('w') || held.has('arrowup')))
-    const blocked = (e) => isTypingTarget(e.target) || uiBusy || Boolean(document.querySelector('.modal-backdrop, .tutorial-root'))
+    const blocked = (e) => isTypingTarget(e.target) || isNavigationTarget(e.target) || uiBusy || Boolean(document.querySelector('.modal-backdrop, .tutorial-root'))
     const down = e => {
+      if (e.key === 'Escape' && !uiBusy && !document.querySelector('.modal-backdrop, .tutorial-root') && player.current.pending) {
+        e.preventDefault(); player.current.cancel(); return
+      }
       if (blocked(e) || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
         if (held.size) { held.clear(); movement() }
         return

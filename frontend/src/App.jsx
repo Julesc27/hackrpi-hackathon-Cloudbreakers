@@ -15,6 +15,8 @@ import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
 import BridgeModal from './components/panels/BridgeModal.jsx'
 import { BuildingModal, RemovalModal } from './components/panels/Removal.jsx'
 import { WeatherWatch, WeatherModal } from './components/panels/Weather.jsx'
+import GameActions from './components/panels/GameActions.jsx'
+import AccessibleStatus from './components/AccessibleStatus.jsx'
 import {
   JournalModal,
   StorageModal,
@@ -52,7 +54,8 @@ function GameScreen() {
   }, [ui])
 
   return (
-    <div className={`game${ui.panel || ui.bridgeRoute ? ' has-panel' : ''}`}>
+    <div role="main" aria-label="Cloudbreakers game" className={`game${ui.panel || ui.bridgeRoute ? ' has-panel' : ''}`}>
+      <a className="skip-link" href="#game-actions">Skip map to game actions</a>
       <SkyMap />
 
       <div className="hud">
@@ -65,6 +68,7 @@ function GameScreen() {
         <ObjectiveRibbon />
         <WeatherWatch />
         <WeatherCard />
+        <button id="game-actions" data-accessible-actions className="game-actions-button panel" aria-haspopup="dialog" aria-expanded={ui.panel === 'actions'} onClick={() => ui.setPanel('actions')}>Game actions</button>
         <LeftRail />
         <ProgressionCard />
         <BottomNav />
@@ -84,6 +88,7 @@ function GameScreen() {
       {ui.panel === 'storageHouse' && <StorageHouseModal />}
       {ui.panel === 'building' && <BuildingModal />}
       {ui.panel === 'weather' && <WeatherModal />}
+      {ui.panel === 'actions' && <GameActions />}
       {ui.panel === 'remove' && <RemovalModal />}
       {ui.panel === 'backpack' && <BackpackModal />}
       {ui.panel === 'store' && <StoreModal />}
@@ -104,6 +109,7 @@ function GameScreen() {
       )}
 
       <Toasts />
+      <AccessibleStatus />
 
       {/* Fixed overlay for resource tokens flying from harvest sites to the top bar */}
       <FlyingResources />

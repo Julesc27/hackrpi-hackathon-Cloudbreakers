@@ -621,6 +621,37 @@ function drawEyes(ctx, a, hy) {
   }
 }
 
+function drawFacialHair(ctx, a, hy) {
+  if (!a.beard || a.beard === 'none') return
+  const stubble = a.beard === 'stubble'
+  ctx.save()
+  // Stubble stays on the face; a full beard rounds off just below the chin.
+  if (stubble) { ctx.beginPath(); ctx.arc(0, hy, 1.99, 0, TAU); ctx.clip() }
+  ctx.beginPath()
+  ctx.moveTo(-1.98, hy + 0.05)
+  ctx.quadraticCurveTo(-1.75, hy + 0.4, -1.5, hy + 0.65)
+  ctx.quadraticCurveTo(-0.65, hy + 1.02, 0.15, hy + 1.04)
+  // A small opening follows the mouth on the three-quarter face.
+  ctx.quadraticCurveTo(0.45, hy + 1.22, 0.95, hy + 1.25)
+  ctx.quadraticCurveTo(1.6, hy + 1.08, 1.98, hy + 0.18)
+  ctx.quadraticCurveTo(2.08, hy + 1.35, 1.2, hy + 2.0)
+  ctx.quadraticCurveTo(0.4, hy + (stubble ? 2.2 : 2.7), -0.65, hy + 2.08)
+  ctx.quadraticCurveTo(-2.08, hy + 1.68, -1.98, hy + 0.05)
+  ctx.closePath()
+  ctx.fillStyle = col(a.hair, stubble ? 0.28 : 1); ctx.fill()
+  if (stubble) {
+    for (const [x,y] of [[-1.5,1.02],[-1.1,1.3],[-0.65,1.53],[-0.15,1.68],[0.4,1.72],[0.95,1.62],[1.45,1.2]]) {
+      line(ctx,x,hy+y,x+0.05,hy+y+0.12,col(a.hair,0.48),0.09)
+    }
+  } else {
+    ctx.strokeStyle = col(shade(a.hair,0.75),0.7); ctx.lineWidth = 0.13; ctx.stroke()
+    for (const [x,y] of [[-1.0,1.35],[-0.45,1.65],[0.15,1.8],[0.75,1.75],[1.35,1.3]]) {
+      line(ctx,x,hy+y,x+0.08,hy+y+0.33,col(shade(a.hair,1.3),0.4),0.11)
+    }
+  }
+  ctx.restore()
+}
+
 /** Draw one resident with their feet at (a.x, a.y). `detail` false draws the far-zoom figure. */
 export function drawPerson(ctx, a, t, detail = true, motion = true) {
   if (!detail) { drawPersonFar(ctx, a); return }
@@ -655,10 +686,12 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
   // cloak / long coat, swept back by the wind
   if (a.cloak || a.coat) {
     const c = a.cloak || a.shirt
+    const hem = hip + (a.cloak ? 3.0 : 1.7) - (sit ? 1 : 0)
+    const flare = a.cloak ? 3.8 : 2.75
     ctx.beginPath()
     ctx.moveTo(-1.6, top + 0.6)
-    ctx.quadraticCurveTo(-3.6 - wind, hip, -3.2 - wind * 1.6, hip + 3.4 - (sit ? 1.5 : 0))
-    ctx.lineTo(1.4, hip + 3 - (sit ? 1.5 : 0))
+    ctx.quadraticCurveTo(-3.3 - wind * 0.5, hip, -flare - wind * 0.6, hem)
+    ctx.quadraticCurveTo(-1.2, hem + 0.2, 1.4, hem - 0.4)
     ctx.lineTo(1.8, top + 0.8)
     ctx.closePath()
     ctx.fillStyle = col(shade(c, 0.78)); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.4; ctx.stroke()
@@ -675,11 +708,14 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     line(ctx, -0.6, hip, -1.6, -1.2, col(a.pants), 1.6); line(ctx, -1.6, -1.2, -0.4, 0, col(a.pants), 1.4)
     line(ctx, 0.8, hip, 2.4, -1.4, col(a.pants), 1.6); line(ctx, 2.4, -1.4, 2.2, 0, col(a.pants), 1.4)
   } else {
-    const l1 = -0.6 - swing * 1.6, l2 = 0.7 + swing * 1.6
-    line(ctx, -0.6, hip, l1, -0.4, col(shade(a.pants, 0.8)), 1.6)
-    line(ctx, 0.7, hip, l2, -0.4, col(a.pants), 1.6)
-    ellipse(ctx, l1 + 0.3, -0.3, 0.95, 0.5, boot)
-    ellipse(ctx, l2 + 0.3, -0.3, 0.95, 0.5, boot)
+    // Leave a clear gap between the two trouser legs; overlapping thick strokes
+    // and a floor-length coat tail used to read as a third leg in the portrait.
+    const l1 = -0.95 - swing * 0.8, l2 = 0.95 + swing * 0.8
+    const lift1 = Math.max(0, swing) * 0.45, lift2 = Math.max(0, -swing) * 0.45
+    line(ctx, -0.95, hip, l1, -0.4 - lift1, col(shade(a.pants, 0.9)), 1.25)
+    line(ctx, 0.95, hip, l2, -0.4 - lift2, col(a.pants), 1.25)
+    ellipse(ctx, l1 + 0.18, -0.3 - lift1, 0.78, 0.42, boot)
+    ellipse(ctx, l2 + 0.18, -0.3 - lift2, 0.78, 0.42, boot)
   }
 
   // a dress, flaring a little as they walk
@@ -828,6 +864,7 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     circle(ctx, -0.6, hy - 1.1, 0.5, col('#ffffff', 0.22)) // a little shine
   }
   if (!a.back) {
+    drawFacialHair(ctx, a, hy)
     // a face: two eyes (see drawEyes), a rosy cheek and a small smile
     drawEyes(ctx, a, hy)
     if (a.body !== 'man') {
@@ -838,13 +875,6 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     }
     ctx.beginPath(); ctx.arc(0.95, hy + 0.82, a.body === 'woman' ? 0.36 : 0.3, Math.PI * 0.2, Math.PI * 0.8)
     ctx.strokeStyle = a.body === 'woman' ? '#b8505e' : 'rgba(80,40,36,.8)'; ctx.lineWidth = a.body === 'woman' ? 0.24 : 0.17; ctx.lineCap = 'round'; ctx.stroke()
-    if (a.beard && a.beard !== 'none') {
-      // along the jaw, below the cheeks, leaving a little gap for the mouth
-      ctx.beginPath(); ctx.arc(0, hy, 2.15, Math.PI * 0.08, Math.PI * 0.82)
-      ctx.quadraticCurveTo(-0.2, hy + 1.1, 0.6, hy + 1.35)
-      ctx.quadraticCurveTo(1.3, hy + 1.05, 2.13, hy + 0.35); ctx.closePath()
-      ctx.fillStyle = col(a.beard === 'stubble' ? shade(a.hair, 0.7) : a.hair, a.beard === 'stubble' ? 0.5 : 1); ctx.fill()
-    }
   }
   // hats
   if (a.hat === 'aviator') {

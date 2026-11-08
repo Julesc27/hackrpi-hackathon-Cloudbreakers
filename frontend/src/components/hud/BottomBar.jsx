@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { activeMissions, getLevelInfo, storageUsed } from '../../game/engine.js'
+import { activeMissions, getLevelInfo, storageUsed, islandAccess } from '../../game/engine.js'
 import { STORAGE_CAP } from '../../game/data.js'
-import { BUILDINGS } from '../../game/data.js'
+import { BUILDINGS, ISLANDS } from '../../game/data.js'
 import { HouseIcon, Star, ArtIcon } from '../icons.jsx'
 import '../../styles/storage.css'
 
@@ -94,13 +94,27 @@ export function ObjectiveRibbon() {
 }
 
 export function PlacingHint() {
-  const ui = useUI()
+  const ui = useUI(), { state, dispatch } = useGame()
+  const [location, setLocation] = useState('')
+  const access = islandAccess(state), def = BUILDINGS[ui.placing]
+  const islands = state.connected.filter(id => access[id] && (!def?.homeOnly || id === 'newHaven'))
+  if (ui.placeFocus) islands.sort((a,b) => Number(b === ui.placeFocus)-Number(a === ui.placeFocus))
+  const plots = islands.flatMap(id => ISLANDS[id].plots.map((_,slot) => ({ id,slot,value:`${id}:${slot}` })).filter(plot => !state.buildings.some(b => b.island === id && b.slot === plot.slot && !BUILDINGS[b.type].infrastructure)))
+  const selected = plots.some(plot => plot.value === location) ? location : plots[0]?.value || ''
   if (!ui.placing) return null
   return (
-    <div className="placing-hint panel">
-      Choose a glowing plot for your <strong>{BUILDINGS[ui.placing].name}</strong>
-      <button className="btn-ghost" onClick={() => ui.setPlacing(null)}>Cancel (Esc)</button>
-    </div>
+    <form className="placing-hint panel" aria-label="Choose a building plot" onSubmit={event => {
+      event.preventDefault()
+      if (!selected) return
+      const [island,slot] = selected.split(':')
+      dispatch({ type:'BUILD',buildingType:ui.placing,island,slot:Number(slot) }); ui.setPlacing(null)
+    }}>
+      <span>Place your <strong>{BUILDINGS[ui.placing].name}</strong> on the map or choose a plot below.</span>
+      <label>Build location<select aria-label="Build location" value={selected} onChange={event => setLocation(event.target.value)} disabled={!plots.length}>{plots.map(plot => <option key={plot.value} value={plot.value}>{ISLANDS[plot.id].name}, plot {plot.slot+1}</option>)}</select></label>
+      <button type="submit" className="btn-gold" disabled={!plots.length}>Build here</button>
+      {!plots.length && <span role="status">No free reachable plots.</span>}
+      <button type="button" className="btn-ghost" onClick={() => ui.setPlacing(null)}>Cancel (Esc)</button>
+    </form>
   )
 }
 

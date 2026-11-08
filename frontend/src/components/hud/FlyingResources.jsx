@@ -138,6 +138,7 @@ export default function FlyingResources() {
   // Listen for fly-resource events fired by Fx.jsx after each gather or bubble tap
   useEffect(() => {
     const onFly = (e) => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       const detail = e.detail || {}
       const res = detail.res || 'wood'
       const totalAmount = detail.amount || 1

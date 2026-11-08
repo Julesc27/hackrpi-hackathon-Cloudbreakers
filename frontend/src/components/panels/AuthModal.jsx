@@ -37,9 +37,9 @@ export default function AuthModal() {
       onClose={auth.closeLogin}
     >
       {auth.notice && <p className="auth-notice">{auth.notice}</p>}
-      <div className="auth-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'on' : ''} onClick={() => switchMode('login')}>Log in</button>
-        <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'on' : ''} onClick={() => switchMode('register')}>Sign up</button>
+      <div className="auth-tabs" role="group" aria-label="Account access">
+        <button type="button" aria-pressed={mode === 'login'} className={mode === 'login' ? 'on' : ''} onClick={() => switchMode('login')}>Log in</button>
+        <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'on' : ''} onClick={() => switchMode('register')}>Sign up</button>
       </div>
       <form className="auth-form" onSubmit={submit}>
         <label>

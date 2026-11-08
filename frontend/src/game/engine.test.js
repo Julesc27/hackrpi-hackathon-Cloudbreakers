@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORED_MATERIALS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
+import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -1212,4 +1212,14 @@ test('town storage is one shared pile of 250 gathered materials', () => {
   assert.equal(paid.resources.energy, rich.resources.energy - 25)
   assert.equal(storageUsed(paid.resources), STORAGE_CAP)
   assert.equal(paid.resources.wood, rich.resources.wood)
+})
+
+test('every save version up to the current one loads, including saves just written', () => {
+  const fresh = createInitialState()
+  assert.equal(fresh.version, SAVE_VERSION)
+  assert.ok(isSupportedSave(fresh))
+  assert.ok(isSupportedSave(JSON.parse(JSON.stringify(fresh))))
+  for (let v = 2; v <= SAVE_VERSION; v++) assert.ok(isSupportedSave({ version: v }))
+  for (const bad of [null, {}, { version: 1 }, { version: SAVE_VERSION + 1 }, { version: '7' }]) assert.equal(isSupportedSave(bad), false)
+  assert.equal(migrateSave({ ...fresh, xp: 123 }).xp, 123)
 })

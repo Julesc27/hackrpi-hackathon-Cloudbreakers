@@ -132,10 +132,13 @@ export default function TopBar() {
       className={`topbar panel${isFlowStep ? ' highlight-deltas' : ''}`}
       data-tutorial="hud-resources"
       onClick={() => ui.setPanel('storage')}
+      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); ui.setPanel('storage') } }}
       role="button"
       tabIndex={0}
       aria-label="Resources — open storage"
+      aria-describedby="resource-summary"
     >
+      <span id="resource-summary" className="sr-only">Energy {r.energy} of {cap.energy}. Water {r.water} of {cap.water}. Happiness {state.happiness} of 100. Food {r.food} of {cap.food}. Wood {r.wood}. Stone {r.stone}. Coins {r.coins}.</span>
       <Meter k="energy"    label="Energy"    value={r.energy}        max={cap.energy}  net={net.energy}    gain={gains.energy}    color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
       <Meter k="water"     label="Water"     value={r.water}         max={cap.water}   net={net.water}     gain={gains.water}     color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
       <Meter k="happiness" label="Happiness" value={state.happiness} max={100} net={net.happiness} gain={gains.happiness} color="linear-gradient(90deg,#b796f0,#e6d4ff)" />

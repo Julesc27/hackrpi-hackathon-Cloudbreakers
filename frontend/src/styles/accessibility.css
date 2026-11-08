@@ -1,0 +1,36 @@
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important; }
+.skip-link { position: absolute; left: 12px; top: 8px; z-index: 10000; padding: 12px 18px; background: #fff5d7; color: #14233c; border: 2px solid #14233c; border-radius: 8px; transform: translateY(-180%); }
+.skip-link:focus { transform: none; }
+.game :is(button, a, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible { outline: 3px solid #fff0b5; outline-offset: 3px; box-shadow: 0 0 0 5px #102440; }
+.game .parchment :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline-color: #173c61; box-shadow: 0 0 0 5px #fff7df; }
+.game .parchment .muted { color: #51566a; }
+.game .parchment .warn-text { color: #87321f; }
+.game .chip.is-short { border-style: dashed; }
+.game-actions-button { position: absolute; right: 23px; bottom: 130px; min-height: 40px; padding: 8px 14px; border-radius: 14px; font-size: 12px; pointer-events: auto; }
+.actions-island-label { display: grid; gap: 5px; font-weight: 700; margin: 12px 0; }
+.actions-island-label select, .placing-hint select { font: inherit; min-height: 40px; padding: 7px; border: 1px solid #877348; border-radius: 7px; background: #fff8e7; color: #1f2a5a; }
+.placing-hint { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; max-width: calc(100% - 32px); max-height: calc(100dvh - 170px); overflow-y: auto; }
+.placing-hint > span:first-child { flex-basis: 100%; }
+.placing-hint label { display: grid; gap: 3px; font-size: 12px; text-align: left; }
+.game :is(button, select, input, summary) { min-height: 24px; }
+@media (max-width: 800px) {
+  .game-actions-button { right: 12px; bottom: 216px; font-size: 11px; min-height: 36px; }
+  .placing-hint { bottom: 90px; width: calc(100% - 24px); max-height: calc(100dvh - 240px); font-size: 12px; }
+}
+@media (pointer: coarse) {
+  .game :is(.btn-gold, .btn-ghost, .btn-action, .cap-chip, .seal-close, .game-actions-button) { min-height: 44px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-actions-button { top: 135px; bottom: auto; right: 12px; }
+  .placing-hint { bottom: 50px; max-height: calc(100dvh - 110px); }
+  .game.has-panel .game-actions-button { opacity: 0; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game *, .game *::before, .game *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
+@media (forced-colors: active) {
+  .game .panel, .game .parchment, .game button, .game select { background: Canvas; color: CanvasText; border: 1px solid ButtonText; }
+  .game :focus-visible { outline: 3px solid Highlight !important; }
+  .game .bar { border: 1px solid CanvasText; }
+  .game .bar-fill { background: Highlight !important; }
+}

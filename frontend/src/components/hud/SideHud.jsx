@@ -45,6 +45,7 @@ export function LeftRail() {
             className={`rail-btn panel${ui.panel === id ? ' is-active' : ''}`}
             onClick={() => ui.toggle(id)}
             data-tutorial={`rail-${id}`}
+            aria-pressed={ui.panel === id}
           >
             {badge && <span className="badge">!</span>}
             {id === 'backpack' && <span className={`backpack-badge${backpackUsed(state) >= backpackCapacity(state) ? ' is-full' : ''}`} aria-label={`Backpack: ${backpackUsed(state)} of ${backpackCapacity(state)} items`}>{backpackUsed(state)}/{backpackCapacity(state)}</span>}

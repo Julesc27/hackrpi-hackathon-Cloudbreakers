@@ -12,6 +12,7 @@ import './styles/captain.css'
 import './styles/mobile.css'
 import './styles/sidebar.css'
 import './styles/weather.css'
+import './styles/accessibility.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

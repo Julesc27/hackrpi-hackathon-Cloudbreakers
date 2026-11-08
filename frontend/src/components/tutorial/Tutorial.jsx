@@ -3,6 +3,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ArtIcon, CloudIcon } from '../icons.jsx'
 import { WORLD } from '../map/Camera.jsx'
 import './Tutorial.css'
+import useDialogAccessibility from '../useDialogAccessibility.js'
 
 // Info-only steps: spotlight an element, explain it, press Next.
 const INFO_STEPS = {
@@ -163,6 +164,8 @@ export default function Tutorial() {
   const [targetRect, setTargetRect] = useState(null)
   const [isShaking, setIsShaking] = useState(false)
   const tooltipRef = useRef(null)
+  const dialogRef = useRef(null)
+  useDialogAccessibility(dialogRef, { enabled: tutorialActive && (tutorialStep === 1 || tutorialStep === FINAL_STEP), onClose: () => endTutorial(true) })
   const [tooltipSize, setTooltipSize] = useState({ w: 340, h: 190 })
   const [viewWidth, setViewWidth] = useState(window.innerWidth)
   const [viewHeight, setViewHeight] = useState(window.innerHeight)
@@ -599,7 +602,7 @@ export default function Tutorial() {
   // Render centered full-screen modal for Step 1 (Welcome)
   if (tutorialStep === 1) {
     return (
-      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Welcome">
+      <div ref={dialogRef} className="tutorial-root" role="dialog" aria-label="Tutorial - Welcome">
         <div className="tutorial-modal-overlay tutorial-modal-wrap">
           <div className="tutorial-modal-card">
             <div className="tutorial-modal-crest"><ArtIcon name="cloud" size={44} /></div>
@@ -640,7 +643,7 @@ export default function Tutorial() {
   // Render centered celebratory modal for Final Step
   if (tutorialStep === FINAL_STEP) {
     return (
-      <div className="tutorial-root" role="dialog" aria-label="Tutorial - Complete">
+      <div ref={dialogRef} className="tutorial-root" role="dialog" aria-label="Tutorial - Complete">
         <div className="tutorial-modal-overlay tutorial-modal-wrap">
           <div className="tutorial-modal-card">
             <div className="tutorial-modal-crest"><ArtIcon name="cloud" size={44} /></div>
@@ -744,7 +747,7 @@ export default function Tutorial() {
   const stepDisplayNumber = tutorialStep - 1
 
   return (
-    <div className="tutorial-root" role="dialog" aria-label={`Tutorial Step ${stepDisplayNumber}`} aria-live="polite">
+    <div className="tutorial-root" role="region" data-guided-dialog aria-label={`Tutorial Step ${stepDisplayNumber}`} aria-live="polite">
       {insideModal ? (
         // Panel is open: no backdrop so the game modal is visible and interactive
         hole && <div className="tutorial-spotlight-box" style={{ top: `${hole.top}px`, left: `${hole.left}px`, width: `${hole.width}px`, height: `${hole.height}px` }} />
@@ -789,6 +792,11 @@ export default function Tutorial() {
         </header>
         <h3 className="tutorial-title">{title}</h3>
         <p className="tutorial-text">{text}</p>
+        {targetSelector && <button className="tutorial-btn-secondary" onClick={() => {
+          const target = document.querySelector(targetSelector)
+          const control = target?.matches('button, [role="button"], input, select') ? target : target?.querySelector('button:not(:disabled), [role="button"], input, select')
+          control?.focus({ preventScroll: false })
+        }}>Focus highlighted control</button>}
         {hint && (
           <div className="tutorial-hint">
             <span className="tutorial-hint-pulse">👉</span>
