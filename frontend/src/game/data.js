@@ -294,13 +294,20 @@ export const MISSIONS = [
   },
 ]
 
+export const SHELTER_LEVELS = {
+  1: { name: 'Basic', cost: {}, unlock: 1 },
+  2: { name: 'Weatherproof', cost: { wood: 6, stone: 3 }, unlock: 1 },
+  3: { name: 'Stormproof', cost: { wood: 10, stone: 6, materials: 2 }, unlock: 3 },
+}
+export const SHELTER_REPAIR_COST = { wood: 4, stone: 2 }
+
 export const WEATHER = {
   clear: { name: 'Clear Skies', text: 'All is calm above the clouds.', icon: 'sun', happiness: 1, weight: 4 },
-  heavyRain: { name: 'Heavy Rain', text: 'Collectors overflow. Rope bridges creak.', icon: 'rain', gain: { water: 5 }, bridgeDamage: 1, weight: 2 },
-  heatWave: { name: 'Heat Wave', text: 'Thirsty crops, thirsty people.', icon: 'heat', gain: { food: -2 }, use: { water: 3 }, weight: 1.5 },
-  crosswind: { name: 'Crosswind', text: 'Bridges sway. Turbines sing.', icon: 'wind', gain: { energy: 2 }, bridgeDamage: 0.7, weight: 2 },
-  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { prism: 0.5 }, weight: 1 },
-  cloudDrought: { name: 'Cloud Drought', text: 'The clouds are holding on to their water.', icon: 'drought', gain: { water: -3 }, weight: 1.5 },
+  heavyRain: { name: 'Heavy Rain', text: 'Collectors overflow. Rope bridges creak.', icon: 'rain', gain: { water: 5 }, bridgeDamage: 1, weight: 2, shelterLevel: 2 },
+  heatWave: { name: 'Heat Wave', text: 'Thirsty crops, thirsty people.', icon: 'heat', gain: { food: -2 }, use: { water: 3 }, weight: 1.5, shelterLevel: 2 },
+  crosswind: { name: 'Crosswind', text: 'Bridges sway. Turbines sing.', icon: 'wind', gain: { energy: 2 }, bridgeDamage: 0.7, weight: 2, shelterLevel: 2 },
+  solarStorm: { name: 'Solar Storm', text: 'Panels flicker; solar output is halved.', icon: 'storm', mult: { solarFarm: 0.5 }, islandMult: { prism: 0.5 }, weight: 1, shelterLevel: 3 },
+  cloudDrought: { name: 'Cloud Drought', text: 'The clouds are holding on to their water.', icon: 'drought', gain: { water: -3 }, weight: 1.5, shelterLevel: 2 },
 }
 
 export const INTRO = {

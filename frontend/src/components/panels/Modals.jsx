@@ -355,7 +355,7 @@ export function MapModal() {
                     {status === 'connected'
                       ? <YieldChips yields={d.yields} suffix="" />
                       : route
-                        ? <CostChips cost={bridgeCost(route, 'rope')} resources={state.resources} />
+                        ? <CostChips cost={bridgeCost(route, 'rope')} resources={constructionResources(state)} />
                         : <span className="muted small">No route yet</span>}
                   </div>
                 </>

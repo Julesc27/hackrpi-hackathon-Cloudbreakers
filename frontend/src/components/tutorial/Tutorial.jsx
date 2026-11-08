@@ -77,7 +77,7 @@ const PANEL_STEPS = {
     railText: 'Want the full picture of your supplies? Click Storage to open the Storehouse!',
     railHint: 'Click the Storage button in the bottom bar',
     title: 'Backpack and Town Storage',
-    text: 'Open Backpack in the side bar to see carried materials and choose Deposit All. Storage shows the town supplies available for building and their production.',
+    text: 'Open Backpack in the side bar to see carried materials. Building uses these first, then Town Storage. Deposit All unloads spare materials to free space. Storage shows town supplies and their production.',
     nextLabel: 'Got it \u203a',
     next: 15,
   },

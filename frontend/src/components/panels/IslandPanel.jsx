@@ -1,6 +1,6 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, BUILDINGS, ROUTES, BEACON_COST, GATHER_AMOUNT, HARVEST } from '../../game/data.js'
-import { islandAccess, openRoutes, otherEnd, canAfford, hasAnchor } from '../../game/engine.js'
+import { islandAccess, openRoutes, otherEnd, canAffordConstruction, constructionResources, hasAnchor } from '../../game/engine.js'
 import { Drawer, CostChips, YieldChips } from './Panel.jsx'
 import { SiteActions } from '../map/InteractionSites.jsx'
 import IslandArt from '../IslandArt.jsx'
@@ -84,7 +84,7 @@ export default function IslandPanel() {
           <ul className="building-list">
             {buildings.map((b) => (
               <li key={b.id}>
-                {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : b.type === 'storageHouse' ? <button className="link" onClick={() => { ui.setSelected(b.id); ui.setPanel('storageHouse') }}>Storage House · capacity and unloading</button> : <span>{BUILDINGS[b.type].name}</span>}
+                {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : b.type === 'storageHouse' ? <button className="link" onClick={() => { ui.setSelected(b.id); ui.setPanel('storageHouse') }}>Storage House · capacity and unloading</button> : b.type === 'shelter' ? <button className="link" onClick={() => { ui.setSelected(b.id); ui.setPanel('building') }}>Shelter · protection and repairs</button> : <span>{BUILDINGS[b.type].name}</span>}
                 {BUILDINGS[b.type].prod && <YieldChips yields={BUILDINGS[b.type].prod} />}
                 <RemoveButton buildingId={b.id} />
               </li>
@@ -95,12 +95,12 @@ export default function IslandPanel() {
             {id === 'newHaven' && !state.beaconRestored && (
               <button
                 className="btn-action"
-                disabled={!canAfford(state.resources, BEACON_COST)}
+                disabled={!canAffordConstruction(state, BEACON_COST)}
                 onClick={() => dispatch({ type: 'RESTORE_BEACON' })}
               >
                 <span>Restore the beacon</span>
                 <small>
-                  <CostChips cost={BEACON_COST} resources={state.resources} />
+                  <CostChips cost={BEACON_COST} resources={constructionResources(state)} />
                 </small>
               </button>
             )}

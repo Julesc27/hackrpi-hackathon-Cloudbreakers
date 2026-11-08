@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -16,15 +16,15 @@
   },
   "avatarSet": false,
   "resources": {
-    "wood": 97,
-    "water": 26,
+    "wood": 73,
+    "water": 32,
     "food": 29,
-    "energy": 51,
+    "energy": 30,
     "coins": 95,
-    "stone": 50,
+    "stone": 51,
     "seeds": 7,
-    "crystals": 5,
-    "materials": 10,
+    "crystals": 6,
+    "materials": 11,
     "fish": 4
   },
   "backpack": {
@@ -37,7 +37,7 @@
   },
   "deposits": {
     "grove": {
-      "stock": 18,
+      "stock": 6,
       "regrowAt": 0
     },
     "stone": {
@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i167",
+    "id": "i148",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
@@ -93,11 +93,11 @@
       "wood": 6
     }
   },
-  "happiness": 9,
+  "happiness": 11,
   "population": 3,
-  "sustainability": 75,
+  "sustainability": 65,
   "sustainPenalty": 0,
-  "xp": 1135,
+  "xp": 1095,
   "blueprints": [
     "waterCollector",
     "battery"
@@ -129,7 +129,8 @@
       "paidCost": {
         "wood": 10,
         "stone": 2
-      }
+      },
+      "condition": 0
     },
     {
       "id": "b7",
@@ -164,7 +165,7 @@
     {
       "route": "verdant-haven",
       "type": "rope",
-      "condition": 98,
+      "condition": 100,
       "builtLevel": 4,
       "paidCost": {
         "wood": 14
@@ -207,8 +208,15 @@
       }
     }
   ],
-  "weather": "cloudDrought",
+  "weather": "clear",
   "forecast": "clear",
+  "weatherCycle": {
+    "phase": "calm",
+    "remaining": 6,
+    "seed": 1283428702,
+    "events": 1,
+    "lastWeather": "heatWave"
+  },
   "completed": [
     "firstSteps",
     "anchor",
@@ -220,7 +228,7 @@
   ],
   "counters": {
     "waterStreak": 4,
-    "energyStreak": 47,
+    "energyStreak": 43,
     "foodSurplus": 1
   },
   "journal": [
@@ -253,338 +261,247 @@
       "text": "Unlocked Food Garden, Water Collector, Storage House."
     },
     {
-      "id": "j13",
-      "level": 2,
-      "type": "event",
-      "title": "Heavy Rain",
-      "text": "Collectors overflow. Rope bridges creak."
-    },
-    {
-      "id": "j16",
+      "id": "j15",
       "level": 2,
       "type": "mission",
       "title": "A Place for Water",
       "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     },
     {
-      "id": "j38",
+      "id": "j37",
       "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food. Residents are worried."
     },
     {
-      "id": "j39",
+      "id": "j38",
       "level": 2,
       "type": "event",
       "title": "Mine stone is resting",
       "text": "Mine stone is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j43",
+      "id": "j42",
       "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food. Residents are worried."
     },
     {
-      "id": "j45",
+      "id": "j44",
       "level": 3,
       "type": "level",
       "title": "Reached level 3: Builder",
       "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
     },
     {
-      "id": "j46",
-      "level": 3,
-      "type": "event",
-      "title": "Heat Wave",
-      "text": "Thirsty crops, thirsty people."
-    },
-    {
-      "id": "j50",
+      "id": "j48",
       "level": 3,
       "type": "event",
       "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
+      "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
-      "id": "j54",
+      "id": "j52",
       "level": 3,
       "type": "event",
       "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
+      "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
-      "id": "j58",
+      "id": "j56",
       "level": 3,
       "type": "event",
       "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
+      "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
-      "id": "j62",
+      "id": "j60",
       "level": 3,
       "type": "event",
       "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
+      "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
-      "id": "j66",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j67",
+      "id": "j64",
       "level": 3,
       "type": "event",
       "title": "Mine stone is resting",
       "text": "Mine stone is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j71",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j75",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j79",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j83",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j87",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j88",
+      "id": "j80",
       "level": 3,
       "type": "event",
       "title": "Gather wood is resting",
       "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j92",
+      "id": "j91",
       "level": 3,
       "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
+      "title": "Weather warning",
+      "text": "Heat Wave arrives after 6 completed jobs. Prepare level 2 shelters and stock food, water and energy."
     },
     {
-      "id": "j96",
+      "id": "j101",
       "level": 3,
       "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j100",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food. Residents are worried."
-    },
-    {
-      "id": "j104",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j108",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
+      "title": "Gather wood is resting",
+      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
       "id": "j112",
       "level": 3,
       "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
+      "title": "Heat Wave",
+      "text": "Thirsty crops, thirsty people. This event lasts 5 completed jobs. Shelters need level 2 protection."
     },
     {
-      "id": "j113",
-      "level": 3,
-      "type": "event",
-      "title": "Gather wood is resting",
-      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
-    },
-    {
-      "id": "j117",
+      "id": "j116",
       "level": 3,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
-      "id": "j121",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j125",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j129",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j131",
+      "id": "j118",
       "level": 4,
       "type": "level",
       "title": "Reached level 4: Steward",
       "text": "Unlocked Clinic, Community Hall."
     },
     {
-      "id": "j132",
+      "id": "j122",
       "level": 4,
       "type": "event",
-      "title": "Crosswind",
-      "text": "Bridges sway. Turbines sing."
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j126",
+      "level": 4,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j127",
+      "level": 4,
+      "type": "event",
+      "title": "Gather wood is resting",
+      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
+    },
+    {
+      "id": "j131",
+      "level": 4,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j135",
+      "level": 4,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j137",
+      "level": 4,
+      "type": "event",
+      "title": "Shelter damaged",
+      "text": "A shelter on New Haven lost its protection during Heat Wave. Its residents need repairs before their home can be used again."
     },
     {
       "id": "j139",
       "level": 4,
       "type": "event",
-      "title": "Gather wood is resting",
-      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
+      "title": "Clear skies return",
+      "text": "The weather has passed. You have 14 calm jobs before another warning. Repair homes and replenish supplies."
     },
     {
-      "id": "j158",
-      "level": 4,
-      "type": "event",
-      "title": "Gather wood is resting",
-      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
-    },
-    {
-      "id": "j171",
+      "id": "j152",
       "level": 4,
       "type": "discovery",
       "title": "Reached Verdant Reach",
       "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
     },
     {
-      "id": "j173",
+      "id": "j154",
       "level": 4,
       "type": "mission",
       "title": "The First Bridge",
       "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
     },
     {
-      "id": "j175",
+      "id": "j156",
       "level": 4,
       "type": "mission",
       "title": "A Garden in the Sky",
       "text": "Achieve a food surplus after an action. Reward: 75 XP · Starter Garden upgrade (+2 food)."
     },
     {
-      "id": "j177",
+      "id": "j158",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j179",
+      "id": "j160",
       "level": 5,
       "type": "mission",
       "title": "Keep the Lights On",
       "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
     },
     {
-      "id": "j180",
-      "level": 5,
-      "type": "event",
-      "title": "Solar Storm",
-      "text": "Panels flicker; solar output is halved."
-    },
-    {
-      "id": "j182",
+      "id": "j162",
       "level": 5,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j184",
+      "id": "j164",
       "level": 5,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j186",
+      "id": "j166",
       "level": 5,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j188",
+      "id": "j168",
       "level": 6,
       "type": "level",
       "title": "Reached level 6: Cloud Mayor",
       "text": ""
     },
     {
-      "id": "j189",
-      "level": 6,
-      "type": "event",
-      "title": "Cloud Drought",
-      "text": "The clouds are holding on to their water."
-    },
-    {
-      "id": "j191",
+      "id": "j170",
       "level": 6,
       "type": "discovery",
       "title": "Reached Mercy Rise",
       "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
     },
     {
-      "id": "j193",
+      "id": "j172",
       "level": 6,
       "type": "discovery",
       "title": "Reached Hearthside",
       "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
     }
   ],
-  "journalUnread": 51,
+  "journalUnread": 38,
   "seenIntro": true,
-  "nextId": 194,
+  "nextId": 173,
   "player": {
     "island": "newHaven",
     "x": 642.5,

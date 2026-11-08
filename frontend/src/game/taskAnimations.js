@@ -24,6 +24,6 @@ export function taskAnimation(action) {
   else if (action.type === 'RESTORE_BEACON') kind = 'beacon'
   else if (action.type === 'DEPOSIT_BACKPACK') kind = 'deposit'
   else if (action.type === 'BUILD' || action.type === 'BUILD_BRIDGE') kind = 'build'
-  else if (['REPAIR_BRIDGE', 'UPGRADE_BRIDGE', 'REMOVE_BUILDING', 'REMOVE_BRIDGE'].includes(action.type)) kind = 'repair'
+  else if (['REPAIR_BRIDGE', 'UPGRADE_BRIDGE', 'REMOVE_BUILDING', 'REMOVE_BRIDGE', 'UPGRADE_SHELTER', 'REPAIR_SHELTER'].includes(action.type)) kind = 'repair'
   return kind ? { kind, ...ANIMATIONS[kind] } : null
 }

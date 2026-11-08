@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { pointerPastDragThreshold, shouldHintTravel, shouldTravelFromMapClick } from '../../game/travelInput.js'
 import { ISLANDS, BUILDINGS, GATHER_AMOUNT } from '../../game/data.js'
-import { openRoutes, hasAnchor, bridgeCost, islandAccess, bridgeStatus, bridgeLabel } from '../../game/engine.js'
+import { openRoutes, hasAnchor, bridgeCost, islandAccess, bridgeStatus, bridgeLabel, shelterLevel, shelterCondition } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import InteractionSites from './InteractionSites.jsx'
 import Defs from './Defs.jsx'
@@ -207,7 +207,10 @@ export default function SkyMap() {
               onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); inspect() } }}>
               <title>{BUILDINGS[b.type].name}</title>
               <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx="7" fill="transparent" />
-
+              {b.type === 'shelter' && !ui.placing && <g className="shelter-level" transform={`translate(0 ${shape.y-8})`}>
+                <rect x="-19" y="-10" width="38" height="19" rx="9" fill={shelterCondition(b) === 0 ? '#713c35' : '#16364d'} stroke="#ddc48d" />
+                <text textAnchor="middle" y="3" fill="#fff0c5">L{shelterLevel(b)}{shelterCondition(b) < 100 ? ' !' : ''}</text>
+              </g>}
             </g>
           )
         })}

@@ -36,6 +36,8 @@ class Building(_Loose):
     slot: int  # starter buildings use negative slots (fixed spots, not build plots)
     builtLevel: int = Field(default=1, ge=1)
     builtTurn: NonNegInt | None = None  # compatibility with version 2 saves
+    shelterLevel: int = Field(default=1, ge=1, le=3)
+    condition: int = Field(default=100, ge=0, le=100)
 
 
 class Bridge(_Loose):

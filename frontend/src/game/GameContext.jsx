@@ -3,16 +3,17 @@ import { createInitialState, gameReducer, migrateSave } from './engine.js'
 import { Player, isPlayerTask } from './player.js'
 
 const SAVE_KEY = 'cloudbreakers-save-v1'
+const weatherSeed = () => crypto.getRandomValues(new Uint32Array(1))[0]
 
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const s = JSON.parse(raw)
-      if ([2, 3, 4, 5, 6].includes(s?.version)) return migrateSave(s)
+      if ([2, 3, 4, 5, 6, 7].includes(s?.version)) return migrateSave(s)
     }
   } catch { /* storage unavailable — start fresh */ }
-  return createInitialState()
+  return createInitialState(weatherSeed())
 }
 
 const GameCtx = createContext(null)
@@ -34,6 +35,7 @@ export function GameProvider({ children }) {
     }
   }
   const dispatch = useCallback(action => {
+    if (action.type === 'NEW_GAME') action = { ...action, seed: weatherSeed() }
     if (action.type === 'LOAD' || action.type === 'NEW_GAME') {
       player.current.cancel()
       resetPlayer.current = true
