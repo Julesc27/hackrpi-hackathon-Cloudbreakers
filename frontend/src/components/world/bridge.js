@@ -1,5 +1,5 @@
 import { bridgeCurve } from './people.js'
-import { EASTERN_DOCK, WORLD_ISLANDS } from './layout.js'
+import { WORLD_ISLANDS, PRISM_GATE } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
 
@@ -30,41 +30,20 @@ function crossVector(a, b) {
   return [(-v - u) / length, (u - v) / (2 * length)]
 }
 
-// One shore structure serves two distinct exits; neither span is drawn over the other.
-export function drawEasternDock(ctx, bridges, progress = 1) {
-  const routes = new Set(bridges.map(b => b.route))
-  if (progress <= 0 || !Object.keys(EASTERN_DOCK.exits).some(r => routes.has(r))) return
-  const materials = getPaintedAtlas('bridge')
-  const corners = EASTERN_DOCK.corners
+// Reuse the island's own painted masonry for the new lower-terrace gateway.
+// Render the threshold below the deck and its front pier above it.
+export function drawPrismGateway(ctx, progress = 1, foreground = false) {
+  const atlas = getPaintedAtlas('starter')
+  if (!atlas.ready || progress <= 0) return
+  const sx = 660 / 1204, sy = 645 / 1211
+  const draw = ([x, y, w, h]) => ctx.drawImage(atlas.image, x, y, w, h,
+    PRISM_GATE[0] + (x - 1186) * sx, PRISM_GATE[1] + (y - 650) * sy,
+    w * sx, h * sy)
   ctx.save()
   ctx.translate(0, WORLD_ISLANDS.newHaven._bob || 0)
   ctx.globalAlpha = Math.min(1, progress * 5)
-  const rim = corners.slice(1)
-  poly(ctx, [...rim, ...rim.map(([x, y]) => [x, y + 5]).reverse()], col('#795536'))
-  const at = (u, v) => [1040 + 120 * u - 20 * v, 495 + 12 * u + 80 * v]
-  ctx.save()
-  ctx.beginPath(); corners.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.closePath(); ctx.clip()
-  for (let i = 0; i < 16; i++) {
-    if (materials.ready) paintedPlank(ctx, materials, i, at(0, i/16), at(1, i/16), at(0, (i+1)/16))
-    else poly(ctx, [at(0, i/16), at(1, i/16), at(1, (i+1)/16), at(0, (i+1)/16)], col(i%2 ? '#bf935f' : '#cba46f'))
-  }
-  ctx.restore()
-  // The eastern edge has two gates, separated by a short stretch of railing.
-  const railing = (a,b) => {
-    for (const p of [a,b]) {
-      line(ctx,p[0],p[1],p[0],p[1]-13,col('#86613c'),2.5)
-      circle(ctx,p[0],p[1]-13,1.5,col('#d2ae61'))
-    }
-    const topA=[a[0],a[1]-12], topB=[b[0],b[1]-12]
-    if(materials.ready) paintedRail(ctx,materials,topA,topB,2.5)
-    else line(ctx,...topA,...topB,col('#ba945c'),2)
-    line(ctx,a[0],a[1]-6,b[0],b[1]-6,col('#9f7a4c'),1.2)
-  }
-  railing(corners[0], corners[1])
-  railing(corners[2], corners[3])
-  railing(corners[4], corners[5])
-  if (!routes.has('hearth-haven')) railing(corners[1], corners[2])
-  if (!routes.has('prism-haven')) railing(corners[3], corners[4])
+  if (foreground) draw([1138, 656, 39, 64])
+  else draw([1135, 607, 106, 130])
   ctx.restore()
 }
 
@@ -82,8 +61,9 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const sample = (t, side = 0, width = halfWidth) => {
     const f = Math.max(0, Math.min(1, t)) * (points.length - 1)
     const i = Math.min(points.length - 2, Math.floor(f)), mix = f - i
-    return [points[i][0] + (points[i + 1][0] - points[i][0]) * mix + cross[0] * side * width,
-      points[i][1] + (points[i + 1][1] - points[i][1]) * mix + cross[1] * side * width]
+    const entryWidth = .8 + .2 * Math.min(1, t * length / 18, (1-t) * length / 18)
+    return [points[i][0] + (points[i + 1][0] - points[i][0]) * mix + cross[0] * side * width * entryWidth,
+      points[i][1] + (points[i + 1][1] - points[i][1]) * mix + cross[1] * side * width * entryWidth]
   }
   const trace = (pts, color, width) => {
     ctx.beginPath()
@@ -133,13 +113,13 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     for (let i = 0; i <= postCount; i++) {
       const t = i / postCount, [x, y] = sample(t, side)
       const endpoint = i === 0 || i === postCount
-      const height = endpoint ? railHeight + 3 : railHeight
-      // The existing painted gateway pillars frame the ends; do not put new posts on top.
-      if (materials.ready && !endpoint) {
+      const height = railHeight
+      // End posts anchor the handrails to the deck instead of leaving floating tips.
+      if (materials.ready) {
         const cell = stone && i % 3 === 0 ? 3 : 2
         const bounds = materials.cells[cell], width = height * bounds[2] / bounds[3]
         materials.draw(ctx, cell, x - width / 2, y - height, width, height)
-      } else if (!endpoint) {
+      } else {
         line(ctx, x, y, x, y - height, col('#795235'), 2.4)
         circle(ctx, x, y - height, 1.3, col('#c7a357'))
       }

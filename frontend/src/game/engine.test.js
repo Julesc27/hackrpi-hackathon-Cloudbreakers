@@ -183,7 +183,7 @@ test('every bridge span stays attached to both independently floating islands', 
 })
 
 
-test('the full network has separated decks and walkable eastern dock exits', async () => {
+test('the full network has separated decks and walkable terrace entrances', async () => {
   const { bridgeCurve, buildGraph } = await import('../components/world/people.js')
   const { WORLD_ISLANDS } = await import('../components/world/layout.js')
   const islands = Object.values(WORLD_ISLANDS), oldBobs = islands.map(i => i._bob)
@@ -199,7 +199,7 @@ test('the full network has separated decks and walkable eastern dock exits', asy
   } finally { islands.forEach((island, i) => { island._bob = oldBobs[i] }) }
   const initial = createInitialState()
   const fresh = buildGraph(initial, { newHaven: true })
-  assert.equal(fresh.nodes.has('newHaven:eastDock'), false)
+  assert.equal(fresh.nodes.has('newHaven:crystalPath'), false)
   const state = { ...initial, bridges: ROUTES.map(r => ({ route: r.id, condition: 100 })) }
   const graph = buildGraph(state, Object.fromEntries(['newHaven', 'verdant', 'rain', 'prism', 'mercy', 'hearth'].map(id => [id, true])))
   const visited = new Set(['newHaven:n1']), queue = ['newHaven:n1']

@@ -9,7 +9,7 @@ import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
 import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
-import { drawBridge, drawEasternDock } from './bridge.js'
+import { drawBridge, drawPrismGateway } from './bridge.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
@@ -347,13 +347,14 @@ export default function WorldCanvas({ hoverRef }) {
         return { b, progress }
       })
       setMode('lit')
-      const eastern = spans.filter(({ b }) => b.route === 'hearth-haven' || b.route === 'prism-haven')
-      drawEasternDock(ctx, st.bridges, Math.max(0, ...eastern.map(s => s.progress)))
+      const crystalSpan = spans.find(({ b }) => b.route === 'prism-haven')
+      if (crystalSpan) drawPrismGateway(ctx, crystalSpan.progress)
       for (const { b, progress } of spans) {
         setMode(b.condition <= 0 ? 'locked' : 'lit')
         drawBridge(ctx, b, t, bridgeLights, progress)
       }
       setMode('lit')
+      if (crystalSpan) drawPrismGateway(ctx, crystalSpan.progress, true)
 
       // Pulsing rings around the "build a bridge" buttons. Drawn here rather than as a CSS
       // animation in the SVG overlay, which made the browser repaint the whole overlay every frame.

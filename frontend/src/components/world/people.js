@@ -35,7 +35,8 @@ export function buildGraph(state, access) {
     if (!access[id]) continue
     for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) {
       if (id === 'newHaven') {
-        if (nid.startsWith('east') && !easternRoutes.size) continue
+        if (nid.startsWith('east') && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'crystalPath' && !easternRoutes.has('prism-haven')) continue
         if (nid === 'e_hearth' && !easternRoutes.has('hearth-haven')) continue
         if (nid === 'e_prism' && !easternRoutes.has('prism-haven')) continue
       }
