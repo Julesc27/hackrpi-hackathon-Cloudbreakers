@@ -5,13 +5,26 @@
 const shelters = (town) => town?.buildings?.filter((b) => b.type === 'shelter').length ?? 0
 const anchors = (town) => town?.buildings?.filter((b) => b.type === 'bridgeAnchor').length ?? 0
 
+// Grove stock used to be the number deposits.wood. It is now deposits.grove.stock.
+export function groveStock(town) {
+  const node = town?.deposits?.grove
+  if (node && typeof node === 'object' && Number.isFinite(Number(node.stock))) return Number(node.stock)
+  const legacy = town?.deposits?.wood
+  return Number.isFinite(Number(legacy)) ? Number(legacy) : undefined
+}
+
 export function gradeGatherWood(start, end) {
-  return Boolean(
-    end && end.resources?.wood > start.resources.wood &&
-    end.deposits?.wood < start.deposits.wood &&
-    end.xp > start.xp &&
-    end.lastInteraction?.siteId === 'grove',
+  const before = groveStock(start)
+  const after = groveStock(end)
+  const gathered = end?.lastInteraction?.siteId === 'grove'
+  const progressed = end?.resources?.wood > start?.resources?.wood && end?.xp > start?.xp
+  // A normal gather lowers the stock. A gather after the cooldown first refills the
+  // empty node, then takes one yield, so the saved stock rises and the timer clears.
+  const consumed = Number.isFinite(before) && Number.isFinite(after) && (
+    after < before ||
+    (before <= 0 && after > 0 && end?.deposits?.grove?.regrowAt === 0 && start?.deposits?.grove?.regrowAt)
   )
+  return Boolean(end && gathered && progressed && consumed)
 }
 
 export function gradeFirstSteps(start, end) {
@@ -40,7 +53,7 @@ export const scenarios = [
     maxSteps: 8,
     grade: gradeGatherWood,
     expectation: 'wood, grove deposit, XP, and gathering action should change through play',
-    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, startingXp: start.xp, finalXp: end?.xp }),
+    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, startingGrove: groveStock(start), finalGrove: groveStock(end), startingXp: start.xp, finalXp: end?.xp }),
   },
   {
     id: 'first-steps',

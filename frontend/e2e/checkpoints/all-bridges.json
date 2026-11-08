@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -17,21 +17,61 @@
   "avatarSet": false,
   "resources": {
     "wood": 12,
-    "water": 62,
+    "water": 70,
     "food": 44,
-    "energy": 40,
+    "energy": 41,
     "coins": 95,
-    "stone": 15,
+    "stone": 17,
     "seeds": 12,
-    "crystals": 6,
-    "materials": 16,
-    "fish": 7
+    "crystals": 7,
+    "materials": 17,
+    "fish": 8
   },
   "deposits": {
-    "wood": 24,
-    "stone": 18,
-    "water": 18,
-    "food": 10
+    "grove": {
+      "stock": 24,
+      "regrowAt": 0
+    },
+    "stone": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "garden": {
+      "stock": 10,
+      "regrowAt": 0
+    },
+    "collector": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "forest": {
+      "stock": 8,
+      "regrowAt": 0
+    },
+    "forage": {
+      "stock": 30,
+      "regrowAt": 0
+    },
+    "lumber": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "falls": {
+      "stock": 48,
+      "regrowAt": 0
+    },
+    "fishing": {
+      "stock": 12,
+      "regrowAt": 0
+    },
+    "crystals": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "salvage": {
+      "stock": 18,
+      "regrowAt": 0
+    }
   },
   "lastInteraction": {
     "id": "i46",
@@ -105,7 +145,7 @@
     {
       "route": "verdant-haven",
       "type": "rope",
-      "condition": 88,
+      "condition": 90,
       "builtLevel": 2
     },
     {
@@ -242,35 +282,35 @@
       "text": "Bridges sway. Turbines sing."
     },
     {
-      "id": "j34",
+      "id": "j33",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j37",
+      "id": "j36",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j39",
+      "id": "j38",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j41",
+      "id": "j40",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j42",
+      "id": "j41",
       "level": 5,
       "type": "event",
       "title": "Solar Storm",

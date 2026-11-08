@@ -26,7 +26,7 @@ export const RESOURCES = {
 export const ISLANDS = {
   newHaven: {
     name: 'New Haven', kind: 'Starter Island', hit: [775, 510, 340, 220], yields: {},
-    desc: 'Open residential terraces, a small wood grove, stone deposits, a starter garden, a basic collector and a workshop. Local timber and stone are finite: build outward for a lasting supply.',
+    desc: 'Open residential terraces, a small wood grove, stone deposits, a starter garden, a basic collector and a workshop. Each source can be gathered dry, then regrows after a short rest. Outer islands regrow larger stocks.',
     question: 'Give the first families a home, then choose which resource island to connect.',
     plots: STARTER_PLOTS,
   },
@@ -88,19 +88,22 @@ export const ROUTES = [
   { id: 'hearth-haven', a: 'newHaven', b: 'hearth', wood: 22, note: 'Connect the village and welcome new families.' },
 ]
 export const ROUTE_MAP = Object.fromEntries(ROUTES.map((r) => [r.id, r]))
+// Older saves stored New Haven stock under these resource names.
 export const STARTER_DEPOSITS = { wood: 36, stone: 18, water: 18, food: 10 }
+// `stock` is remaining world yield of the first reward, not the player's inventory.
+// `regrowMs` is wall-clock time after the node hits zero before that stock returns.
 export const GATHER_SITES = {
-  grove: { island: 'newHaven', label: 'Gather wood', kind: 'wood', deposit: 'wood', reward: { wood: 6 } },
-  stone: { island: 'newHaven', label: 'Mine stone', kind: 'stone', deposit: 'stone', reward: { stone: 3 } },
-  garden: { island: 'newHaven', label: 'Tend the garden', kind: 'garden', deposit: 'food', cost: { seeds: 1 }, reward: { food: 5 } },
-  collector: { island: 'newHaven', label: 'Collect fresh water', kind: 'water', deposit: 'water', reward: { water: 3 } },
-  forest: { island: 'verdant', label: 'Harvest timber', kind: 'wood', reward: { wood: 8 } },
-  forage: { island: 'verdant', label: 'Forage & collect seeds', kind: 'garden', reward: { food: 5, seeds: 2 } },
-  lumber: { island: 'verdant', label: 'Prepare building materials', kind: 'stone', reward: { materials: 3 } },
-  falls: { island: 'rain', label: 'Collect waterfall water', kind: 'water', reward: { water: 8 } },
-  fishing: { island: 'rain', label: 'Fish the pools', kind: 'water', reward: { fish: 2, food: 3 } },
-  crystals: { island: 'prism', label: 'Mine energy crystals', kind: 'crystal', reward: { crystals: 3, energy: 2 } },
-  salvage: { island: 'prism', label: 'Recover power components', kind: 'crystal', reward: { materials: 3, stone: 2 } },
+  grove: { island: 'newHaven', label: 'Gather wood', kind: 'wood', legacy: 'wood', stock: 36, regrowMs: 90_000, reward: { wood: 6 } },
+  stone: { island: 'newHaven', label: 'Mine stone', kind: 'stone', legacy: 'stone', stock: 18, regrowMs: 90_000, reward: { stone: 3 } },
+  garden: { island: 'newHaven', label: 'Tend the garden', kind: 'garden', legacy: 'food', stock: 10, regrowMs: 60_000, cost: { seeds: 1 }, reward: { food: 5 } },
+  collector: { island: 'newHaven', label: 'Collect fresh water', kind: 'water', legacy: 'water', stock: 18, regrowMs: 75_000, reward: { water: 3 } },
+  forest: { island: 'verdant', label: 'Harvest timber', kind: 'wood', stock: 48, regrowMs: 75_000, reward: { wood: 8 } },
+  forage: { island: 'verdant', label: 'Forage & collect seeds', kind: 'garden', stock: 30, regrowMs: 60_000, reward: { food: 5, seeds: 2 } },
+  lumber: { island: 'verdant', label: 'Prepare building materials', kind: 'stone', stock: 18, regrowMs: 90_000, reward: { materials: 3 } },
+  falls: { island: 'rain', label: 'Collect waterfall water', kind: 'water', stock: 48, regrowMs: 60_000, reward: { water: 8 } },
+  fishing: { island: 'rain', label: 'Fish the pools', kind: 'water', stock: 12, regrowMs: 75_000, reward: { fish: 2, food: 3 } },
+  crystals: { island: 'prism', label: 'Mine energy crystals', kind: 'crystal', stock: 18, regrowMs: 120_000, reward: { crystals: 3, energy: 2 } },
+  salvage: { island: 'prism', label: 'Recover power components', kind: 'crystal', stock: 18, regrowMs: 120_000, reward: { materials: 3, stone: 2 } },
 }
 
 export const BRIDGE_TYPES = {
