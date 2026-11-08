@@ -184,15 +184,18 @@ def deploy(sha: str) -> dict:
 
 STATE_FILE = os.getenv("STATE_FILE", "/var/tmp/cloudbreakers-deploy-jobs.json")
 MAX_JOBS = 20
-_jobs_lock = threading.Lock()
+_jobs_lock = threading.RLock()
 
 
 def _load_jobs() -> dict:
-    try:
-        with open(STATE_FILE) as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return {}
+    # Readers and replacement writes share a lock: Windows may deny a replace
+    # while a status reader holds the file, causing a valid job to appear missing.
+    with _jobs_lock:
+        try:
+            with open(STATE_FILE) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return {}
 
 
 def _save_job(job_id: str, job: dict) -> None:

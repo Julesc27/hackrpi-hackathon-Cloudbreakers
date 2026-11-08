@@ -142,8 +142,8 @@
     "firstSteps"
   ],
   "counters": {
-    "waterStreak": 1,
-    "energyStreak": 1,
+    "waterStreak": 0,
+    "energyStreak": 0,
     "foodSurplus": 0
   },
   "journal": [
