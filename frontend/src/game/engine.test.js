@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots } from './engine.js'
 import { Player } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -100,6 +100,57 @@ test('a nearby town storehouse receives the backpack instead of sending the capt
   assert.ok(Math.hypot(player.avatar.x-635, player.avatar.y-610) > 150)
   assert.equal(backpackUsed(state), 0)
   assert.equal(state.resources.wood, initial.resources.wood+8)
+})
+
+test('building storage houses visibly increases all three survival capacities', () => {
+  let state = { ...createInitialState(), xp: 100 }
+  assert.deepEqual(caps(state), { water: 100, food: 100, energy: 100 })
+  state = gameReducer(state, { type: 'BUILD', buildingType: 'storageHouse', island: 'newHaven', slot: 0 })
+  assert.deepEqual(caps(state), { water: 125, food: 125, energy: 125 })
+  state = gameReducer(state, { type: 'BUILD', buildingType: 'storageHouse', island: 'newHaven', slot: 1 })
+  assert.deepEqual(caps(state), { water: 150, food: 150, energy: 150 })
+})
+
+test('a connected island storage house unloads locally and a closed bridge disables it', () => {
+  const initial = createInitialState(), plot = ISLANDS.verdant.plots[0]
+  let state = { ...initial, connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }], buildings: [...initial.buildings, { id: 'forest-depot', type: 'storageHouse', island: 'verdant', slot: 0 }], backpack: { wood: 8 }, player: { island: 'verdant', x: plot[0], y: plot[1] } }
+  const disconnected = { ...state, bridges: [{ ...state.bridges[0], condition: 0 }] }
+  assert.equal(storageDepots(disconnected).some(d => d.id === 'forest-depot'), false)
+  assert.equal(gameReducer(disconnected, { type: 'DEPOSIT_BACKPACK', storageId: 'forest-depot' }).backpack.wood, 8)
+  const player = new Player(state)
+  player.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
+  assert.equal(player.request({ type: 'DEPOSIT_BACKPACK', storageId: 'forest-depot' }, action => { state = gameReducer(state, action); player.sync(state) }), true)
+  let crossed = false
+  for (let i=0; player.pending && i<1000; i++) { player.update(.1); if (!player.avatar.isl) crossed = true }
+  assert.equal(crossed, false)
+  assert.equal(player.pending, null)
+  assert.equal(player.avatar.isl, 'verdant')
+  assert.equal(backpackUsed(state), 0)
+  assert.equal(state.resources.wood, initial.resources.wood+8)
+})
+
+test('choosing a specific storage house overrides the nearest depot', () => {
+  const initial = createInitialState(), target = ISLANDS.newHaven.plots[0]
+  let state = { ...initial, backpack: { wood: 8 }, buildings: [...initial.buildings, { id: 'chosen-house', type: 'storageHouse', island: 'newHaven', slot: 0 }, { id: 'closer-house', type: 'storageHouse', island: 'newHaven', slot: 4 }], player: { island: 'newHaven', x: 1000, y: 610 } }
+  const player = new Player(state)
+  player.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
+  player.request({ type: 'DEPOSIT_BACKPACK', storageId: 'chosen-house' }, action => { state = gameReducer(state, action); player.sync(state) })
+  for (let i=0; player.pending && i<1000; i++) player.update(.1)
+  assert.equal(player.pending, null)
+  assert.ok(Math.hypot(player.avatar.x-target[0],player.avatar.y-target[1]) < 45)
+  assert.equal(backpackUsed(state), 0)
+})
+
+test('storage houses can receive supplies at every buildable plot', () => {
+  for (const [island, def] of Object.entries(ISLANDS)) for (let slot=0; slot<def.plots.length; slot++) {
+    const initial = createInitialState(), plot = def.plots[slot]
+    let state = { ...initial, connected: Object.keys(ISLANDS), bridges: ROUTES.map(r => ({ route: r.id, type: 'reinforced', condition: 100 })), buildings: [...initial.buildings, { id: 'depot', type: 'storageHouse', island, slot }], backpack: { wood: 8 }, player: { island, x: plot[0], y: plot[1] } }
+    const player = new Player(state)
+    player.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
+    assert.equal(player.request({ type: 'DEPOSIT_BACKPACK', storageId: 'depot' }, action => { state = gameReducer(state, action); player.sync(state) }), true, `${island} plot ${slot} is unreachable`)
+    for (let i=0; player.pending && i<1000; i++) player.update(.1)
+    assert.equal(backpackUsed(state), 0, `${island} plot ${slot} cannot accept supplies`)
+  }
 })
 
 test('every painted stair flight is walkable in both directions using up and down controls', () => {

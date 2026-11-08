@@ -2,7 +2,7 @@ import { Crowd, bridgeAt } from '../components/world/people.js'
 import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageLocations } from './engine.js'
+import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots } from './engine.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
@@ -56,8 +56,10 @@ export class Player extends Crowd {
   task(action) {
     if (action.type === 'DEPOSIT_BACKPACK') {
       const a = this.avatar
-      const focus = storageLocations(this.state).slice().sort((p,q) => Math.hypot(p[0]-a.x,p[1]-a.y)-Math.hypot(q[0]-a.x,q[1]-a.y))[0]
-      return { island: 'newHaven', point: this.recoveryPoint('newHaven', ...focus), focus, label: 'Deposit backpack' }
+      const depots = storageDepots(this.state)
+      const depot = action.storageId ? depots.find(d => d.id === action.storageId) : depots.sort((p,q) => Number(q.island === a.isl)-Number(p.island === a.isl) || Math.hypot(p.point[0]-a.x,p.point[1]-a.y)-Math.hypot(q.point[0]-a.x,q.point[1]-a.y))[0]
+      if (!depot) return null
+      return { island: depot.island, point: this.recoveryPoint(depot.island, ...depot.point), focus: depot.point, label: 'Deposit backpack' }
     }
     const siteId = action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : action.siteId
     if (siteId && GATHER_SITES[siteId]) {
@@ -157,8 +159,8 @@ export class Player extends Crowd {
     const choices = Object.entries(GATHER_SITES).filter(([, s]) => s.island === a.isl).map(([id, site]) => ({
       id, point: this.task({ type: 'GATHER_AT_SITE', siteId: id }).point || INTERACTION_POINTS[id], label: site.label, action: { type: 'GATHER_AT_SITE', siteId: id }, reason: gatherAvailability(this.state, id),
     }))
+    if (backpackUsed(this.state)) for (const depot of storageDepots(this.state).filter(d => d.island === a.isl)) choices.push({ id: 'deposit', point: depot.point, label: 'Deposit backpack', action: { type: 'DEPOSIT_BACKPACK', storageId: depot.id } })
     if (a.isl === 'newHaven') {
-      if (backpackUsed(this.state)) for (const point of storageLocations(this.state)) choices.push({ id: 'deposit', point, label: 'Deposit backpack', action: { type: 'DEPOSIT_BACKPACK' } })
       choices.push({ id: 'workshop', point: WORKSHOP, label: 'Open workshop', menu: 'build' })
       if (!this.state.beaconRestored) choices.push({ id: 'beacon', point: BEACON, label: 'Restore the beacon', action: { type: 'RESTORE_BEACON' },
         reason: canAfford(this.state.resources, BEACON_COST) ? null : 'Needs 20 wood and 10 energy' })

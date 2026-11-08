@@ -167,12 +167,13 @@ export default function SkyMap() {
           const plot = ISLANDS[b.island]?.plots?.[b.slot]
           if (!plot) return null
           const shape = footprint(b.type, b.island, b.slot)
+          const inspect = () => { if (b.type === 'storageHouse') { ui.setSelected(b.id); ui.setPanel('storageHouse') } else ui.openIsland(b.island) }
           return (
             <g key={b.id} className="building-hit" role="button" tabIndex="0"
               aria-label={`Inspect ${BUILDINGS[b.type].name}`}
               transform={`translate(${plot[0]} ${plot[1]})`}
-              onClick={(e) => { e.stopPropagation(); if (!ui.placing) ui.openIsland(b.island) }}
-              onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ui.openIsland(b.island) } }}>
+              onClick={(e) => { e.stopPropagation(); if (!ui.placing) inspect() }}
+              onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); inspect() } }}>
               <title>{BUILDINGS[b.type].name}</title>
               <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx="7" fill="transparent" />
 

@@ -135,6 +135,43 @@ test('the backpack side action and capacity fit on a phone', async ({ page }, te
   await page.screenshot({ path: testInfo.outputPath('backpack-phone.png') })
 })
 
+test('a built storage house shows its capacity and accepts supplies directly', async ({ page }, testInfo) => {
+  await startAt(page, 'new-town', { xp: 100, backpack: { wood: 8 } })
+  await page.locator('[data-tutorial="rail-build"]').click()
+  await page.locator('[data-tutorial="build-btn-storageHouse"]').click()
+  await page.locator('[data-tutorial="plot-newHaven"]').click()
+  await expectSave(page, s => s.buildings.some(b => b.type === 'storageHouse'))
+  const built = await savedTown(page)
+  const house = page.getByRole('button', { name: 'Inspect Storage House', exact: true })
+  await house.focus(); await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Storage House', exact: true })
+  await expect(dialog.getByText('125', { exact: true })).toHaveCount(3)
+  await expect(dialog.getByRole('button', { name: 'Deposit All Here' })).toBeEnabled()
+  await page.screenshot({ path: testInfo.outputPath('storage-house.png') })
+  await dialog.getByRole('button', { name: 'Deposit All Here' }).click()
+  await expectSave(page, s => s.backpack.wood === 0 && s.resources.wood === built.resources.wood+8)
+  expect((await savedTown(page)).xp).toBe(built.xp)
+  await house.focus(); await page.keyboard.press('Enter')
+  await expect(dialog.getByRole('button', { name: 'Deposit All Here' })).toBeDisabled()
+  await dialog.getByRole('button', { name: 'View Town Storage' }).click()
+  await expect(page.getByRole('dialog', { name: 'Storehouse' })).toBeVisible()
+})
+
+test('an island storage house unloads locally without a trip to New Haven', async ({ page }) => {
+  const initial = checkpoint('all-bridges'), point = ISLANDS.verdant.plots[0]
+  await startAt(page, 'all-bridges', { buildings: [...initial.buildings, { id: 'forest-storehouse', type: 'storageHouse', island: 'verdant', slot: 0 }], backpack: { wood: 8 }, player: { island: 'verdant', x: point[0], y: point[1] } })
+  const house = page.getByRole('button', { name: 'Inspect Storage House', exact: true })
+  await house.focus(); await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Storage House', exact: true })
+  await expect(dialog).toContainText('Verdant Reach')
+  await dialog.getByRole('button', { name: 'Deposit All Here' }).click()
+  await expectSave(page, s => s.backpack.wood === 0)
+  const stored = await savedTown(page)
+  expect(stored.player.island).toBe('verdant')
+  expect(stored.resources.wood).toBe(initial.resources.wood+8)
+  expect(stored.xp).toBe(initial.xp)
+})
+
 for (const [siteId, kind] of [['stone', 'mine'], ['garden', 'garden'], ['collector', 'collect'], ['crystals', 'crystal'], ['fishing', 'fish']]) {
   test(`the captain shows ${kind} work and progress at ${siteId}`, async ({ page }, testInfo) => {
     const site = GATHER_SITES[siteId], point = INTERACTION_POINTS[siteId]

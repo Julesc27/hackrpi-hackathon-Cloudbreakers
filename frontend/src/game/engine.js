@@ -9,8 +9,13 @@ export const BACKPACK_RESOURCES = ['wood', 'stone', 'seeds', 'crystals', 'materi
 export const backpackCapacity = () => 20
 export const backpackUsed = state => BACKPACK_RESOURCES.reduce((sum, key) => sum + (state.backpack?.[key] || 0), 0)
 const emptyBackpack = () => Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, 0]))
-export const storageLocations = state => [[635, 610], ...state.buildings.filter(b => b.type === 'storageHouse' && b.island === 'newHaven' && b.slot >= 0).map(b => ISLANDS.newHaven.plots[b.slot]).filter(Boolean)]
-export const atTownStorage = state => state.player?.island === 'newHaven' && storageLocations(state).some(([x,y]) => Math.hypot(x-state.player.x,y-state.player.y) <= 45)
+export function storageDepots(state) {
+  const access = islandAccess(state)
+  return [{ id: 'workshop', island: 'newHaven', point: [635, 610] }, ...state.buildings
+    .filter(b => b.type === 'storageHouse' && b.slot >= 0 && access[b.island] && ISLANDS[b.island]?.plots[b.slot])
+    .map(b => ({ id: b.id, island: b.island, point: ISLANDS[b.island].plots[b.slot] }))]
+}
+export const atTownStorage = (state, storageId = null) => storageDepots(state).some(depot => (!storageId || depot.id === storageId) && depot.island === state.player?.island && Math.hypot(depot.point[0]-state.player.x,depot.point[1]-state.player.y) <= 45)
 const ALL_RES = Object.keys(RESOURCES)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
@@ -431,7 +436,7 @@ export function gameReducer(state, action) {
   switch (action.type) {
     case 'DEPOSIT_BACKPACK': {
       if (!backpackUsed(state)) return state
-      if (!atTownStorage(state)) return toast(state, 'warn', 'Visit the workshop or a storehouse in New Haven to deposit supplies.')
+      if (!atTownStorage(state, action.storageId)) return toast(state, 'warn', 'Walk to the workshop or a connected storage house to deposit supplies.')
       const resources = { ...state.resources }
       for (const key of BACKPACK_RESOURCES) resources[key] = (resources[key] || 0) + (state.backpack?.[key] || 0)
       return toast({ ...state, resources, backpack: emptyBackpack(), nextId: state.nextId+1 }, 'success', 'Backpack deposited into town storage.')

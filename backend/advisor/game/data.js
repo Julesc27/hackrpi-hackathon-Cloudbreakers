@@ -42,7 +42,8 @@ export const ISLANDS = {
     yields: { water: 8, fish: 1, stone: 1 }, badge: 'drop',
     desc: 'Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town.',
     question: 'Clean water links the homes, gardens and workshops of the settlement.',
-    plots: [[825, 270], [885, 288], [1010, 285], [1070, 303]],
+    // Keep the two eastern plots on reachable plaza paving, above the cliff.
+    plots: [[825, 270], [885, 288], [900, 200], [965, 220]],
   },
   prism: {
     name: 'Prism Shelf', kind: 'Crystal Island', hit: [410, 235, 225, 140],
@@ -151,7 +152,7 @@ export const BUILDINGS = {
   },
   storageHouse: {
     name: 'Storage House', category: 'Survival', cost: { wood: 12, stone: 4 }, capBonus: 25,
-    desc: 'Raises water, food and energy storage by 25.',
+    desc: 'Adds 25 capacity each for water, food and energy. Drop off backpack supplies here while its island is connected.',
   },
   solarFarm: {
     name: 'Solar Farm', category: 'Renewable', cost: { wood: 12, coins: 30, crystals: 3, materials: 2 }, prod: { energy: 5 }, renewable: true,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots } from '../../game/engine.js'
 import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
@@ -126,6 +126,28 @@ export function JournalModal() {
 export function BackpackModal() {
   const ui = useUI()
   return <Modal title="Backpack" kicker="Supplies for the journey" onClose={() => ui.setPanel(null)}><Backpack /></Modal>
+}
+
+export function StorageHouseModal() {
+  const { state, dispatch } = useGame()
+  const ui = useUI()
+  const building = state.buildings.find(b => b.id === ui.selected && b.type === 'storageHouse')
+  if (!building) return null
+  const connected = storageDepots(state).some(depot => depot.id === building.id)
+  const capacity = caps(state), carried = backpackUsed(state)
+  return <Modal title="Storage House" kicker={ISLANDS[building.island].name} onClose={() => ui.setPanel(null)}>
+    <p>This storage house adds <strong>25 capacity each</strong> for food, water and energy. Your current town capacity is:</p>
+    <div className="storage-capacities">{['food','water','energy'].map(key => { const Icon = RES_ICON[key]; return <div key={key}><Icon size={24} /><span>{RESOURCES[key].label}</span><strong>{capacity[key]}</strong></div> })}</div>
+    <h3 className="section">Unload supplies here</h3>
+    <p>Connected storage houses accept backpack supplies and deliver them to shared town stock for building and upgrades.</p>
+    <p><strong>{carried} items</strong> in your backpack.</p>
+    {!connected && <p className="backpack-full" role="status">Reconnect this island’s bridge to use this drop-off point.</p>}
+    <div className="action-stack">
+      <button className="btn-gold" disabled={!carried || !connected} onClick={() => dispatch({ type: 'DEPOSIT_BACKPACK', storageId: building.id })}>Deposit All Here</button>
+      <button className="btn-ghost" onClick={() => ui.setPanel('storage')}>View Town Storage</button>
+    </div>
+    <p className="muted small">Your captain walks to this house and unloads on arrival. Press E beside it to deposit supplies again.</p>
+  </Modal>
 }
 
 export function StorageModal() {
