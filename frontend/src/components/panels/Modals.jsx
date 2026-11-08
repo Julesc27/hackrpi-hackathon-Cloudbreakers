@@ -496,6 +496,10 @@ export function SettingsModal() {
         <span>How to Play</span>
       </button>
 
+      <button type="button" className="btn-ghost" style={{ width: '100%', marginBottom: 14 }} onClick={() => ui.setPanel('captain')}>
+        Edit your Captain
+      </button>
+
       {confirm ? (
         <div className="confirm">
           <p>Start over? All progress on this town will be lost.</p>

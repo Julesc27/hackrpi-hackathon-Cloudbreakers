@@ -1,39 +1,50 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { ISLANDS } from '../../game/data.js'
+import { centerCameraOnAvatar } from '../../game/player.js'
+import { isTypingTarget, keyboardShouldWalk } from '../../game/travelInput.js'
 import '../../styles/player.css'
 
 export default function PlayerControls() {
   const { player } = useGame()
   const ui = useUI()
   const [view, setView] = useState(null)
+  const keys = useRef(new Set())
+  const uiBusy = Boolean(ui.panel || ui.placing || ui.bridgeRoute)
+  useEffect(() => {
+    if (!uiBusy) return
+    keys.current.clear()
+    player.current.setInput(0, 0)
+  }, [uiBusy, player])
   useEffect(() => {
     const refresh = () => {
-      const p = player.current, a = p.avatar, target = p.nearby()
+      const p = player.current, a = p.avatar
       if (!a) return
-      setView({ x: a.x, y: a.y, island: a.isl, status: p.status, busy: Boolean(p.pending),
-        work: a.task ? { ...a.task } : null,
-        target: target?.reason || target?.label, available: target && !target.reason })
+      setView({ x: a.x, y: a.y, island: a.isl, busy: Boolean(p.pending),
+        task: a.task?.kind || '', progress: a.task ? a.task.progress : null })
       if (a.act === 'walk') ui.camera.current?.followPoint(a.x, a.y)
     }
     refresh()
     const timer = setInterval(refresh, 150)
-    const keys = new Set()
+    const held = keys.current
     const movement = () => player.current.setInput(
-      Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')),
-      Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')))
+      Number(held.has('d') || held.has('arrowright')) - Number(held.has('a') || held.has('arrowleft')),
+      Number(held.has('s') || held.has('arrowdown')) - Number(held.has('w') || held.has('arrowup')))
+    const blocked = (e) => isTypingTarget(e.target) || uiBusy || Boolean(document.querySelector('.modal-backdrop, .tutorial-root'))
     const down = e => {
-      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]') || document.querySelector('.modal-backdrop')) return
+      if (blocked(e) || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+        if (held.size) { held.clear(); movement() }
+        return
+      }
       const key = e.key.toLowerCase()
-      if (['w','a','s','d','arrowup','arrowleft','arrowdown','arrowright'].includes(key)) {
-        e.preventDefault(); e.stopImmediatePropagation(); keys.add(key); movement()
+      if (keyboardShouldWalk({ key, target: e.target, uiBusy })) {
+        e.preventDefault(); e.stopImmediatePropagation(); held.add(key); movement()
       } else if (key === 'e' && !e.repeat) { e.preventDefault(); player.current.interact() }
       else if (key === 'escape' && player.current.pending) player.current.cancel()
     }
-    const up = e => { if (keys.delete(e.key.toLowerCase())) { e.preventDefault(); movement() } }
+    const up = e => { if (held.delete(e.key.toLowerCase())) { e.preventDefault(); movement() } }
     const blur = () => {
-      const wasMoving = keys.size || player.current.input.some(Boolean)
-      keys.clear()
+      const wasMoving = held.size || player.current.input.some(Boolean)
+      held.clear()
       if (wasMoving) movement()
     }
     window.addEventListener('keydown', down, true)
@@ -43,22 +54,23 @@ export default function PlayerControls() {
       clearInterval(timer); blur()
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur)
     }
-  }, [player, ui.camera])
+  }, [player, ui.camera, uiBusy])
   if (!view || ui.placing) return null
-  const locate = () => {
-    const a = player.current.avatar, camera = ui.camera.current
-    camera?.flyTo(a.x, a.y, Math.max(1.2, camera.view().s), { duration: 300 })
-  }
-  return <section className="player-controls" aria-label="Captain controls" data-player-island={view.island || 'bridge'} data-player-x={view.x.toFixed(1)} data-player-y={view.y.toFixed(1)} data-player-busy={view.busy} data-player-task={view.work?.kind || ''}>
-    <div className="captain-badge" aria-hidden="true">✦</div>
-    <div className="captain-info"><strong>Your captain <span>{ISLANDS[view.island]?.name || 'Crossing the sky'}</span></strong>
-      <span role="status">{view.status}</span>
-      {view.work && <div className="captain-task" style={{ '--task-color': view.work.color }}><progress aria-label={view.work.label} max="1" value={view.work.progress} /><span>{Math.round(view.work.progress*100)}%</span></div>}
-      <small>WASD / arrows to walk · E to interact · tap a path to walk</small></div>
-    <button className="captain-use" aria-label={view.busy ? 'Cancel task' : undefined} onClick={() => view.busy ? player.current.cancel() : player.current.interact()} disabled={!view.busy && !view.available} title={view.busy ? 'Stop this task without spending resources' : view.target || 'Walk closer to a resource or workshop'}><kbd>{view.busy ? 'Esc' : 'E'}</kbd> {view.busy ? 'Cancel task' : view.target || 'Explore'}</button>
-    <button className="captain-locate" onClick={locate} aria-label="Find my avatar" title="Find my avatar">◎</button>
-    <div className="captain-dpad" aria-label="Walk controls">
-      {[['↑',0,-1,'up'],['←',-1,0,'left'],['↓',0,1,'down'],['→',1,0,'right']].map(([label,x,y,name]) => <button key={name} aria-label={`Walk ${name}`} onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); player.current.setInput(x,y) }} onPointerUp={() => player.current.setInput(0,0)} onPointerCancel={() => player.current.setInput(0,0)}>{label}</button>)}
-    </div>
-  </section>
+  return (
+    <button
+      type="button"
+      className="center-me"
+      onClick={() => centerCameraOnAvatar(ui.camera.current, player.current.avatar)}
+      aria-label="Center me"
+      title="Center the view on your captain. They stay where they are."
+      data-player-island={view.island || 'bridge'}
+      data-player-x={view.x.toFixed(1)}
+      data-player-y={view.y.toFixed(1)}
+      data-player-busy={view.busy}
+      data-player-task={view.task}
+      data-player-progress={view.progress == null ? '' : view.progress.toFixed(3)}
+    >
+      Center me
+    </button>
+  )
 }

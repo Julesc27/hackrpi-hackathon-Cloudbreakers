@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots } from './engine.js'
-import { Player } from './player.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots, projectProduction } from './engine.js'
+import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
 
@@ -151,6 +151,22 @@ test('storage houses can receive supplies at every buildable plot', () => {
     for (let i=0; player.pending && i<1000; i++) player.update(.1)
     assert.equal(backpackUsed(state), 0, `${island} plot ${slot} cannot accept supplies`)
   }
+})
+
+test('centering the camera keeps the current zoom and does not move the captain', () => {
+  const avatar = { x: 120.5, y: 40.25, isl: 'verdant' }
+  const calls = []
+  const camera = {
+    view: () => ({ s: 0.62 }),
+    flyTo: (...args) => calls.push(args),
+    home: () => { throw new Error('must not fly home to New Haven') },
+  }
+  assert.equal(centerCameraOnAvatar(camera, avatar), true)
+  assert.deepEqual(calls[0], [120.5, 40.25, 0.62, { duration: 300 }])
+  assert.deepEqual(avatar, { x: 120.5, y: 40.25, isl: 'verdant' })
+  centerCameraOnAvatar({ view: () => ({ s: 1.8 }), flyTo: (...args) => calls.push(args) }, avatar)
+  assert.equal(calls[1][2], 1.8)
+  assert.equal(centerCameraOnAvatar({ view: () => ({ s: 1 }), flyTo() {} }, null), false)
 })
 
 test('every painted stair flight is walkable in both directions using up and down controls', () => {
@@ -444,7 +460,7 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 })
 
 
-test('starter timber and stone deplete; rejected harvesting grants neither XP nor effects', () => {
+test('starter timber, stone, water and food deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' }))
   assert.equal(state.deposits.wood, 0)
@@ -455,6 +471,17 @@ test('starter timber and stone deplete; rejected harvesting grants neither XP no
   for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' }))
   assert.equal(state.deposits.stone, 0)
   assert.match(gatherAvailability(state, 'stone'), /depleted/)
+  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
+  assert.equal(state.deposits.water, 0)
+  assert.match(gatherAvailability(state, 'collector'), /depleted/)
+  for (let i = 0; i < 2; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden' })
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
+  state = { ...state, connected: [...state.connected, 'verdant'], bridges: [{ route: 'verdant-haven', type: 'reinforced', condition: 100 }] }
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'forage' })
+  assert.ok(state.resources.seeds > 0)
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
 })
 
 test('outer resource sites require a working bridge and provide their distinct resources', () => {
@@ -683,4 +710,72 @@ test('Friendly Cloud points to the Store and notices when the gods disagree', as
   assert.equal(godsWord(agree, tip).kind, 'agree')
   assert.equal(godsWord({ ...agree, xp: agree.xp + GODS_FRESH_XP }, tip).kind, 'nudge') // stale
   assert.ok(getAdvice(start).every((t) => t.focus))
+})
+
+test('happiness depletion: food or water below 25% causes -1 per action', () => {
+  // cap=100; 25% threshold; clear weather adds +1
+  // After action net water=-1, so water=24 -> nextRes=23 (23% < 25%) -> lowSupplies: -1 + weather(+1) = 0
+  const base = createInitialState()
+
+  // Low water (24->23, 23% < 25%)
+  const lowWater = { ...base, happiness: 60, resources: { ...base.resources, water: 24, food: 60, energy: 50 } }
+  assert.equal(projectProduction(lowWater).net.happiness, 0)   // -1 penalty + 1 clear weather
+  assert.equal(gameReducer(lowWater, { type: 'GATHER_WOOD' }).happiness, 60)
+
+  // Low food (24->23, 23% < 25%)
+  const lowFood = { ...base, happiness: 60, resources: { ...base.resources, water: 60, food: 24, energy: 50 } }
+  assert.equal(projectProduction(lowFood).net.happiness, 0)
+  assert.equal(gameReducer(lowFood, { type: 'GATHER_WOOD' }).happiness, 60)
+})
+
+test('happiness depletion: food and water at 25%+ follow normal rules', () => {
+  // water=26->25 (25% = not < 25%), food=60->59 (59%) => no depletion
+  // normal: needs met (+1) + clear weather (+1) = +2; happiness 60->62
+  const base = createInitialState()
+  const ok = { ...base, happiness: 60, resources: { ...base.resources, water: 26, food: 60, energy: 50 } }
+  assert.equal(projectProduction(ok).net.happiness, 2)
+  assert.equal(gameReducer(ok, { type: 'GATHER_WOOD' }).happiness, 62)
+})
+
+test('the Captain avatar can be changed, is sanitised, and survives old saves', () => {
+  const initial = createInitialState()
+  assert.equal(initial.avatar.body, 'woman')
+  const man = gameReducer(initial, { type: 'SET_AVATAR', avatar: { ...initial.avatar, body: 'man', beard: 'beard', top: '#5f9e4f', hat: 'straw' } })
+  assert.deepEqual([man.avatar.body, man.avatar.beard, man.avatar.top, man.avatar.hat], ['man', 'beard', '#5f9e4f', 'straw'])
+  assert.equal(man.xp, initial.xp)
+  // unknown values fall back to the default; beards only for the man body
+  const odd = gameReducer(initial, { type: 'SET_AVATAR', avatar: { body: 'woman', beard: 'beard', top: 'javascript:alert(1)', hat: 'crown' } })
+  assert.equal(odd.avatar.beard, 'none')
+  assert.equal(odd.avatar.top, initial.avatar.top)
+  assert.equal(odd.avatar.hat, initial.avatar.hat)
+  // a save from before avatars existed gets the default Captain
+  const { avatar, ...old } = initial
+  assert.deepEqual(migrateSave(old).avatar, initial.avatar)
+  assert.equal(migrateSave(man).avatar.beard, 'beard')
+})
+
+test('Captain eyes are a style and a colour from the editor', () => {
+  const s = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { body: 'man', eyes: 'happy', eyeColor: '#3a6fb8' } })
+  assert.deepEqual([s.avatar.eyes, s.avatar.eyeColor], ['happy', '#3a6fb8'])
+  const bad = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { eyes: 'laser', eyeColor: 'red' } })
+  assert.deepEqual([bad.avatar.eyes, bad.avatar.eyeColor], ['lashes', '#5a3a24'])
+})
+
+test('designing the Captain marks it as set, and that survives saving and loading', () => {
+  const fresh = createInitialState()
+  assert.equal(fresh.avatarSet, false)
+  const set = gameReducer(fresh, { type: 'SET_AVATAR', avatar: fresh.avatar })
+  assert.equal(set.avatarSet, true)
+  assert.equal(migrateSave(JSON.parse(JSON.stringify(set))).avatarSet, true)
+  const { avatarSet, ...old } = fresh
+  assert.equal(migrateSave(old).avatarSet, false)
+})
+
+test('a notice is shown as a warning toast and changes nothing else', () => {
+  const s = createInitialState()
+  const n = gameReducer(s, { type: 'NOTICE', text: 'Backpack full' })
+  assert.equal(n.toasts.at(-1).kind, 'warn')
+  assert.equal(n.toasts.at(-1).text, 'Backpack full')
+  assert.deepEqual([n.xp, n.resources, n.backpack], [s.xp, s.resources, s.backpack])
+  assert.equal(gameReducer(s, { type: 'NOTICE', text: '' }), s)
 })

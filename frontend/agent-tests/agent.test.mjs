@@ -2,11 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { defaultModel, parseAction, requestTimeoutMs, retryableStatus, stepBudgetMs } from './agent.mjs'
-import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
+import { defaultModel, parseAction, requestGemini, requestTimeoutMs, retryableStatus, stepBudgetMs, thinkingLevel } from './agent.mjs'
+import { gradeFirstSteps, gradeGatherWood, gradeHoldFast, scenarios } from './scenarios.mjs'
 
-const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
-const play = (...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(start))
+const checkpoint = (name) => JSON.parse(readFileSync(new URL(`../e2e/checkpoints/${name}.json`, import.meta.url), 'utf8'))
+const start = checkpoint('new-town')
+const playFrom = (from, ...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(from))
+const play = (...actions) => playFrom(start, ...actions)
 const buildShelter = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
 
 test('defaults to free-tier Flash, which can tell the wood and stone markers apart better than Flash Lite', () => {
@@ -20,6 +22,64 @@ test('Gemini Flash gets more than the 60 seconds that aborted its first CI reque
 test('overload and rate-limit errors are retried, but bad keys and requests are not', () => {
   for (const status of [429, 503]) assert.ok(retryableStatus.has(status), `${status} should retry`)
   for (const status of [400, 401, 403, 404]) assert.ok(!retryableStatus.has(status), `${status} should fail fast`)
+})
+
+test('asks Gemini 3.8 Flash for low thinking, a level it supports (it rejects minimal)', () => {
+  assert.equal(thinkingLevel, 'low')
+})
+
+test('a step budget outlasts one slow answer, so a timeout is retried instead of ending the run', () => {
+  assert.ok(stepBudgetMs >= 2 * requestTimeoutMs)
+})
+
+// Stubbed Gemini: plays back a script of responses; 'timeout' waits until the request's own abort signal fires.
+// AbortSignal.timeout's timer does not keep Node alive (a real socket would), so the stub holds a timer open itself;
+// without it Node 20 exits mid-test and cancels every later test.
+async function withGemini(script, run) {
+  const realFetch = globalThis.fetch
+  const realLog = console.log
+  let calls = 0
+  globalThis.fetch = (url, { signal }) => {
+    const next = script[Math.min(calls++, script.length - 1)]
+    if (next === 'timeout') {
+      return new Promise((_, reject) => {
+        const keepAlive = setInterval(() => {}, 1_000)
+        signal.addEventListener('abort', () => { clearInterval(keepAlive); reject(signal.reason) })
+      })
+    }
+    const [status, payload] = next
+    return Promise.resolve(new Response(JSON.stringify(payload), { status }))
+  }
+  console.log = () => {}
+  try {
+    return { result: await run(), calls }
+  } catch (error) {
+    return { error, calls }
+  } finally {
+    globalThis.fetch = realFetch
+    console.log = realLog
+  }
+}
+const fast = { budgetMs: 400, timeoutMs: 60, delaysMs: [5] }
+const overloaded = [503, { error: { status: 'UNAVAILABLE', message: 'This model is currently experiencing high demand.' } }]
+
+test('requestGemini retries overloads and slow answers, then returns the answer', async () => {
+  const { result, calls, error } = await withGemini([overloaded, 'timeout', [200, { ok: true }]], () => requestGemini('{}', 'key', 'test', fast))
+  assert.equal(error, undefined)
+  assert.deepEqual(result, { ok: true })
+  assert.equal(calls, 3)
+})
+
+test('requestGemini fails fast on a bad key and explains why', async () => {
+  const { error, calls } = await withGemini([[401, { error: { status: 'UNAUTHENTICATED', message: 'API key not valid' } }]], () => requestGemini('{}', 'key', 'test', fast))
+  assert.equal(calls, 1)
+  assert.match(error.message, /HTTP 401: UNAUTHENTICATED - API key not valid/)
+})
+
+test('requestGemini gives up when the step budget runs out, naming the last problem', async () => {
+  const { error, calls } = await withGemini([overloaded], () => requestGemini('{}', 'key', 'test', fast))
+  assert.ok(calls > 1)
+  assert.match(error.message, /step budget .*HTTP 503: UNAVAILABLE/)
 })
 
 test('every scenario has a unique id, a committed checkpoint, and fits its CI job', () => {
@@ -45,6 +105,21 @@ test('First Steps grader requires a newly built shelter, not just gathering or a
   assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, buildShelter)), true)
   const alreadyDone = play(buildShelter)
   assert.equal(gradeFirstSteps(alreadyDone, alreadyDone), false)
+})
+
+test('Hold Fast grader requires the bridge-anchor upgrade built from the shelter-built save', () => {
+  const shelterBuilt = checkpoint('shelter-built')
+  const buildAnchor = { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' }
+  assert.equal(gradeHoldFast(shelterBuilt, shelterBuilt), false)
+  assert.equal(gradeHoldFast(shelterBuilt, playFrom(shelterBuilt, { type: 'GATHER_WOOD' })), false)
+  // The checkpoint can afford the anchor without gathering first.
+  assert.equal(gradeHoldFast(shelterBuilt, playFrom(shelterBuilt, buildAnchor)), true)
+  const anchorReady = checkpoint('anchor-ready')
+  assert.equal(gradeHoldFast(anchorReady, anchorReady), false)
+})
+
+test('scenarios run in the order a player meets them', () => {
+  assert.deepEqual(scenarios.map((s) => s.id), ['gather-wood', 'first-steps', 'hold-fast'])
 })
 
 test('model action parser scales normalized 0-1000 points to the viewport and rejects unsafe clicks', () => {

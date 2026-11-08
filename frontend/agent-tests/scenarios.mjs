@@ -1,7 +1,9 @@
 // Agent scenarios: an objective, the checkpoint it starts from, and a grader that reads the final save.
-// Each scenario has its own workflow that selects it with `--grep "[<id>]"`.
+// Listed in the order a player meets them; .github/workflows/agent-gameplay.yml runs them one after
+// another in this order, selecting each with `--grep "[<id>]"`.
 
 const shelters = (town) => town?.buildings?.filter((b) => b.type === 'shelter').length ?? 0
+const anchors = (town) => town?.buildings?.filter((b) => b.type === 'bridgeAnchor').length ?? 0
 
 export function gradeGatherWood(start, end) {
   return Boolean(
@@ -17,6 +19,15 @@ export function gradeFirstSteps(start, end) {
     end && !start.completed.includes('firstSteps') &&
     end.completed?.includes('firstSteps') &&
     shelters(end) > shelters(start) &&
+    end.xp > start.xp,
+  )
+}
+
+export function gradeHoldFast(start, end) {
+  return Boolean(
+    end && !start.completed.includes('anchor') &&
+    end.completed?.includes('anchor') &&
+    anchors(end) > anchors(start) &&
     end.xp > start.xp,
   )
 }
@@ -40,5 +51,15 @@ export const scenarios = [
     grade: gradeFirstSteps,
     expectation: 'a shelter should be built through play and First Steps should be completed',
     outcome: (start, end) => ({ startingShelters: shelters(start), finalShelters: shelters(end), completed: end?.completed, startingXp: start.xp, finalXp: end?.xp }),
+  },
+  {
+    id: 'hold-fast',
+    checkpoint: 'shelter-built',
+    // Names the quest, not the building: the agent must connect "Hold Fast" to the workshop's bridge upgrade.
+    objective: 'Complete the Hold Fast quest.',
+    maxSteps: 8,
+    grade: gradeHoldFast,
+    expectation: 'the bridge-anchor upgrade should be built through play and Hold Fast should be completed',
+    outcome: (start, end) => ({ startingAnchors: anchors(start), finalAnchors: anchors(end), completed: end?.completed, startingXp: start.xp, finalXp: end?.xp }),
   },
 ]

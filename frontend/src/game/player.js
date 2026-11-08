@@ -3,12 +3,22 @@ import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots } from './engine.js'
+import { avatarLook } from './avatar.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
 const BEACON = [795, 407]
 const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON', 'DEPOSIT_BACKPACK'])
 export const isPlayerTask = action => TASKS.has(action.type)
+
+/** Move the camera onto the captain. Their place in the world, and the current zoom, stay put. */
+export function centerCameraOnAvatar(camera, avatar) {
+  if (!camera?.flyTo || !camera.view || avatar == null || !Number.isFinite(avatar.x) || !Number.isFinite(avatar.y)) return false
+  const scale = camera.view().s
+  if (!Number.isFinite(scale)) return false
+  camera.flyTo(avatar.x, avatar.y, scale, { duration: 300 })
+  return true
+}
 
 // The player uses the same traced paths and live bridge curves as the residents,
 // but moves only under the player's control and completes tasks on arrival.
@@ -33,16 +43,23 @@ export class Player extends Crowd {
   }
 
   get avatar() { return this.agents[0] }
+
+  /** Look like the Captain from the avatar editor (state.avatar), keeping the tool bag. */
+  dress() {
+    this.lastAvatar = this.state.avatar
+    Object.assign(this.avatar, avatarLook(this.state.avatar), { carry: 'toolbag' })
+  }
   plan() {} // No autonomous wandering for the player.
 
   sync(state) {
     this.state = state
+    if (this.avatar && state.avatar !== this.lastAvatar) this.dress()
     if (this.lastBridges === state.bridges && this.lastBuildings === state.buildings && this.lastConnected === state.connected) return
     const pending = this.pending
     const before = this.avatar && [this.avatar.isl, this.avatar.x, this.avatar.y]
     super.setState(state, islandAccess(state), 1)
-    Object.assign(this.avatar, { kid: false, role: 'captain', shirt: '#265aa4', trim: '#f1cb75',
-      pants: '#263550', hat: 'aviator', carry: 'toolbag', cloak: null, speed: 85 })
+    this.dress()
+    this.avatar.speed = 85
     this.lastBridges = state.bridges; this.lastBuildings = state.buildings; this.lastConnected = state.connected
     if (this.manualBridge && !this.bridgeTypes[this.manualBridge.route]) this.manualBridge = null
     if (before && (before[0] !== this.avatar.isl || before[1] !== this.avatar.x || before[2] !== this.avatar.y)) this.remember()

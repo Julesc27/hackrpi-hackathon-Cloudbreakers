@@ -1,6 +1,7 @@
 name: Deploy
 
-# Pushes to main (including PR merges) deploy after checks; manual dispatch remains available.
+# Pushes to main (including PR merges) run the full CI (ci.yml), then deploy only if it passes;
+# manual dispatch remains available.
 # First rollout: manually dispatch after merge to update the old server hook, which rejects push tokens.
 # The server trusts GitHub's signed OIDC token and only accepts this workflow on main.
 on:
@@ -8,47 +9,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: deploy
-  cancel-in-progress: false  # queue deploys, never cut one off halfway
-
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Test and build frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run checkpoints
-          git diff --exit-code -- e2e/checkpoints
-          npm test
-          npm run build
-      - name: Install Chromium
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Playwright gameplay tests
-        working-directory: frontend
-        run: npm run test:e2e
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Check backend imports
-        working-directory: backend
-        run: |
-          pip install -r requirements.txt
-          python -c "from app.main import app; print('backend OK')"
-          python -m unittest discover -s ../deploy/hook -p test_hook.py
+  ci:
+    uses: ./.github/workflows/ci.yml
 
   deploy:
-    needs: check
+    needs: ci
     runs-on: ubuntu-latest
+    # Only the deploy step is serialized, so CI for a newer push can run while an older deploy finishes.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false  # queue deploys, never cut one off halfway
     permissions:
       id-token: write   # lets this job request a GitHub-signed OIDC token
       contents: read

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { pointerPastDragThreshold, shouldHintTravel, shouldTravelFromMapClick } from '../../game/travelInput.js'
 import { ISLANDS, BUILDINGS, GATHER_AMOUNT } from '../../game/data.js'
 import { openRoutes, hasAnchor, bridgeCost, islandAccess, bridgeStatus, bridgeLabel } from '../../game/engine.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
@@ -31,17 +32,39 @@ export default function SkyMap() {
     return buildingLayout(type, island, slot, PAINTED_ATLASES[sheet].cells[cell])
   }
   const [hover, setHover] = useState(null)
+  const [hint, setHint] = useState(null)
   const hoverRef = useRef(null)
+  const hintTimer = useRef(null)
+  const press = useRef(null)
+  const lastTap = useRef(null)
   hoverRef.current = hover
+  const uiBusy = Boolean(ui.placing || ui.panel || ui.bridgeRoute)
 
   const statusOf = (id) =>
     state.connected.includes(id) ? 'connected' : state.discovered.includes(id) ? 'discovered' : 'hidden'
 
-  const walk = (island, event) => {
-    if (ui.placing) return
-    event.stopPropagation()
+  const worldPoint = (event) => {
     const svg = event.currentTarget.ownerSVGElement
-    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse())
+    return new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse())
+  }
+  const showHint = (event) => {
+    const point = worldPoint(event)
+    const coarse = window.matchMedia?.('(hover: none), (pointer: coarse), (any-pointer: coarse)').matches
+    setHint({ x: point.x, y: point.y, text: coarse ? 'Double-tap to walk' : 'Double-click to walk' })
+    clearTimeout(hintTimer.current)
+    hintTimer.current = setTimeout(() => setHint(null), 1400)
+  }
+  useEffect(() => () => clearTimeout(hintTimer.current), [])
+  const movedSincePress = (event) => press.current ? pointerPastDragThreshold(event.clientX - press.current.x, event.clientY - press.current.y) : false
+  const walk = (island, event, detail = event.detail) => {
+    event.stopPropagation()
+    const gesture = { detail, moved: movedSincePress(event), uiBusy }
+    if (!shouldTravelFromMapClick(gesture)) {
+      if (shouldHintTravel(gesture)) showHint(event)
+      return
+    }
+    setHint(null)
+    const point = worldPoint(event)
     player.current.go(island, [point.x, point.y])
   }
 
@@ -99,7 +122,13 @@ export default function SkyMap() {
           const lw = label ? label.length * 8.4 + 34 : 0
           return (
             <g key={id} className={`isle-hit isle-hit-${st}`}>
-              <ellipse cx={cx} cy={cy} rx={rx} ry={ry} role="button" tabIndex="0" aria-label={`Walk on ${ISLANDS[id].name}`} onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); player.current.go(id, [cx, cy]) } }} fill="transparent" onClick={e => walk(id, e)}
+              <ellipse cx={cx} cy={cy} rx={rx} ry={ry} role="button" tabIndex="0" aria-label={`Walk on ${ISLANDS[id].name}`} title="Double-click to walk here" onKeyDown={(e) => { if (!uiBusy && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); player.current.go(id, [cx, cy]) } }} fill="transparent" onPointerDown={(e) => { press.current = { x: e.clientX, y: e.clientY } }} onClick={(e) => {
+                const now = performance.now()
+                const prev = lastTap.current
+                const repeat = prev?.island === id && now - prev.t < 450 && !pointerPastDragThreshold(e.clientX - prev.x, e.clientY - prev.y, 24)
+                lastTap.current = { t: now, x: e.clientX, y: e.clientY, island: id }
+                walk(id, e, repeat ? Math.max(2, e.detail) : e.detail)
+              }}
                 onPointerEnter={() => setHover(id)} onPointerLeave={() => setHover((h) => (h === id ? null : h))} />
               {selected && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#f3d98f" strokeWidth="2.5" strokeDasharray="8 8" className="select-ring" pointerEvents="none" />}
               {label && (
@@ -143,6 +172,7 @@ export default function SkyMap() {
           return (
             <g role="button" tabIndex="0" aria-label={`Plan bridge to ${ISLANDS[state.connected.includes(r.a) ? r.b : r.a].name}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.setBridgeRoute(r.id) } }} key={r.id} className={`ghost-route${anchor ? '' : ' is-locked'}`} onClick={() => ui.setBridgeRoute(r.id)}>
               <g transform={`translate(${mx} ${my})`}><g className="route-btn">
+                <circle r="34" fill="transparent" />{/* a finger-sized hit area */}
                 <circle r="20" fill="url(#goldBtn)" stroke="#fff1c4" strokeWidth="1.5" />
                 {anchor ? (
                   <path d="M-7 0h14M0 -7v14" stroke="#4a3208" strokeWidth="3.4" strokeLinecap="round" />
@@ -207,6 +237,15 @@ export default function SkyMap() {
             )
           })
         })}
+
+        {hint && (
+          <g className="travel-hint" transform={`translate(${hint.x} ${hint.y - 22})`}>
+            <g className="ui-scale">
+              <rect x="-86" y="-16" width="172" height="28" rx="14" fill="rgba(12,19,58,.92)" stroke="#d6b36a" />
+              <text textAnchor="middle" y="4" className="travel-hint-text">{hint.text}</text>
+            </g>
+          </g>
+        )}
 
         <FxLayer />
       </svg>

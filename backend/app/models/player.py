@@ -4,7 +4,7 @@ from typing import Annotated
 from beanie import Document, Indexed
 from pydantic import BaseModel, Field
 
-from app.models.town import TownSave
+from app.models.town import Avatar, TownSave
 
 
 class Player(Document):
@@ -24,6 +24,7 @@ class Player(Document):
     completion: dict[str, bool] = Field(default_factory=dict)
     turn: int = Field(default=0, ge=0)
     town_name: str | None = None
+    avatar: Avatar | None = None  # the player's Captain, copied out of `town`
 
     class Settings:
         name = "players"  # MongoDB collection name
@@ -37,6 +38,8 @@ class Player(Document):
         self.completion = {mission_id: True for mission_id in town.completed}
         self.turn = town.turn or 0  # retained for legacy profile consumers
         self.town_name = town.townName
+        if town.avatar is not None:
+            self.avatar = town.avatar
 
 
 class PlayerOut(BaseModel):
@@ -50,6 +53,7 @@ class PlayerOut(BaseModel):
     completion: dict[str, bool]
     turn: int
     town_name: str | None
+    avatar: Avatar | None = None
 
     @classmethod
     def from_doc(cls, p: Player) -> "PlayerOut":
@@ -62,4 +66,5 @@ class PlayerOut(BaseModel):
             completion=p.completion,
             turn=p.turn,
             town_name=p.town_name,
+            avatar=p.avatar,
         )

@@ -1,15 +1,63 @@
-name: Agent gameplay - gather wood
+name: Agent gameplay
 
+# Runs every browser-agent scenario one after another, in the order a player meets them
+# (the order of frontend/agent-tests/scenarios.mjs). A failure is reported but does not stop
+# the later scenarios. Leave the input blank to run all, or name some to run just those.
 on:
   workflow_dispatch:
+    inputs:
+      scenarios:
+        description: 'Scenario ids, comma-separated (blank = all, in order). e.g. first-steps,hold-fast'
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
+# One agent run at a time, so runs don't compete for the same Gemini free-tier quota.
+concurrency:
+  group: agent-gameplay
+  cancel-in-progress: false
+
 jobs:
-  agent-play:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      scenarios: ${{ steps.pick.outputs.scenarios }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pick scenarios in play order
+        id: pick
+        env:
+          WANT: ${{ inputs.scenarios }}
+        run: |
+          node --input-type=module -e "
+            import { scenarios } from './frontend/agent-tests/scenarios.mjs'
+            const all = scenarios.map((s) => s.id)
+            const want = (process.env.WANT || '').split(',').map((s) => s.trim()).filter(Boolean)
+            const unknown = want.filter((id) => !all.includes(id))
+            if (unknown.length) {
+              console.error('Unknown scenario(s): ' + unknown.join(', ') + '. Known: ' + all.join(', '))
+              process.exit(1)
+            }
+            const ids = want.length ? all.filter((id) => want.includes(id)) : all
+            console.log('scenarios=' + JSON.stringify(ids))
+          " >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  play:
+    needs: plan
+    name: ${{ matrix.scenario }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      max-parallel: 1   # one after another, in play order
+      fail-fast: false  # a failed scenario still lets the later ones run
+      matrix:
+        scenario: ${{ fromJSON(needs.plan.outputs.scenarios) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,17 +80,34 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # Optional repo variable; empty falls back to defaultModel in agent-tests/agent.mjs.
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          SCENARIO: ${{ matrix.scenario }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
             echo 'Set the GEMINI_API_KEY repository secret before running this workflow.' >&2
             exit 1
           fi
-          # Scenario ids live in agent-tests/scenarios.mjs.
-          npx playwright test --config agent-tests/playwright.config.js --grep "\[gather-wood\]"
+          npx playwright test --config agent-tests/playwright.config.js --grep "\[$SCENARIO\]"
+      - name: Summarize
+        if: always()
+        working-directory: frontend
+        run: |
+          node --input-type=module -e "
+            import { readdirSync, readFileSync, existsSync } from 'node:fs'
+            const dirs = existsSync('agent-results') ? readdirSync('agent-results') : []
+            for (const dir of dirs) {
+              const file = 'agent-results/' + dir + '/transcript.json'
+              if (!existsSync(file)) continue
+              const r = JSON.parse(readFileSync(file, 'utf8'))
+              console.log('### ' + (r.passed ? 'PASS' : 'FAIL') + ' ' + r.scenario + ': ' + r.objective)
+              console.log('Model ' + r.model + ', ' + r.transcript.length + ' steps, ' + (r.reason || r.error || ''))
+              console.log('')
+              for (const s of r.transcript) console.log('1. ' + s.message + ' [' + s.action + ']')
+            }
+          " >> "$GITHUB_STEP_SUMMARY"
       - name: Upload transcript and failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: agent-gather-wood-evidence
+          name: agent-${{ matrix.scenario }}-evidence
           path: frontend/agent-results/
           if-no-files-found: ignore

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Close, RES_ICON, Compass } from '../icons.jsx'
+import { eventShouldDismissOverlay } from '../../game/travelInput.js'
 
 function SealClose({ onClose }) {
   return (
@@ -52,7 +53,7 @@ export function Modal({ title, kicker, onClose, children, footer, size = 'md', d
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, dismissable])
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => dismissable && e.target === e.currentTarget && onClose?.()}>
+    <div className="modal-backdrop" onClick={(e) => dismissable && eventShouldDismissOverlay(e) && onClose?.()}>
       <div className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
         <Corners />
         {crest && <div className="crest"><Compass size={52} /></div>}

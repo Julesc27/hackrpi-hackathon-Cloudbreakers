@@ -4,7 +4,15 @@ const instructions = readFileSync(new URL('./HOW_TO_PLAY.md', import.meta.url), 
 export const defaultModel = 'gemini-3.8-flash'
 const model = process.env.GEMINI_MODEL || defaultModel
 const maxTokens = 30_000
-export const requestTimeoutMs = 180_000
+// Per-attempt wait. A slow attempt is retried, so this no longer has to cover Gemini's worst case alone.
+export const requestTimeoutMs = 120_000
+// Total time one agent step may spend getting an answer, across retries of overloads and slow responses.
+export const stepBudgetMs = 300_000
+// Overload (503), rate limit (429) and transient server errors are worth retrying; bad keys or requests are not.
+export const retryableStatus = new Set([429, 500, 502, 503, 504])
+export const retryDelaysMs = [5_000, 15_000, 30_000, 60_000]
+// Gemini 3.8 Flash thinks at "medium" by default and rejects "minimal"; "low" is enough to pick one click.
+export const thinkingLevel = process.env.GEMINI_THINKING_LEVEL || 'low'
 
 export function parseAction(data, viewport) {
   const candidate = data.candidates?.[0]
@@ -35,58 +43,70 @@ function toPixel(value, size) {
 async function nextAction(page, objective, previous, key) {
   const screenshot = await page.screenshot({ type: 'jpeg', quality: 65 })
   const body = JSON.stringify({
-  systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. Give click coordinates as x and y normalized from 0 to 1000 across the screenshot's width and height (0,0 is top-left; 1000,1000 is bottom-right). If an action did not change the screen, try a different target instead of repeating it. Use done only when you believe the objective is met.` }] },
-  contents: [{ role: 'user', parts: [
-    { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3).map(({ step, action, message, modelX, modelY, deltaY }) => ({ step, action, message, x: modelX, y: modelY, deltaY })))}\nChoose the next action from the screenshot.` },
-    { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
-  ] }],
-  generationConfig: {
-    temperature: 0.2,
-    responseMimeType: 'application/json',
-    responseSchema: {
-      type: 'OBJECT',
-      properties: {
-        action: { type: 'STRING', enum: ['click', 'scroll', 'done'] },
-        x: { type: 'INTEGER' },
-        y: { type: 'INTEGER' },
-        deltaY: { type: 'INTEGER' },
-        message: { type: 'STRING' },
+    systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. Give click coordinates as x and y normalized from 0 to 1000 across the screenshot's width and height (0,0 is top-left; 1000,1000 is bottom-right). If an action did not change the screen, try a different target instead of repeating it. Use done only when you believe the objective is met.` }] },
+    contents: [{ role: 'user', parts: [
+      { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3).map(({ step, action, message, modelX, modelY, deltaY }) => ({ step, action, message, x: modelX, y: modelY, deltaY })))}\nChoose the next action from the screenshot.` },
+      { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
+    ] }],
+    generationConfig: {
+      temperature: 0.2,
+      thinkingConfig: { thinkingLevel },
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'OBJECT',
+        properties: {
+          action: { type: 'STRING', enum: ['click', 'scroll', 'done'] },
+          x: { type: 'INTEGER' },
+          y: { type: 'INTEGER' },
+          deltaY: { type: 'INTEGER' },
+          message: { type: 'STRING' },
+        },
+        required: ['action', 'x', 'y', 'deltaY', 'message'],
       },
-      required: ['action', 'x', 'y', 'deltaY', 'message'],
     },
-  },
   })
+  return requestGemini(body, key, `${screenshot.length} screenshot bytes`)
+}
+
+// POSTs one request, retrying overloads, rate limits and slow responses until the step budget runs out.
+export async function requestGemini(body, key, label, { budgetMs = stepBudgetMs, timeoutMs = requestTimeoutMs, delaysMs = retryDelaysMs } = {}) {
+  const deadline = Date.now() + budgetMs
+  const minAttemptMs = Math.min(20_000, budgetMs / 4)
+  let lastProblem = ''
   for (let attempt = 0; ; attempt++) {
+    const attemptTimeoutMs = Math.max(1, Math.min(timeoutMs, deadline - Date.now()))
     const started = Date.now()
-    console.log(`Gemini request started (${model}; ${screenshot.length} screenshot bytes${attempt ? `; retry ${attempt}/${retryDelaysMs.length}` : ''})`)
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body,
-      signal: AbortSignal.timeout(requestTimeoutMs),
-    }).catch((error) => {
-      if (error.name === 'TimeoutError') {
-        throw new Error(`Gemini sent no response within ${requestTimeoutMs / 1000}s; request or model may be slow or unreachable`, { cause: error })
-      }
-      throw error
-    })
-    console.log(`Gemini responded HTTP ${response.status} in ${Date.now() - started}ms`)
-    if (response.ok) return response.json()
-    const detail = await errorDetail(response)
-    if (!retryableStatus.has(response.status) || attempt >= retryDelaysMs.length) {
-      throw new Error(`Gemini request failed (HTTP ${response.status}${detail ? `: ${detail}` : ''}) after ${attempt + 1} attempt(s); check key, model access, and free-tier quota`)
+    console.log(`Gemini request started (${model}; thinking ${thinkingLevel}; ${label}${attempt ? `; attempt ${attempt + 1}` : ''})`)
+    let response
+    try {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body,
+        signal: AbortSignal.timeout(attemptTimeoutMs),
+      })
+    } catch (error) {
+      if (error.name !== 'TimeoutError') throw error
+      lastProblem = `no response within ${Math.round(attemptTimeoutMs / 1000)}s`
+      console.log(`Gemini sent ${lastProblem}`)
     }
-    const delay = retryDelaysMs[attempt]
-    console.log(`Gemini is temporarily unavailable${detail ? ` (${detail})` : ''}; retrying in ${delay / 1000}s`)
+    if (response) {
+      console.log(`Gemini responded HTTP ${response.status} in ${Date.now() - started}ms`)
+      if (response.ok) return response.json()
+      const detail = await errorDetail(response)
+      if (!retryableStatus.has(response.status)) {
+        throw new Error(`Gemini request failed (HTTP ${response.status}${detail ? `: ${detail}` : ''}); check key, model access, and free-tier quota`)
+      }
+      lastProblem = `HTTP ${response.status}${detail ? `: ${detail}` : ''}`
+    }
+    const delay = delaysMs[Math.min(attempt, delaysMs.length - 1)]
+    if (deadline - Date.now() - delay < minAttemptMs) {
+      throw new Error(`Gemini gave no usable answer within the ${Math.round(budgetMs / 1000)}s step budget (${attempt + 1} attempts; last: ${lastProblem}). The model is likely overloaded; rerun later or set GEMINI_MODEL to another free model.`)
+    }
+    console.log(`Gemini is temporarily unavailable (${lastProblem}); retrying in ${delay / 1000}s`)
     await new Promise((resolve) => setTimeout(resolve, delay))
   }
 }
-
-// Overload (503), rate limit (429) and transient server errors are worth retrying; bad keys or requests are not.
-export const retryableStatus = new Set([429, 500, 502, 503, 504])
-export const retryDelaysMs = [5_000, 15_000, 30_000, 60_000]
-// Worst-case time one agent step can take: a full-timeout answer after every backoff.
-export const stepBudgetMs = requestTimeoutMs + retryDelaysMs.reduce((sum, ms) => sum + ms, 0)
 
 async function errorDetail(response) {
   try {

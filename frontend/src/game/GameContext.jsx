@@ -38,13 +38,16 @@ export function GameProvider({ children }) {
       player.current.cancel()
       resetPlayer.current = true
     }
-    if (isPlayerTask(action)) player.current.request(action, rawDispatch)
-    else rawDispatch(action)
+    if (isPlayerTask(action)) {
+      // The Captain says why a task can't start (backpack full, no bridge…): the HUD no longer
+      // shows the Captain's status line, so this is the only place the player would see it.
+      if (!player.current.request(action, rawDispatch) && player.current.status) rawDispatch({ type: 'NOTICE', text: player.current.status })
+    } else rawDispatch(action)
   }, [])
   useEffect(() => {
     if (resetPlayer.current) { Object.assign(player.current, new Player(state)); resetPlayer.current = false }
     else player.current.sync(state)
-  }, [state.bridges, state.connected, state.buildings])
+  }, [state.bridges, state.connected, state.buildings, state.avatar])
 
   // Local backup on every change; CloudSync also saves logged-in towns to the server.
   useEffect(() => {

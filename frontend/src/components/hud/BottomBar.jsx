@@ -23,8 +23,9 @@ export function BottomNav() {
             className={`nav-btn panel${isActive(id) ? ' is-active' : ''}`}
             onClick={() => (id === null ? ui.closeAll() : ui.toggle(id))}
             data-tutorial={id ? `nav-${id}` : 'nav-town'}
+            aria-label={badge ? `${label}, new entries` : undefined}
           >
-            {badge && <span className="badge">!</span>}
+            {badge && <span className="badge" aria-hidden="true">!</span>}
             <Icon size={44} />
             <span>{label}</span>
           </button>
@@ -94,21 +95,6 @@ export function PlacingHint() {
     <div className="placing-hint panel">
       Choose a glowing plot for your <strong>{BUILDINGS[ui.placing].name}</strong>
       <button className="btn-ghost" onClick={() => ui.setPlacing(null)}>Cancel (Esc)</button>
-    </div>
-  )
-}
-
-// Zoom / recentre buttons for the map camera
-export function CameraControls() {
-  const ui = useUI()
-  const cam = () => ui.camera.current
-  return (
-    <div className="cam-controls" aria-label="Map view">
-      <button className="cam-btn panel" onClick={() => cam()?.zoomIn()} aria-label="Zoom in" title="Zoom in (+)">+</button>
-      <button className="cam-btn panel" onClick={() => cam()?.zoomOut()} aria-label="Zoom out" title="Zoom out (−)">−</button>
-      <button className="cam-btn panel" onClick={() => cam()?.home()} aria-label="Back to New Haven" title="Back to New Haven (0)">
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" fill="currentColor" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-      </button>
     </div>
   )
 }

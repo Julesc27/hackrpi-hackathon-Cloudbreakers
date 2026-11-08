@@ -8,7 +8,7 @@ import SkyMap from './components/map/SkyMap.jsx'
 import TopBar from './components/hud/TopBar.jsx'
 import FlyingResources from './components/hud/FlyingResources.jsx'
 import { TitleBlock, LeftRail, LevelBadge, WeatherCard } from './components/hud/SideHud.jsx'
-import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint, CameraControls } from './components/hud/BottomBar.jsx'
+import { BottomNav, ProgressionCard, SettingsButton, ObjectiveRibbon, PlacingHint } from './components/hud/BottomBar.jsx'
 import { QuestBook, BuildPanel, AdvisorPanel } from './components/panels/LeftPanels.jsx'
 import IslandPanel from './components/panels/IslandPanel.jsx'
 import BridgeAnchorModal from './components/panels/BridgeAnchorModal.jsx'
@@ -26,11 +26,13 @@ import {
 } from './components/panels/Modals.jsx'
 import Tutorial from './components/tutorial/Tutorial.jsx'
 import PlayerControls from './components/hud/PlayerControls.jsx'
+import { CaptainModal, useCaptainOnboarding } from './components/panels/CaptainModal.jsx'
 
 function GameScreen() {
   const { state } = useGame()
   const ui = useUI()
   const auth = useAuth()
+  useCaptainOnboarding()
 
   useEffect(() => {
     const onKey = (e) => {
@@ -63,9 +65,10 @@ function GameScreen() {
         <LeftRail />
         <ProgressionCard />
         <BottomNav />
-        <SettingsButton />
-        <CameraControls />
-        <PlayerControls />
+        <div className="corner-tools">
+          <PlayerControls />
+          <SettingsButton />
+        </div>
         <PlacingHint />
       </div>
 
@@ -80,16 +83,17 @@ function GameScreen() {
       {ui.panel === 'store' && <StoreModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
+      {ui.panel === 'captain' && <CaptainModal />}
       {ui.panel === 'bridges' && <BridgeAnchorModal />}
       {ui.bridgeRoute && <BridgeModal />}
 
       {auth.loginOpen && <AuthModal />}
 
-      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && (
+      {!state.seenIntro && !auth.loginOpen && auth.status !== 'loading' && ui.panel !== 'captain' && (
         <IntroModal />
       )}
 
-      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && (
+      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && ui.panel !== 'captain' && (
         <Tutorial />
       )}
 

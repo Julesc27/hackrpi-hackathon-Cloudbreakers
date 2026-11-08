@@ -3,6 +3,7 @@ import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
   GATHER_AMOUNT, HARVEST, GATHER_SITES, STARTER_DEPOSITS, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
 } from './data.js'
+import { DEFAULT_AVATAR, normalizeAvatar } from './avatar.js'
 
 export const METERS = ['energy', 'water', 'food']
 export const BACKPACK_RESOURCES = ['wood', 'stone', 'seeds', 'crystals', 'materials', 'fish']
@@ -23,6 +24,8 @@ export function createInitialState() {
   return {
     version: 5,
     townName: 'New Haven',
+    avatar: { ...DEFAULT_AVATAR },
+    avatarSet: false, // true once the player has designed their Captain
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
     backpack: emptyBackpack(),
     deposits: { ...STARTER_DEPOSITS },
@@ -183,13 +186,26 @@ export function projectProduction(state, weatherKey = state.weather) {
   const net = Object.fromEntries(ALL_RES.map((k) => [k, gain[k] - use[k]]))
 
   // Project happiness change on next action
+  const cap = caps(state)
+  const nextRes = {}
   const shortages = []
   for (const k of METERS) {
-    if ((state.resources?.[k] || 0) + net[k] < 0) shortages.push(k)
+    const val = (state.resources?.[k] || 0) + net[k]
+    if (val < 0) shortages.push(k)
+    nextRes[k] = Math.max(0, Math.min(cap[k] || 0, val))
   }
+
+  const waterRatio = cap.water > 0 ? nextRes.water / cap.water : 1
+  const foodRatio = cap.food > 0 ? nextRes.food / cap.food : 1
+  const lowSupplies = waterRatio < 0.25 || foodRatio < 0.25
+
   let dh = 0
-  if (!shortages.length) dh += 1
-  if (net.food > 0) dh += 1
+  if (lowSupplies) {
+    dh -= 1
+  } else {
+    if (!shortages.length) dh += 1
+    if (net.food > 0) dh += 1
+  }
   for (const k of shortages) dh -= 6
   const house = housing(state)
   if (state.population > house) dh -= 3
@@ -305,9 +321,19 @@ function progressSettlement(state, xp) {
   // Happiness
   const access = islandAccess(state)
   const reasons = []
+
+  const waterRatio = cap.water > 0 ? res.water / cap.water : 1
+  const foodRatio = cap.food > 0 ? res.food / cap.food : 1
+  const lowSupplies = waterRatio < 0.25 || foodRatio < 0.25
+
   let dh = 0
-  if (!shortages.length) { dh += 1; reasons.push(['Needs met', 1]) }
-  if (proj.net.food > 0) { dh += 1; reasons.push(['Food surplus', 1]) }
+  if (lowSupplies) {
+    dh -= 1
+    reasons.push(['Low supplies', -1])
+  } else {
+    if (!shortages.length) { dh += 1; reasons.push(['Needs met', 1]) }
+    if (proj.net.food > 0) { dh += 1; reasons.push(['Food surplus', 1]) }
+  }
   for (const k of shortages) { dh -= 6; reasons.push([`${k[0].toUpperCase() + k.slice(1)} shortage`, -6]) }
   const house = housing(state)
   if (state.population > house) { dh -= 3; reasons.push(['Overcrowding', -3]) }
@@ -426,7 +452,7 @@ function gatherAtSite(state, siteId) {
   }
   s = progressSettlement(s, 10)
   if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Backpack in the side bar to return and deposit your supplies.')
-  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
+  if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : site.deposit === 'water' ? 'Water source' : site.deposit === 'food' ? 'Food garden' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
   return s
 }
 
@@ -539,6 +565,8 @@ export function gameReducer(state, action) {
       return journal(s, 'oracle', 'Word from the gods', poem)
     }
 
+    case 'NOTICE': // a short message for the player, e.g. why the Captain can't do something
+      return action.text ? toast(state, 'warn', String(action.text).slice(0, 160)) : state
     case 'DISMISS_TOAST':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
     case 'PLAYER_POSITION': {
@@ -548,6 +576,8 @@ export function gameReducer(state, action) {
     }
     case 'SEEN_INTRO':
       return { ...state, seenIntro: true }
+    case 'SET_AVATAR':
+      return { ...state, avatar: normalizeAvatar(action.avatar), avatarSet: true }
     case 'READ_JOURNAL':
       return { ...state, journalUnread: 0 }
     case 'NEW_GAME':
@@ -594,6 +624,8 @@ export function migrateSave(saved) {
   }
   return {
     ...createInitialState(), ...rest, version: 5, toasts: [],
+    avatar: normalizeAvatar(saved.avatar),
+    avatarSet: saved.avatarSet === true,
     resources: { ...createInitialState().resources, ...saved.resources },
     backpack: Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, Number.isFinite(saved.backpack?.[key]) ? Math.max(0, Math.floor(saved.backpack[key])) : 0])),
     deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
