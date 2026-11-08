@@ -77,7 +77,7 @@ export function CaptainModal() {
     >
       {welcome && <p className="cap-welcome">Your Captain is saved to your account, so they’ll be waiting on any device you log in from. You can change their look any time from the Captain button.</p>}
       <div className="captain-editor">
-        <div className="cap-preview">
+        <div className="cap-preview" data-tutorial="captain-preview">
           <AvatarPortrait avatar={draft} mode="full" animate size={150} label="Preview of your Captain" />
           <p className="cap-note">This is the Captain you walk around the islands with.</p>
         </div>

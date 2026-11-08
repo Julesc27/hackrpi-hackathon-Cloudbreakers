@@ -476,7 +476,7 @@ export function StoreModal() {
   const ui = useUI()
   return (
     <Modal title="Store" kicker="Trade with passing sky merchants" onClose={() => ui.setPanel(null)}>
-      <div className="store-items">
+      <div className="store-items" data-tutorial="store-items">
         {STORE_ITEMS.map((item) => <ConsultGodsCard key={item.id} item={item} />)}
       </div>
     </Modal>

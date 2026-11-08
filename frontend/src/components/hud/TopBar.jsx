@@ -77,7 +77,7 @@ export default function TopBar() {
   const cap = caps(state)
   const { net } = projectProduction(state)
   const r = state.resources
-  const isFlowStep = ui.tutorialActive && ui.tutorialStep === 8
+  const isFlowStep = ui.tutorialActive && ui.tutorialStep === 13
 
   // gains: { [res]: { amount, epoch } } — only tracks explicit rewards & tapped bubbles,
   // NOT passive background production.

@@ -23,7 +23,7 @@ export default function useDialogAccessibility(ref, { modal = true, onClose, dis
       modalStack.push(root)
       for (let branch = root; branch.parentElement && branch !== document.body; branch = branch.parentElement) {
         for (const sibling of branch.parentElement.children) {
-          if (sibling === branch || sibling.matches('.toasts, [data-live-announcements], script, style')) continue
+          if (sibling === branch || sibling.matches('.toasts, [data-live-announcements], .tutorial-root, [data-guided-dialog], script, style')) continue
           if (!inertCounts.has(sibling)) inertCounts.set(sibling, { count: 0, original: sibling.inert })
           inertCounts.get(sibling).count++
           sibling.inert = true; inert.push(sibling)
@@ -52,7 +52,7 @@ export default function useDialogAccessibility(ref, { modal = true, onClose, dis
       }
     }
     const focusin = event => {
-      if (modal && modalStack.at(-1) === root && !root.contains(event.target)) focusStart()
+      if (modal && modalStack.at(-1) === root && !root.contains(event.target) && !event.target.closest?.('.tutorial-root, [data-guided-dialog]')) focusStart()
     }
     document.addEventListener('keydown', keydown, true)
     document.addEventListener('focusin', focusin)
