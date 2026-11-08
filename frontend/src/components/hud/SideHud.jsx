@@ -5,6 +5,7 @@ import { getAdvice } from '../../game/advisor.js'
 import { WEATHER } from '../../game/data.js'
 import { CloudIcon, WeatherIcon, People, Leaf, ArtIcon } from '../icons.jsx'
 import GodsLine from '../GodsLine.jsx'
+import AvatarPortrait from '../AvatarPortrait.jsx'
 
 export function TitleBlock() {
   const { state } = useGame()
@@ -32,10 +33,11 @@ export function LeftRail() {
     { id: 'build', label: 'Build', icon: 'build' },
     { id: 'advisor', label: 'Cloud', icon: 'cloud' },
     { id: 'store', label: 'Store', icon: 'store' },
+    { id: 'captain', label: 'Captain', portrait: true },
   ]
   return (
     <nav className="left-rail" aria-label="Main actions">
-      {items.map(({ id, label, icon, badge }, i) => (
+      {items.map(({ id, label, icon, badge, portrait }, i) => (
         <span key={id} className="rail-item">
           {i > 0 && <span className="rail-sep">✦</span>}
           <button
@@ -44,7 +46,7 @@ export function LeftRail() {
             data-tutorial={`rail-${id}`}
           >
             {badge && <span className="badge">!</span>}
-            <ArtIcon name={icon} size={50} />
+            {portrait ? <AvatarPortrait avatar={state.avatar} className="art-icon rail-avatar" size={50} /> : <ArtIcon name={icon} size={50} />}
             <span>{label}</span>
           </button>
         </span>

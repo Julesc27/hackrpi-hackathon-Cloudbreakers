@@ -24,6 +24,7 @@ import {
 } from './components/panels/Modals.jsx'
 import Tutorial from './components/tutorial/Tutorial.jsx'
 import PlayerControls from './components/hud/PlayerControls.jsx'
+import { CaptainModal } from './components/panels/CaptainModal.jsx'
 
 function GameScreen() {
   const { state } = useGame()
@@ -76,6 +77,7 @@ function GameScreen() {
       {ui.panel === 'store' && <StoreModal />}
       {ui.panel === 'map' && <MapModal />}
       {ui.panel === 'settings' && <SettingsModal />}
+      {ui.panel === 'captain' && <CaptainModal />}
       {ui.panel === 'bridges' && <BridgeAnchorModal />}
       {ui.bridgeRoute && <BridgeModal />}
 
