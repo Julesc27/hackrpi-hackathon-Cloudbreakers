@@ -686,10 +686,12 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
   // cloak / long coat, swept back by the wind
   if (a.cloak || a.coat) {
     const c = a.cloak || a.shirt
+    const hem = hip + (a.cloak ? 3.0 : 1.7) - (sit ? 1 : 0)
+    const flare = a.cloak ? 3.8 : 2.75
     ctx.beginPath()
     ctx.moveTo(-1.6, top + 0.6)
-    ctx.quadraticCurveTo(-3.6 - wind, hip, -3.2 - wind * 1.6, hip + 3.4 - (sit ? 1.5 : 0))
-    ctx.lineTo(1.4, hip + 3 - (sit ? 1.5 : 0))
+    ctx.quadraticCurveTo(-3.3 - wind * 0.5, hip, -flare - wind * 0.6, hem)
+    ctx.quadraticCurveTo(-1.2, hem + 0.2, 1.4, hem - 0.4)
     ctx.lineTo(1.8, top + 0.8)
     ctx.closePath()
     ctx.fillStyle = col(shade(c, 0.78)); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.4; ctx.stroke()
@@ -706,11 +708,14 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
     line(ctx, -0.6, hip, -1.6, -1.2, col(a.pants), 1.6); line(ctx, -1.6, -1.2, -0.4, 0, col(a.pants), 1.4)
     line(ctx, 0.8, hip, 2.4, -1.4, col(a.pants), 1.6); line(ctx, 2.4, -1.4, 2.2, 0, col(a.pants), 1.4)
   } else {
-    const l1 = -0.6 - swing * 1.6, l2 = 0.7 + swing * 1.6
-    line(ctx, -0.6, hip, l1, -0.4, col(shade(a.pants, 0.8)), 1.6)
-    line(ctx, 0.7, hip, l2, -0.4, col(a.pants), 1.6)
-    ellipse(ctx, l1 + 0.3, -0.3, 0.95, 0.5, boot)
-    ellipse(ctx, l2 + 0.3, -0.3, 0.95, 0.5, boot)
+    // Leave a clear gap between the two trouser legs; overlapping thick strokes
+    // and a floor-length coat tail used to read as a third leg in the portrait.
+    const l1 = -0.95 - swing * 0.8, l2 = 0.95 + swing * 0.8
+    const lift1 = Math.max(0, swing) * 0.45, lift2 = Math.max(0, -swing) * 0.45
+    line(ctx, -0.95, hip, l1, -0.4 - lift1, col(shade(a.pants, 0.9)), 1.25)
+    line(ctx, 0.95, hip, l2, -0.4 - lift2, col(a.pants), 1.25)
+    ellipse(ctx, l1 + 0.18, -0.3 - lift1, 0.78, 0.42, boot)
+    ellipse(ctx, l2 + 0.18, -0.3 - lift2, 0.78, 0.42, boot)
   }
 
   // a dress, flaring a little as they walk
