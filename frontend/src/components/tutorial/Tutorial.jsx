@@ -222,7 +222,7 @@ export default function Tutorial() {
   else if (tutorialStep === 8) {
     targetSelector = '[data-tutorial="hud-resources"]'
     title = 'Resource Flow & Actions'
-    text = 'Notice the small numbers next to some of the resources (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount of resources on the next action! Green (+) means production, red (−) means upkeep.'
+    text = 'Notice the small numbers next to the resources and happiness (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount on the next action! Green (+) means production or a happiness gain, red (−) means upkeep or a penalty.'
     hint = 'Watch these numbers as you build to keep your town balanced'
     showNextBtn = true
     nextBtnLabel = 'Next ›'
