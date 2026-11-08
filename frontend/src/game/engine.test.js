@@ -588,3 +588,37 @@ test('happiness depletion: food and water at 25%+ follow normal rules', () => {
   assert.equal(projectProduction(ok).net.happiness, 2)
   assert.equal(gameReducer(ok, { type: 'GATHER_WOOD' }).happiness, 62)
 })
+
+test('the Captain avatar can be changed, is sanitised, and survives old saves', () => {
+  const initial = createInitialState()
+  assert.equal(initial.avatar.body, 'woman')
+  const man = gameReducer(initial, { type: 'SET_AVATAR', avatar: { ...initial.avatar, body: 'man', beard: 'beard', top: '#5f9e4f', hat: 'straw' } })
+  assert.deepEqual([man.avatar.body, man.avatar.beard, man.avatar.top, man.avatar.hat], ['man', 'beard', '#5f9e4f', 'straw'])
+  assert.equal(man.xp, initial.xp)
+  // unknown values fall back to the default; beards only for the man body
+  const odd = gameReducer(initial, { type: 'SET_AVATAR', avatar: { body: 'woman', beard: 'beard', top: 'javascript:alert(1)', hat: 'crown' } })
+  assert.equal(odd.avatar.beard, 'none')
+  assert.equal(odd.avatar.top, initial.avatar.top)
+  assert.equal(odd.avatar.hat, initial.avatar.hat)
+  // a save from before avatars existed gets the default Captain
+  const { avatar, ...old } = initial
+  assert.deepEqual(migrateSave(old).avatar, initial.avatar)
+  assert.equal(migrateSave(man).avatar.beard, 'beard')
+})
+
+test('Captain eyes are a style and a colour from the editor', () => {
+  const s = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { body: 'man', eyes: 'happy', eyeColor: '#3a6fb8' } })
+  assert.deepEqual([s.avatar.eyes, s.avatar.eyeColor], ['happy', '#3a6fb8'])
+  const bad = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { eyes: 'laser', eyeColor: 'red' } })
+  assert.deepEqual([bad.avatar.eyes, bad.avatar.eyeColor], ['lashes', '#5a3a24'])
+})
+
+test('designing the Captain marks it as set, and that survives saving and loading', () => {
+  const fresh = createInitialState()
+  assert.equal(fresh.avatarSet, false)
+  const set = gameReducer(fresh, { type: 'SET_AVATAR', avatar: fresh.avatar })
+  assert.equal(set.avatarSet, true)
+  assert.equal(migrateSave(JSON.parse(JSON.stringify(set))).avatarSet, true)
+  const { avatarSet, ...old } = fresh
+  assert.equal(migrateSave(old).avatarSet, false)
+})

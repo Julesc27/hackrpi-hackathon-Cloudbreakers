@@ -3,6 +3,7 @@ import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { islandAccess, gatherAvailability, canAfford } from './engine.js'
+import { avatarLook } from './avatar.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
@@ -42,16 +43,23 @@ export class Player extends Crowd {
   }
 
   get avatar() { return this.agents[0] }
+
+  /** Look like the Captain from the avatar editor (state.avatar), keeping the tool bag. */
+  dress() {
+    this.lastAvatar = this.state.avatar
+    Object.assign(this.avatar, avatarLook(this.state.avatar), { carry: 'toolbag' })
+  }
   plan() {} // No autonomous wandering for the player.
 
   sync(state) {
     this.state = state
+    if (this.avatar && state.avatar !== this.lastAvatar) this.dress()
     if (this.lastBridges === state.bridges && this.lastBuildings === state.buildings && this.lastConnected === state.connected) return
     const pending = this.pending
     const before = this.avatar && [this.avatar.isl, this.avatar.x, this.avatar.y]
     super.setState(state, islandAccess(state), 1)
-    Object.assign(this.avatar, { kid: false, role: 'captain', shirt: '#265aa4', trim: '#f1cb75',
-      pants: '#263550', hat: 'aviator', carry: 'toolbag', cloak: null, speed: 85 })
+    this.dress()
+    this.avatar.speed = 85
     this.lastBridges = state.bridges; this.lastBuildings = state.buildings; this.lastConnected = state.connected
     if (this.manualBridge && !this.bridgeTypes[this.manualBridge.route]) this.manualBridge = null
     if (before && (before[0] !== this.avatar.isl || before[1] !== this.avatar.x || before[2] !== this.avatar.y)) this.remember()
