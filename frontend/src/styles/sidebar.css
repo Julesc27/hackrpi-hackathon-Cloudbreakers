@@ -1,0 +1,41 @@
+/* Six equal actions fit between the town header and the progression card. */
+.left-rail {
+  --rail-top: clamp(132px, 20dvh, 195px);
+  --rail-bottom: 110px;
+  top: var(--rail-top);
+  bottom: auto;
+  display: grid;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  height: min(470px, calc(100dvh - var(--rail-top) - var(--rail-bottom)));
+  padding: 6px;
+}
+.left-rail .rail-item { min-height: 0; margin: 0; }
+.left-rail .rail-btn { width: 60px; height: 100%; min-height: 0; padding: 3px 2px; gap: 3px; font-size: 9px; line-height: 1.15; }
+.left-rail .rail-btn > :is(svg, .art-icon) { width: 31px; height: 31px; flex: none; }
+.left-rail .rail-btn > span:last-child { min-height: 2.3em; display: grid; align-items: center; }
+.left-rail .rail-btn .badge { top: 2px; right: 1px; }
+.left-rail .rail-btn .backpack-badge { top: 1px; right: 0; min-width: 28px; padding: 1px 3px; font-size: 8px; }
+
+@media (max-width: 800px) {
+  .left-rail { --rail-top: 142px; --rail-bottom: 150px; left: 8px; height: min(326px, calc(100dvh - var(--rail-top) - var(--rail-bottom))); padding: 4px; border-radius: 18px; }
+  .left-rail .rail-btn { width: 46px; padding: 2px 1px; gap: 2px; font-size: 7px; border-radius: 11px; }
+  .left-rail .rail-btn > :is(svg, .art-icon) { width: 22px; height: 22px; }
+  .left-rail .rail-btn .badge { width: 14px; height: 14px; font-size: 9px; }
+  .left-rail .rail-btn .backpack-badge { font-size: 7px; min-width: 25px; }
+}
+
+/* Short desktop windows use a compact icon-and-label column. */
+@media (min-width: 801px) and (max-height: 650px), (orientation: portrait) and (max-height: 540px) {
+  .left-rail .rail-btn { width: 92px; flex-direction: row; justify-content: flex-start; gap: 5px; padding: 3px 4px; font-size: 8px; }
+  .left-rail .rail-btn > :is(svg, .art-icon) { width: 22px; height: 22px; }
+  .left-rail .rail-btn > span:last-child { min-height: 0; text-align: left; }
+  .left-rail .rail-btn .backpack-badge { right: 0; top: -2px; }
+}
+
+/* Landscape phones have room for two columns instead of an overflowing rail. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .left-rail { --rail-top: 54px; --rail-bottom: 12px; left: 6px; grid-template-columns: repeat(2, 44px); grid-template-rows: repeat(3, minmax(0, 1fr)); height: min(166px, calc(100dvh - var(--rail-top) - var(--rail-bottom))); padding: 4px; gap: 3px; }
+  .left-rail .rail-btn { width: 44px; font-size: 7px; padding: 2px 1px; gap: 2px; }
+  .left-rail .rail-btn > :is(svg, .art-icon) { width: 22px; height: 22px; }
+}
