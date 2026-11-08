@@ -99,21 +99,6 @@ export function PlacingHint() {
   )
 }
 
-// Zoom / recentre buttons for the map camera
-export function CameraControls() {
-  const ui = useUI()
-  const cam = () => ui.camera.current
-  return (
-    <div className="cam-controls" aria-label="Map view">
-      <button className="cam-btn panel" onClick={() => cam()?.zoomIn()} aria-label="Zoom in" title="Zoom in (+)">+</button>
-      <button className="cam-btn panel" onClick={() => cam()?.zoomOut()} aria-label="Zoom out" title="Zoom out (−)">−</button>
-      <button className="cam-btn panel" onClick={() => cam()?.home()} aria-label="Back to New Haven" title="Back to New Haven (0)">
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" fill="currentColor" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-      </button>
-    </div>
-  )
-}
-
 // One-time coach mark: disappears after the first drag or zoom
 export function CameraHint() {
   const [show, setShow] = useState(() => {

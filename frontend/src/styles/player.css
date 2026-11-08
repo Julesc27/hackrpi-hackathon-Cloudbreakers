@@ -1,23 +1,48 @@
+.corner-tools {
+  position: absolute;
+  z-index: 12;
+  right: 23px;
+  bottom: 23px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.corner-tools .gear-btn,
+.corner-tools .center-me {
+  position: static;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  pointer-events: auto;
+}
 .center-me {
-  position: fixed;
-  right: 90px;
-  bottom: 112px;
-  z-index: 25;
-  min-height: 44px;
-  padding: 8px 14px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 1px solid #d7bd7dcc;
   border-radius: 999px;
   background: #1a3350ee;
   color: #ffe5a8;
   font: 700 13px/1 inherit;
   white-space: nowrap;
-  pointer-events: auto;
   cursor: pointer;
 }
 .center-me:hover { border-color: #ffe5a8; }
 .center-me:focus-visible { outline: 2px solid #ffe5a8; outline-offset: 2px; }
-@media (max-width: 900px) {
-  .center-me { right: 8px; bottom: 108px; }
+.game.has-panel .center-me { display: none; }
+@media (max-width: 800px) {
+  .corner-tools { right: 12px; bottom: 19px; }
 }
-.game.has-panel .center-me { opacity: 0; pointer-events: none; }
-@media(max-width:700px) { .game .objective { top:112px; bottom:auto; height:auto; max-width:calc(100vw - 30px); } }
+@media (max-width: 640px) {
+  .corner-tools { right: 8px; bottom: 6px; }
+  .center-me { min-height: 38px; padding: 8px 10px; font-size: 12px; }
+  /* The bottom nav rises higher than the gear, so lift Center me clear of it. */
+  .corner-tools .center-me { position: absolute; right: 0; bottom: calc(100% + 32px); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .corner-tools { right: 8px; bottom: 6px; }
+}
+@media (max-width: 700px) {
+  .game .objective { top: 112px; bottom: auto; height: auto; max-width: calc(100vw - 30px); }
+}
