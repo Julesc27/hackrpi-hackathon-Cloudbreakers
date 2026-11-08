@@ -51,6 +51,15 @@ test('the complete bridge network renders and both eastern crossings can be mana
   await page.mouse.move(915, 480)
   await page.mouse.wheel(0, -400)
   await page.screenshot({ path: testInfo.outputPath('eastern-landings.png') })
+  await page.keyboard.press('0')
+  await page.evaluate(() => new Promise(resolve => {
+    let frames = 30
+    const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
+    requestAnimationFrame(painted)
+  }))
+  await page.mouse.move(520, 465)
+  await page.mouse.wheel(0, -600)
+  await page.screenshot({ path: testInfo.outputPath('western-landings.png') })
   expect(errors).toEqual([])
 })
 

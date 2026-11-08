@@ -1,5 +1,5 @@
 import { bridgeCurve } from './people.js'
-import { WORLD_ISLANDS, PRISM_GATE } from './layout.js'
+import { WORLD_ISLANDS, PRISM_GATE, BRIDGE_GATE_INSETS } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
 
@@ -92,6 +92,8 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const edge = (side) => points.map((_, i) => sample(i / (points.length - 1), side))
   const near = cross[1] >= 0 ? 1 : -1
   const postCount = Math.max(6, Math.ceil(length / 18))
+  const inset = BRIDGE_GATE_INSETS[bridge.route]
+  const homeGate = inset.home / length, awayGate = 1 - inset.away / length
 
   ctx.save()
   // Reveal every layer together from home, including the landings and handrails.
@@ -133,8 +135,8 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   }
   const tower = (t, side) => {
     // Stand outside the walking surface, leaving a clear gateway between piers.
-    const [x, floor] = sample(t, side, (halfWidth + 8) / .8)
-    const base = floor + 12, height = 40, width = 21
+    const [x, floor] = sample(t, side, halfWidth + 7)
+    const base = floor + 4, height = 40, width = 21
     if (materials.ready) {
       const [sx, sy, sw, sh] = materials.cells[3]
       // Omit the atlas's round finial; a lit lantern crowns each tower instead.
@@ -154,14 +156,16 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     }
   }
   const drawRail = (side) => {
-    const cable = t => {
-      const height = 11 + 19 * (2*t-1)**2
-      const p = sample(t, side, halfWidth + 8 * Math.abs(2*t-1)**6)
+    const cable = u => {
+      const t = homeGate + (awayGate - homeGate) * u
+      const height = 11 + 19 * (2*u-1)**2
+      const p = sample(t, side, halfWidth + 7 * Math.abs(2*u-1)**6)
       return [p[0], p[1] - height]
     }
     const cablePoints = points.map((_, i) => cable(i/(points.length-1)))
     for (let i = 1; i < postCount; i++) {
-      const t = i / postCount, bottom = sample(t, side), top = cable(t)
+      const u = i / postCount, t = homeGate + (awayGate - homeGate) * u
+      const bottom = sample(t, side), top = cable(u)
       line(ctx, ...top, bottom[0], bottom[1]-1, col('#b99757'), .85)
       line(ctx, top[0]+.4, top[1], bottom[0]+.4, bottom[1]-1, col('#eed49b'), .3)
     }
@@ -171,12 +175,12 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     trace(edge(side).map(([x,y]) => [x,y-6.5]), '#dec18b', .45)
   }
   // Far masonry is behind the suspension lines; near masonry frames the entrances.
-  tower(0, -near)
-  tower(1, -near)
+  tower(homeGate, -near)
+  tower(awayGate, -near)
   drawRail(-near)
   drawRail(near)
-  tower(0, near)
-  tower(1, near)
+  tower(homeGate, near)
+  tower(awayGate, near)
   ctx.restore()
   if (progress < 1) {
     const [x, y] = sample(progress)

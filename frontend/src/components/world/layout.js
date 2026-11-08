@@ -245,6 +245,15 @@ export const BRIDGE_ENDS = {
   'mercy-haven': { a: ['mercy', 'e_newHaven'], b: ['newHaven', 'e_mercy'] },
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
 }
+// Keep gateway masonry on the bridge shoulders, clear of painted shore foliage.
+// Distances are measured outward from the home and destination walking thresholds.
+export const BRIDGE_GATE_INSETS = {
+  'verdant-haven': { home: 22, away: 8 },
+  'rain-haven': { home: 12, away: 8 },
+  'mercy-haven': { home: 30, away: 10 },
+  'hearth-haven': { home: 10, away: 12 },
+  'prism-haven': { home: 8, away: 8 },
+}
 // Land on the walking surface inside the dock posts, not on its outer corner.
 WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = shiftIslandPoint('verdant', [535, 239])
 WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1200, 225]
