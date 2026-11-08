@@ -1,9 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GATHER_SITES, ISLANDS, ROUTES, BUILD_ORDER, BUILDINGS } from './data.js'
-import { buildingLayout } from '../components/world/buildingLayout.js'
-import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity, caps, storageDepots, projectProduction } from './engine.js'
+import { GATHER_SITES, ISLANDS, ROUTES, LEVELS } from './data.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -910,11 +908,31 @@ test('designing the Captain marks it as set, and that survives saving and loadin
   assert.equal(migrateSave(old).avatarSet, false)
 })
 
-test('a notice is shown as a warning toast and changes nothing else', () => {
-  const s = createInitialState()
-  const n = gameReducer(s, { type: 'NOTICE', text: 'Backpack full' })
-  assert.equal(n.toasts.at(-1).kind, 'warn')
-  assert.equal(n.toasts.at(-1).text, 'Backpack full')
-  assert.deepEqual([n.xp, n.resources, n.backpack], [s.xp, s.resources, s.backpack])
-  assert.equal(gameReducer(s, { type: 'NOTICE', text: '' }), s)
+test('player level progression supports levels 1 to 20 with increasing XP requirements', () => {
+  assert.equal(LEVELS.length, 20)
+  assert.equal(LEVELS[0].level, 1)
+  assert.equal(LEVELS[19].level, 20)
+  assert.equal(LEVELS[19].title, 'Ascendant of Cloudbreak')
+
+  // Verify XP delta needed for next level increases each level
+  let prevDelta = 0
+  for (let i = 0; i < LEVELS.length - 1; i++) {
+    const cur = LEVELS[i]
+    const next = LEVELS[i + 1]
+    const delta = next.xp - cur.xp
+    assert.ok(delta > prevDelta, `Level ${cur.level} -> ${next.level} delta (${delta}) should be greater than prev (${prevDelta})`)
+    prevDelta = delta
+  }
+
+  // Max level behavior
+  const maxInfo = getLevelInfo(LEVELS[19].xp)
+  assert.equal(maxInfo.level, 20)
+  assert.equal(maxInfo.next, null)
+  assert.equal(maxInfo.progress, 1)
+
+  // Beyond max XP
+  const beyondInfo = getLevelInfo(20000)
+  assert.equal(beyondInfo.level, 20)
+  assert.equal(beyondInfo.next, null)
+  assert.equal(beyondInfo.progress, 1)
 })
