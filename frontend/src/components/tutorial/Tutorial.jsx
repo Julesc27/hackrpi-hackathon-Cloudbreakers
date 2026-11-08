@@ -240,13 +240,20 @@ export default function Tutorial() {
       title = 'Store Supplies'
       text = 'Your backpack has limited carrying capacity. Unload carried materials into Town Storage at any storage depot to free up space. Click Deposit All!'
       hint = 'Click Deposit All to store your supplies'
-      showNextBtn = false
+      showNextBtn = true
+      nextBtnLabel = 'Next ›'
+      onNext = () => {
+        ui.setPanel(null)
+        setTutorialStep(7)
+      }
     } else {
       targetSelector = '[data-tutorial="rail-backpack"]'
       title = 'Open Backpack'
       text = 'Click Backpack on the left rail to view your carried materials and deposit them.'
       hint = 'Click the Backpack button in the left rail'
-      showNextBtn = false
+      showNextBtn = true
+      nextBtnLabel = 'Next ›'
+      onNext = () => setTutorialStep(7)
     }
   }
 
@@ -360,8 +367,9 @@ export default function Tutorial() {
     if (tutorialStep === 3) {
       const snap = stepSnapshot.current
       const woodGained = state.resources.wood + (state.backpack?.wood || 0) > snap.wood
+      const hasWoodInPack = (state.backpack?.wood || 0) > 0
       const busy = Boolean(player.current?.pending || player.current?.avatar?.task)
-      if (woodGained && !busy) {
+      if ((woodGained || hasWoodInPack) && !busy) {
         const timer = setTimeout(() => {
           setTutorialStep(4)
         }, 500)
@@ -375,8 +383,7 @@ export default function Tutorial() {
         (player.current?.avatar?.task && player.current.avatar.task.kind === 'deposit') ||
         (player.current?.pending?.action?.type === 'DEPOSIT_BACKPACK')
       )
-      const woodDeposited = (state.backpack?.wood || 0) === 0 && state.resources.wood > 0
-      if (hasDepositTask || woodDeposited) {
+      if (hasDepositTask) {
         if (ui.panel === 'backpack') ui.setPanel(null)
         setTutorialStep(6)
       }
@@ -384,12 +391,11 @@ export default function Tutorial() {
 
     // Step 6: Auto-advance to Step 7 (Build Menu) when deposit completes
     if (tutorialStep === 6) {
-      const woodInBackpack = state.backpack?.wood || 0
       const busy = Boolean(
         (player.current?.avatar?.task && player.current.avatar.task.kind === 'deposit') ||
         (player.current?.pending?.action?.type === 'DEPOSIT_BACKPACK')
       )
-      if (woodInBackpack === 0 && !busy) {
+      if (!busy) {
         const timer = setTimeout(() => {
           setTutorialStep(7)
         }, 500)
@@ -440,7 +446,7 @@ export default function Tutorial() {
         (player.current?.avatar?.task && player.current.avatar.task.kind === 'build') ||
         (player.current?.pending?.action?.type === 'BUILD')
       )
-      if (shelterBuilt && !busy) {
+      if ((shelterBuilt || currentShelters > 0) && !busy) {
         const timer = setTimeout(() => {
           setTutorialStep(11)
         }, 500)
@@ -792,11 +798,6 @@ export default function Tutorial() {
         </header>
         <h3 className="tutorial-title">{title}</h3>
         <p className="tutorial-text">{text}</p>
-        {targetSelector && <button className="tutorial-btn-secondary" onClick={() => {
-          const target = document.querySelector(targetSelector)
-          const control = target?.matches('button, [role="button"], input, select') ? target : target?.querySelector('button:not(:disabled), [role="button"], input, select')
-          control?.focus({ preventScroll: false })
-        }}>Focus highlighted control</button>}
         {hint && (
           <div className="tutorial-hint">
             <span className="tutorial-hint-pulse">👉</span>
