@@ -118,7 +118,7 @@ export default function SkyMap() {
           const [mx, my] = bridgeMid(b.route)
           return (
             <g key={b.route} role="button" tabIndex="0" aria-label={`Manage ${bridgeLabel(b.route)} bridge`} className={`bridge bridge-${s}`} onClick={() => ui.setBridgeRoute(b.route)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.setBridgeRoute(b.route) } }}>
-              <path d={bridgeCurve(b.route, 20).map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ')} fill="none" stroke="transparent" strokeWidth="30" />
+              <path d={bridgeCurve(b.route, 20, b.type).map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ')} fill="none" stroke="transparent" strokeWidth="30" />
               {s !== 'good' && (
                 <g transform={`translate(${mx} ${my - 26})`}><g className="warn-badge ui-scale">
                   <circle r="13" fill="#2a1630" stroke="#ff8a5b" strokeWidth="2" />

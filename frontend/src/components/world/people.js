@@ -8,17 +8,19 @@ const PANTS = ['#3a3550', '#5b4636', '#2b3a66', '#6b5a44', '#44506e']
 const SKIN = ['#f1c9a5', '#e0ac85', '#c68b62', '#9a6646', '#f5d6bc']
 const HAIR = ['#3b2a1e', '#6b4426', '#1f1a24', '#c99a5e', '#8a4a2a', '#d9d2c4']
 
-export function bridgeCurve(routeId, n = 10) {
+export function bridgeCurve(routeId, n = 10, type = 'rope') {
   const p = bridgePoints(routeId)
   if (!p) return []
   const out = []
+  const length = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1])
+  const sag = type === 'reinforced' ? Math.min(6, Math.max(3, length * .012)) : Math.min(24, Math.max(10, length * .065))
   for (let i = 0; i <= n; i++) {
     const t = i / n
     const x = p.a[0] + (p.b[0] - p.a[0]) * t
     const ends = BRIDGE_ENDS[routeId]
     const bobA = WORLD_ISLANDS[ends.a[0]]._bob || 0
     const bobB = WORLD_ISLANDS[ends.b[0]]._bob || 0
-    const y = p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t + Math.sin(t * Math.PI) * 5
+    const y = p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t + Math.sin(t * Math.PI) * sag
     out.push([x, y])
   }
   return out
@@ -30,16 +32,25 @@ export function buildGraph(state, access) {
   const adj = new Map()
   const add = (k, x, y, island, tag) => { nodes.set(k, { k, x, y, island, tag }); adj.set(k, []) }
   const link = (a, b) => { if (nodes.has(a) && nodes.has(b)) { adj.get(a).push(b); adj.get(b).push(a) } }
+  const easternRoutes = new Set(state.bridges.map(b => b.route).filter(r => r === 'hearth-haven' || r === 'prism-haven'))
   for (const [id, isl] of Object.entries(WORLD_ISLANDS)) {
     if (!access[id]) continue
-    for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) add(`${id}:${nid}`, x, y, id, tag)
+    for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) {
+      if (id === 'newHaven') {
+        if (nid.startsWith('east') && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'crystalPath' && !easternRoutes.has('prism-haven')) continue
+        if (nid === 'e_hearth' && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'e_prism' && !easternRoutes.has('prism-haven')) continue
+      }
+      add(`${id}:${nid}`, x, y, id, tag)
+    }
     for (const [a, b] of isl.nav.edges) link(`${id}:${a}`, `${id}:${b}`)
   }
   for (const b of state.bridges) {
     if (b.condition <= 0) continue
     const e = BRIDGE_ENDS[b.route]
     if (!e || !access[e.a[0]] || !access[e.b[0]]) continue
-    const pts = bridgeCurve(b.route, 8)
+    const pts = bridgeCurve(b.route, 8, b.type)
     let prev = `${e.a[0]}:${e.a[1]}`
     for (let i = 1; i < pts.length - 1; i++) {
       const k = `br:${b.route}:${i}`

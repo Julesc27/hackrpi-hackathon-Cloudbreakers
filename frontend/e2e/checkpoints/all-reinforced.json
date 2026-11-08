@@ -1,0 +1,326 @@
+{
+  "version": 5,
+  "townName": "New Haven",
+  "resources": {
+    "wood": 17,
+    "water": 75,
+    "food": 57,
+    "energy": 84,
+    "coins": 129,
+    "stone": 4,
+    "seeds": 22,
+    "crystals": 25,
+    "materials": 43,
+    "fish": 17
+  },
+  "deposits": {
+    "wood": 24,
+    "stone": 18
+  },
+  "lastInteraction": {
+    "id": "i66",
+    "siteId": "forest",
+    "island": "verdant",
+    "kind": "wood",
+    "reward": {
+      "wood": 8
+    }
+  },
+  "happiness": 100,
+  "population": 18,
+  "sustainability": 91,
+  "sustainPenalty": 0,
+  "xp": 1285,
+  "blueprints": [
+    "waterCollector",
+    "battery"
+  ],
+  "flags": {
+    "gardenUpgrade": true,
+    "stormBracing": true
+  },
+  "buildings": [
+    {
+      "id": "b1",
+      "type": "starterGarden",
+      "island": "newHaven",
+      "slot": -1,
+      "builtLevel": 1
+    },
+    {
+      "id": "b2",
+      "type": "rainBarrel",
+      "island": "newHaven",
+      "slot": -2,
+      "builtLevel": 1
+    },
+    {
+      "id": "b3",
+      "type": "shelter",
+      "island": "newHaven",
+      "slot": 0,
+      "builtLevel": 1
+    },
+    {
+      "id": "b7",
+      "type": "bridgeAnchor",
+      "island": "newHaven",
+      "slot": -3,
+      "builtLevel": 1
+    },
+    {
+      "id": "b50",
+      "type": "market",
+      "island": "newHaven",
+      "slot": 1,
+      "builtLevel": 5
+    }
+  ],
+  "beaconRestored": false,
+  "connected": [
+    "newHaven",
+    "verdant",
+    "rain",
+    "prism",
+    "mercy",
+    "hearth"
+  ],
+  "discovered": [
+    "newHaven",
+    "verdant",
+    "rain",
+    "prism",
+    "mercy",
+    "hearth"
+  ],
+  "bridges": [
+    {
+      "route": "verdant-haven",
+      "type": "reinforced",
+      "condition": 100,
+      "builtLevel": 2
+    },
+    {
+      "route": "rain-haven",
+      "type": "reinforced",
+      "condition": 100,
+      "builtLevel": 4
+    },
+    {
+      "route": "prism-haven",
+      "type": "reinforced",
+      "condition": 100,
+      "builtLevel": 4
+    },
+    {
+      "route": "mercy-haven",
+      "type": "reinforced",
+      "condition": 100,
+      "builtLevel": 5
+    },
+    {
+      "route": "hearth-haven",
+      "type": "reinforced",
+      "condition": 100,
+      "builtLevel": 5
+    }
+  ],
+  "weather": "cloudDrought",
+  "forecast": "clear",
+  "completed": [
+    "firstSteps",
+    "anchor",
+    "placeForWater",
+    "firstBridge",
+    "gardenInSky",
+    "keepLightsOn",
+    "cleanRoute",
+    "longSpan",
+    "balancedTown"
+  ],
+  "counters": {
+    "waterStreak": 24,
+    "energyStreak": 24,
+    "foodSurplus": 1
+  },
+  "journal": [
+    {
+      "id": "j0",
+      "level": 1,
+      "type": "story",
+      "title": "Chapter 1 — A Place to Begin",
+      "text": "The shelter is damaged, the beacon is dark, and the old bridge has collapsed. Three islands drift within sight."
+    },
+    {
+      "id": "j6",
+      "level": 1,
+      "type": "mission",
+      "title": "First Steps",
+      "text": "Build the first shelter. Reward: 50 XP · 25 coins · basic housing."
+    },
+    {
+      "id": "j10",
+      "level": 1,
+      "type": "mission",
+      "title": "Hold Fast",
+      "text": "Unlock bridge construction in the workshop. Reward: 30 XP · bridges unlocked."
+    },
+    {
+      "id": "j12",
+      "level": 2,
+      "type": "level",
+      "title": "Reached level 2: Settler",
+      "text": "Unlocked Food Garden, Water Collector, Storage House."
+    },
+    {
+      "id": "j13",
+      "level": 2,
+      "type": "event",
+      "title": "Heavy Rain",
+      "text": "Collectors overflow. Rope bridges creak."
+    },
+    {
+      "id": "j16",
+      "level": 2,
+      "type": "mission",
+      "title": "A Place for Water",
+      "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
+    },
+    {
+      "id": "j19",
+      "level": 2,
+      "type": "discovery",
+      "title": "Reached Verdant Reach",
+      "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
+    },
+    {
+      "id": "j21",
+      "level": 2,
+      "type": "mission",
+      "title": "The First Bridge",
+      "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
+    },
+    {
+      "id": "j23",
+      "level": 3,
+      "type": "level",
+      "title": "Reached level 3: Builder",
+      "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
+    },
+    {
+      "id": "j25",
+      "level": 3,
+      "type": "mission",
+      "title": "A Garden in the Sky",
+      "text": "Achieve a food surplus after an action. Reward: 75 XP · Starter Garden upgrade (+2 food)."
+    },
+    {
+      "id": "j27",
+      "level": 3,
+      "type": "mission",
+      "title": "Keep the Lights On",
+      "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
+    },
+    {
+      "id": "j29",
+      "level": 4,
+      "type": "level",
+      "title": "Reached level 4: Steward",
+      "text": "Unlocked Clinic, Community Hall."
+    },
+    {
+      "id": "j30",
+      "level": 4,
+      "type": "event",
+      "title": "Crosswind",
+      "text": "Bridges sway. Turbines sing."
+    },
+    {
+      "id": "j34",
+      "level": 4,
+      "type": "discovery",
+      "title": "Reached Rain Island",
+      "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
+    },
+    {
+      "id": "j37",
+      "level": 4,
+      "type": "discovery",
+      "title": "Reached Prism Shelf",
+      "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
+    },
+    {
+      "id": "j39",
+      "level": 4,
+      "type": "mission",
+      "title": "The Clean Route",
+      "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
+    },
+    {
+      "id": "j41",
+      "level": 5,
+      "type": "level",
+      "title": "Reached level 5: Sky Engineer",
+      "text": "Unlocked Wind Turbine, Crystal Battery."
+    },
+    {
+      "id": "j42",
+      "level": 5,
+      "type": "event",
+      "title": "Solar Storm",
+      "text": "Panels flicker; solar output is halved."
+    },
+    {
+      "id": "j45",
+      "level": 5,
+      "type": "discovery",
+      "title": "Reached Mercy Rise",
+      "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
+    },
+    {
+      "id": "j48",
+      "level": 5,
+      "type": "discovery",
+      "title": "Reached Hearthside",
+      "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
+    },
+    {
+      "id": "j55",
+      "level": 5,
+      "type": "mission",
+      "title": "The Long Span",
+      "text": "Have a bridge with stability above 70%. Reward: 80 XP · Storm Bracing (halves bridge damage)."
+    },
+    {
+      "id": "j58",
+      "level": 5,
+      "type": "mission",
+      "title": "Higher Tomorrows",
+      "text": "Water, food, energy and happiness all ≥ 50, and sustainability ≥ 60. Reward: 300 XP · the Skystead is founded."
+    },
+    {
+      "id": "j60",
+      "level": 6,
+      "type": "level",
+      "title": "Reached level 6: Cloud Mayor",
+      "text": ""
+    },
+    {
+      "id": "j61",
+      "level": 6,
+      "type": "story",
+      "title": "A Skystead is founded",
+      "text": "Water, food, energy and spirits are all holding. The sky network glows from end to end. Higher tomorrows."
+    },
+    {
+      "id": "j62",
+      "level": 6,
+      "type": "event",
+      "title": "Cloud Drought",
+      "text": "The clouds are holding on to their water."
+    }
+  ],
+  "journalUnread": 25,
+  "seenIntro": true,
+  "nextId": 68
+}
