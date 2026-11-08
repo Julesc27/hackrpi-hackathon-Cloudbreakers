@@ -10,9 +10,10 @@ test('defaults to free-tier Flash, which can tell the wood and stone markers apa
   assert.equal(defaultModel, 'gemini-3.8-flash')
 })
 
-test('Gemini gets more than the 25 seconds that aborted the first CI request', () => {
-  assert.ok(requestTimeoutMs > 25_000)
-  assert.ok(requestTimeoutMs <= 60_000)
+test('Gemini Flash gets more than the 60 seconds that aborted its first CI request', () => {
+  assert.ok(requestTimeoutMs > 60_000)
+  // 8 slow steps must still fit inside the 30-minute Playwright test timeout.
+  assert.ok(requestTimeoutMs * 8 < 1_800_000)
 })
 
 test('grader requires a real grove gathering action, not just extra XP or wood', () => {

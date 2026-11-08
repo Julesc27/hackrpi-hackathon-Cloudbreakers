@@ -5,7 +5,7 @@ export const defaultModel = 'gemini-3.8-flash'
 const model = process.env.GEMINI_MODEL || defaultModel
 const maxSteps = 8
 const maxTokens = 30_000
-export const requestTimeoutMs = 60_000
+export const requestTimeoutMs = 180_000
 
 export function gradeGatherWood(start, end) {
   return Boolean(

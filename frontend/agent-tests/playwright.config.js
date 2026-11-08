@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: '.',
   testMatch: 'gather-wood.spec.js',
   outputDir: '../agent-results',
-  timeout: 540_000,
+  timeout: 1_800_000,
   retries: 0,
   use: {
     baseURL: 'http://127.0.0.1:4173',
