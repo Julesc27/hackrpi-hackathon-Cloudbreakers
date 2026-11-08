@@ -13,14 +13,6 @@ function paintedPlank(ctx, atlas, index, a, b, c) {
   ctx.restore()
 }
 
-function paintedRail(ctx, atlas, a, b, height) {
-  const length = Math.hypot(b[0] - a[0], b[1] - a[1])
-  ctx.save()
-  ctx.translate(...a); ctx.rotate(Math.atan2(b[1] - a[1], b[0] - a[0]))
-  atlas.draw(ctx, 1, -.3, -height / 2, length + .6, height)
-  ctx.restore()
-}
-
 // A transverse vector on the same 2:1 ground plane as the painted islands.
 // Keeping its projected length prevents horizontal spans from becoming tall flat strips.
 function crossVector(a, b) {
@@ -83,7 +75,7 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const tangent = [(end[0] - start[0]) / length, (end[1] - start[1]) / length]
   const cross = crossVector(start, end)
   const stone = bridge.type === 'reinforced', damaged = bridge.condition < 40
-  const halfWidth = stone ? 10.5 : 9.5
+  const halfWidth = stone ? 12 : 10.5
   const count = Math.max(12, Math.ceil(length / 6))
   const sample = (t, side = 0, width = halfWidth) => {
     const f = Math.max(0, Math.min(1, t)) * (points.length - 1)
@@ -99,8 +91,7 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   }
   const edge = (side) => points.map((_, i) => sample(i / (points.length - 1), side))
   const near = cross[1] >= 0 ? 1 : -1
-  const postCount = Math.max(3, Math.ceil(length / 34))
-  const railHeight = 13
+  const postCount = Math.max(6, Math.ceil(length / 18))
 
   ctx.save()
   // Reveal every layer together from home, including the landings and handrails.
@@ -128,44 +119,64 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     else poly(ctx, [sample(t0, -1), sample(t1, -1), sample(t1, 1), sample(t0, 1)], col(i % 2 ? '#c49560' : '#d4aa75'), col('#86613e'), .35)
   }
   trace(front, '#8c613b', 1.5)
-  // Keep the bracing inside a continuous timber frame, rather than a zigzag silhouette.
-  for (let i = 0; i < postCount; i++) {
-    const a = sample(i / postCount, near), b = sample((i + 1) / postCount, near)
-    line(ctx, a[0], a[1] + 2*depth(i/postCount), b[0], b[1] + 8*depth((i+1)/postCount), col(stone ? '#aa9a82' : '#88643e'), 1.7)
-    line(ctx, a[0], a[1] + 8*depth(i/postCount), b[0], b[1] + 2*depth((i+1)/postCount), col('#9f7a4c'), 1)
-  }
-  trace(front.map(([x, y],i) => [x, y + 8*depth(i/(front.length-1))]), '#7c5936', 2.2)
+  // A slim curved timber frame follows the sagging deck, without a rigid truss.
+  trace(front.map(([x, y], i) => [x, y + 4 * depth(i / (front.length - 1))]), '#8a6945', 2)
 
-  const drawRail = (side) => {
-    for (let i = 0; i <= postCount; i++) {
-      const t = i / postCount, [x, y] = sample(t, side)
-      const endpoint = i === 0 || i === postCount
-      const height = railHeight
-      // End posts anchor the handrails to the deck instead of leaving floating tips.
-      if (materials.ready) {
-        const cell = stone && i % 3 === 0 ? 3 : 2
-        const bounds = materials.cells[cell], width = height * bounds[2] / bounds[3]
-        materials.draw(ctx, cell, x - width / 2, y - height, width, height)
-      } else {
-        line(ctx, x, y, x, y - height, col('#795235'), 2.4)
-        circle(ctx, x, y - height, 1.3, col('#c7a357'))
+  const lantern = (x, y) => {
+    glow(ctx, x, y - 4, 13, '#ffcf75', .28)
+    poly(ctx, [[x-3,y-7],[x+3,y-7],[x+2.3,y],[x-2.3,y]], col('#ffe6a1'), col('#9e743b'), .65)
+    line(ctx, x, y-7, x, y, col('#bd9046'), .65)
+    poly(ctx, [[x-4,y-7],[x,y-10],[x+4,y-7]], col('#a78244'), col('#e4c17e'), .6)
+    line(ctx, x, y-10, x, y-12, col('#c5a362'), .8)
+    line(ctx, x-2.6, y+.5, x+2.6, y+.5, col('#96703d'), 1)
+    if (lights) lights.push([x, y-4, 12])
+  }
+  const tower = (t, side) => {
+    // Stand outside the walking surface, leaving a clear gateway between piers.
+    const [x, floor] = sample(t, side, (halfWidth + 8) / .8)
+    const base = floor + 12, height = 40, width = 21
+    if (materials.ready) {
+      const [sx, sy, sw, sh] = materials.cells[3]
+      // Omit the atlas's round finial; a lit lantern crowns each tower instead.
+      ctx.drawImage(materials.image, sx, sy+76, sw, sh-76, x-width/2, base-height, width, height)
+    } else {
+      poly(ctx, [[x-9,base],[x+9,base],[x+9,base-height],[x-9,base-height]], col('#d1c7b0'), col('#8b8997'), .7)
+    }
+    lantern(x, base-height-1)
+    // Small trailing vines soften the junction between masonry and cliff.
+    if (side === near) for (let strand = 0; strand < 2; strand++) {
+      const vx = x - 8 + strand * 14
+      for (let j = 0; j < 7; j++) {
+        const vy = base - 5 + j * 2.7, px = vx + Math.sin(j*1.8 + strand)*1.5
+        line(ctx, vx, vy-2, px, vy+2, col('#657944'), .7)
+        circle(ctx, px + (j%2 ? 1.2 : -1.2), vy, 1.35, col(j%2 ? '#7e9454' : '#586f40'))
       }
-      if (endpoint) {
-        if (lights && (side === near) && (i === 0 || progress >= .98)) lights.push([x, y - 10, 6])
-      }
-      if (i === postCount) continue
-      const cable = []
-      for (let j = 0; j <= 8; j++) {
-        const u = j / 8, p = sample((i + u) / postCount, side)
-        cable.push([p[0], p[1] - railHeight + .7 * Math.sin(u * Math.PI)])
-      }
-      if (materials.ready) paintedRail(ctx, materials, cable[0], cable.at(-1), side === near ? 2.7 : 2.2)
-      else trace(cable, '#a27a48', 2)
-      trace(cable.map(([x, y]) => [x, y + 5]), '#9d7b50', 1.3)
     }
   }
+  const drawRail = (side) => {
+    const cable = t => {
+      const height = 11 + 19 * (2*t-1)**2
+      const p = sample(t, side, halfWidth + 8 * Math.abs(2*t-1)**6)
+      return [p[0], p[1] - height]
+    }
+    const cablePoints = points.map((_, i) => cable(i/(points.length-1)))
+    for (let i = 1; i < postCount; i++) {
+      const t = i / postCount, bottom = sample(t, side), top = cable(t)
+      line(ctx, ...top, bottom[0], bottom[1]-1, col('#b99757'), .85)
+      line(ctx, top[0]+.4, top[1], bottom[0]+.4, bottom[1]-1, col('#eed49b'), .3)
+    }
+    trace(cablePoints, '#85663b', 2.1)
+    trace(cablePoints.map(([x,y]) => [x,y-.45]), '#dbb875', 1.15)
+    trace(edge(side).map(([x,y]) => [x,y-6]), '#ab844c', 1.25)
+    trace(edge(side).map(([x,y]) => [x,y-6.5]), '#dec18b', .45)
+  }
+  // Far masonry is behind the suspension lines; near masonry frames the entrances.
+  tower(0, -near)
+  tower(1, -near)
   drawRail(-near)
   drawRail(near)
+  tower(0, near)
+  tower(1, near)
   ctx.restore()
   if (progress < 1) {
     const [x, y] = sample(progress)

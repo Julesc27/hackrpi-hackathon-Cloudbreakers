@@ -178,6 +178,8 @@ test('every bridge span stays attached to both independently floating islands', 
       assert.deepEqual(points[0], [base.a[0], base.a[1] + 2.2])
       assert.ok(Math.abs(points.at(-1)[0] - base.b[0]) < 1e-8)
       assert.ok(Math.abs(points.at(-1)[1] - (base.b[1] - 1.8)) < 1e-8)
+      const midpoint = points[10], straightY = (points[0][1] + points.at(-1)[1]) / 2
+      assert.ok(midpoint[1] > straightY + 9, 'suspension decks must sag below their shore anchors')
     } finally { a._bob = oldA; b._bob = oldB }
   }
 })

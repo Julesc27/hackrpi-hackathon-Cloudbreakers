@@ -34,6 +34,12 @@ test('the complete bridge network renders and both eastern crossings can be mana
     const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
     return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)
   })
+  // The world fills its sprite cache over several animation frames after decoding.
+  await page.evaluate(() => new Promise(resolve => {
+    let frames = 20
+    const painted = () => --frames ? requestAnimationFrame(painted) : resolve()
+    requestAnimationFrame(painted)
+  }))
   await page.screenshot({ path: testInfo.outputPath('complete-network.png') })
   for (const island of ['Hearthside', 'Prism Shelf']) {
     const crossing = page.getByRole('button', { name: `Manage New Haven ↔ ${island} bridge`, exact: true })
