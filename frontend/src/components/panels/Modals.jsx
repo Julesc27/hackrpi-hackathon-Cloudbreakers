@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots, storageUsed } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, constructionResources, backpackUsed, storageDepots, storageUsed } from '../../game/engine.js'
 import { STORAGE_CAP } from '../../game/data.js'
 import '../../styles/storage.css'
 import { consultGods } from '../../api/client.js'
