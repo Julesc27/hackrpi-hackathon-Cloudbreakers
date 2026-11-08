@@ -14,7 +14,7 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
  * Pan / zoom camera.
  * - drag (mouse or one finger) to pan, with momentum
  * - wheel or pinch to zoom around the pointer
- * - keyboard: arrows/WASD pan, +/- zoom, 0 / Home recentres
+ * - keyboard: Shift + arrows/WASD pan, +/- zoom, 0 / Home recentres
  * - a tap that moved less than DRAG_THRESHOLD still counts as a click on the world
  *
  * Children are rendered in world units (a WORLD.w x WORLD.h box whose origin is WORLD.x/WORLD.y).
@@ -135,6 +135,12 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
 
   useImperativeHandle(apiRef, () => ({
     flyTo, home, focusIsland,
+    followPoint: (x, y) => {
+      if (anim.current) return
+      const c = cam.current, { w, h } = size()
+      const sx = (x-WORLD.x)*c.s+c.x, sy = (y-WORLD.y)*c.s+c.y
+      if (sx < 170 || sx > w-200 || sy < 155 || sy > h-235) flyTo(x, y, c.s, { duration: 240, sy: h*.53 })
+    },
     zoomIn: () => { const { w, h } = size(); zoomAt(1.35, w / 2, h / 2) },
     zoomOut: () => { const { w, h } = size(); zoomAt(1 / 1.35, w / 2, h / 2) },
     view: () => cam.current,
@@ -311,6 +317,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
       const c = cam.current
       const { w, h } = size()
       const k = e.key.toLowerCase()
+      if (!e.shiftKey && ['a','d','w','s','arrowleft','arrowright','arrowup','arrowdown'].includes(k)) return
       if (k === 'arrowleft' || k === 'a') set({ ...c, x: c.x + step })
       else if (k === 'arrowright' || k === 'd') set({ ...c, x: c.x - step })
       else if (k === 'arrowup' || k === 'w') set({ ...c, y: c.y + step })

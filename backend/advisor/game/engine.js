@@ -516,6 +516,11 @@ export function gameReducer(state, action) {
 
     case 'DISMISS_TOAST':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) }
+    case 'PLAYER_POSITION': {
+      const p = action.position
+      if (!p || !state.connected.includes(p.island) || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return state
+      return { ...state, player: { island: p.island, x: p.x, y: p.y } }
+    }
     case 'SEEN_INTRO':
       return { ...state, seenIntro: true }
     case 'READ_JOURNAL':

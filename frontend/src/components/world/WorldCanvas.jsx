@@ -9,6 +9,7 @@ import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
 import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
+import { Crowd, drawPerson, personLight } from './people.js'
 import { drawBridge, drawPrismGateway } from './bridge.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
@@ -123,7 +124,7 @@ const propKey = (p) => `${p.type}:${Math.round(p.x)}:${Math.round(p.y)}:${p.pts 
 
 /* ---------------- the component ---------------- */
 export default function WorldCanvas({ hoverRef }) {
-  const { state } = useGame()
+  const { state, player } = useGame()
   const ui = useUI()
   const canvasRef = useRef(null)
   const stateRef = useRef(state)
@@ -131,7 +132,17 @@ export default function WorldCanvas({ hoverRef }) {
   const uiRef = useRef(ui)
   uiRef.current = ui
   const cache = useRef(new SpriteCache())
+  const crowd = useRef(new Crowd())
   const originalBuildings = useRef(new Set(state.buildings.map((b) => b.id)))
+
+  // Residents follow the walkable paths of every island you can reach. Their number grows with
+  // the population, and new buildings and bridges change where they can go.
+  useEffect(() => {
+    const access = islandAccess(state)
+    const reachable = Object.keys(access).filter((k) => access[k] && state.connected.includes(k)).length
+    const target = Math.max(6, Math.min(48, Math.round(state.population * 1.4) + reachable * 3))
+    crowd.current.setState(state, access, target)
+  }, [state.bridges, state.connected, state.population, state.buildings]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const cv = canvasRef.current
@@ -195,7 +206,7 @@ export default function WorldCanvas({ hoverRef }) {
       return [path[i][0] + (path[i + 1][0] - path[i][0]) * u, path[i][1] + (path[i + 1][1] - path[i][1]) * u]
     }
 
-    let lastDraw = 0, lastView = ''
+    let lastDraw = 0, lastView = '', lastSim = 0
     const frame = (now) => {
       raf = requestAnimationFrame(frame)
       const dt = prevNow ? Math.min(250, now - prevNow) : 16
@@ -213,6 +224,11 @@ export default function WorldCanvas({ hoverRef }) {
       if (minGap && now - lastDraw < minGap) return
       lastDraw = now
       lastView = viewKey
+      // Resident travel is part of the living town. Reduced motion only pauses
+      // decorative effects; it must not stop residents from following their paths.
+      crowd.current.update(lastSim ? (now - lastSim) / 1000 : 0)
+      player.current.update(lastSim ? (now - lastSim) / 1000 : 0)
+      lastSim = now
       const t = reducedMotion.matches ? 0 : now / 1000
       const cam = uiRef.current.camera.current
       if (!cam?.view || !W) return
@@ -370,8 +386,13 @@ export default function WorldCanvas({ hoverRef }) {
         }
       }
 
-      // 4. buildings, trees and props, depth-sorted. No characters.
-      const items = []
+      // 4. buildings, trees, props and residents, depth-sorted so buildings hide people behind them.
+      const items = crowd.current.items()
+      const captain = player.current.items()[0]
+      if (captain) items.push({ ...captain, captain: true })
+      // far out, people are only a few pixels tall: draw a simple figure instead
+      // (on a struggling device: half the crowd, and the simple figure unless zoomed right in)
+      const personDetail = v.s * dpr * 14 >= (lowQuality ? 16 : 10)
       for (const isl of order) {
         const mode = islandMode(isl.id, st, access)
         if (atlases[PAINTED_ISLANDS[isl.id].sheet].ready) continue
@@ -385,6 +406,28 @@ export default function WorldCanvas({ hoverRef }) {
       items.sort((a, b) => a.y - b.y)
       const lights = []
       for (const it of items) {
+        if (it.person) {
+          const a = it.person
+          if (!it.captain && lowQuality && a.id % 2) continue
+          if (a.x < vx0 - 20 || a.x > vx1 + 20 || a.y + it.bob < vy0 - 4 || a.y + it.bob > vy1 + 36) continue
+          ctx.save(); ctx.translate(0, it.bob)
+          if (it.captain) {
+            ellipse(ctx, a.x, a.y+1, 9, 4, 'rgba(255,213,115,.2)', '#ffe3a1', 1.1)
+            poly(ctx, [[a.x-3,a.y-42],[a.x+3,a.y-42],[a.x,a.y-38]], '#ffe3a1')
+          }
+          if (it.captain) {
+            ctx.save(); ctx.translate(a.x, a.y); ctx.scale(1.3, 1.3)
+            drawPerson(ctx, { ...a, x: 0, y: 0 }, t, true); ctx.restore()
+          } else drawPerson(ctx, a, t, personDetail)
+          if (it.captain) {
+            ctx.font = 'bold 6px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff1cf'
+            ctx.fillText('YOU', a.x, a.y-46)
+          }
+          ctx.restore()
+          const l = personLight(a)
+          if (l) lights.push([l[0], l[1] + it.bob, l[2]])
+          continue
+        }
         const p = it.p, def = PROPS[p.type]
         if (!def) continue
         const b = propBounds(p)

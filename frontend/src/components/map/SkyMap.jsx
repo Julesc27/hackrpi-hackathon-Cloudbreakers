@@ -18,7 +18,7 @@ import { bridgeMid } from '../world/layout.js'
 // The world itself is drawn every frame by <WorldCanvas>. This SVG layer on top only holds
 // what you interact with: island hit areas and labels, bridge buttons, building plots and effects.
 export default function SkyMap() {
-  const { state, dispatch } = useGame()
+  const { state, dispatch, player } = useGame()
   const ui = useUI()
   const access = islandAccess(state)
   const routes = openRoutes(state)
@@ -36,6 +36,14 @@ export default function SkyMap() {
 
   const statusOf = (id) =>
     state.connected.includes(id) ? 'connected' : state.discovered.includes(id) ? 'discovered' : 'hidden'
+
+  const walk = (island, event) => {
+    if (ui.placing) return
+    event.stopPropagation()
+    const svg = event.currentTarget.ownerSVGElement
+    const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse())
+    player.current.go(island, [point.x, point.y])
+  }
 
   const place = (island, slot) => {
     dispatch({ type: 'BUILD', buildingType: ui.placing, island, slot })
@@ -91,11 +99,11 @@ export default function SkyMap() {
           const lw = label ? label.length * 8.4 + 34 : 0
           return (
             <g key={id} className={`isle-hit isle-hit-${st}`}>
-              <ellipse data-tutorial={id === 'newHaven' ? 'island-newHaven' : undefined} cx={cx} cy={cy} rx={rx} ry={ry} role="button" tabIndex="0" aria-label={`Explore ${ISLANDS[id].name}`} onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); ui.openIsland(id) } }} fill="transparent" onClick={() => !ui.placing && ui.openIsland(id)}
+              <ellipse cx={cx} cy={cy} rx={rx} ry={ry} role="button" tabIndex="0" aria-label={`Walk on ${ISLANDS[id].name}`} onKeyDown={(e) => { if (!ui.placing && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); player.current.go(id, [cx, cy]) } }} fill="transparent" onClick={e => walk(id, e)}
                 onPointerEnter={() => setHover(id)} onPointerLeave={() => setHover((h) => (h === id ? null : h))} />
               {selected && <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#f3d98f" strokeWidth="2.5" strokeDasharray="8 8" className="select-ring" pointerEvents="none" />}
               {label && (
-                <g className="isle-label" transform={`translate(${cx} ${cy + ry * 0.55})`} onClick={() => !ui.placing && ui.openIsland(id)}><g className="ui-scale">
+                <g className="isle-label" data-tutorial={id === 'newHaven' ? 'island-newHaven' : undefined} role="button" tabIndex="0" aria-label={`Explore ${ISLANDS[id].name}`} transform={`translate(${cx} ${cy + ry * 0.55})`} onClick={() => !ui.placing && ui.openIsland(id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.openIsland(id) } }}><g className="ui-scale">
                   <rect x={-lw / 2} y="-14" width={lw} height="28" rx="14" fill="rgba(12,19,58,.82)" stroke="#d6b36a" strokeWidth="1.2" />
                   {st === 'discovered' && (
                     <g transform={`translate(${-lw / 2 + 10} -8) scale(.6)`}>

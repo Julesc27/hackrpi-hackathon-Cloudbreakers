@@ -10,6 +10,7 @@ export function SiteActions({ island }) {
     const reason = gatherAvailability(state, id)
     return <button key={id} data-tutorial={id === 'grove' ? 'gather-wood-btn' : undefined} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
       <span>{site.label}</span>
+      <small>Your captain will walk here and work on arrival.</small>
       <small>{Object.entries(site.reward).map(([key, value]) => `+${value} ${RESOURCES[key].label.toLowerCase()}`).join(' · ')}{site.deposit ? ` · ${state.deposits[site.deposit]} remaining` : ''}{site.cost ? ' · uses 1 seed' : ''}</small>
       {reason && <small>{reason}</small>}
     </button>

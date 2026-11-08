@@ -33,7 +33,7 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 ## How to play
 
 1. **Build** (left rail) → pick *Shelter* → click a glowing plot on New Haven. Choose *Unlock bridges* in the workshop to enable crossings without using a plot.
-2. Click **New Haven** to *gather wood* (or restore the beacon later).
+2. Select **New Haven's nameplate** to choose *Gather wood* (or restore the beacon later). Your captain walks to the site and completes the task on arrival.
 3. Click a glowing **+** between islands to plan a bridge. Rope bridges are cheap but storms damage them; reinforced stone unlocks at level 3.
 4. Gather and build freely: each successful action earns **10 XP** and updates production and consumption automatically. Complete quests for bonus XP and **level up** to unlock buildings and bridges. Weather changes with your level.
 5. **Cloud** (left rail) is the advisor: situation → recommendation → reason → trade-off → confidence.
@@ -41,7 +41,9 @@ Without Docker: `cd frontend && npm install && npm run dev`.
 
 Progress saves to the browser's localStorage, and to your account when logged in. Settings (gear) → *New game* resets it.
 
-**Moving around:** drag the sky to pan (it glides), scroll or pinch to zoom, double-click to zoom in, and press `0` or the target button to fly back to New Haven. Arrow keys / WASD and `+`/`−` work too. Tapping an island flies the camera to it. Each action you take shows what your islands produced as bubbles you can tap.
+**Your captain:** use **WASD / arrow keys** to walk, or tap a path to walk there. Press **E** (or the nearby-action button) to interact with resources, the workshop or beacon. Selecting a resource, building plot or bridge job sends the captain there; resources and XP change only when the work is completed. **Escape / Cancel task** cancels queued work without spending supplies. Built bridges are walkable; disconnected islands and blocked paths cannot be crossed. The captain's position is saved with your town. Touch devices also have directional buttons.
+
+**The camera:** drag the sky to pan, scroll or pinch to zoom, and press `0` or the target button to view New Haven. `+`/`−` zoom and Shift + arrows pan. The captain controls include **Find my avatar**, and the camera follows travel near the screen edges.
 
 ## Frontend layout
 
@@ -69,7 +71,9 @@ frontend/src/
 - `layout.js`: where every island, building, tree, path, waterfall and walkway is. Move things here.
 - `props.js`: how each kind of thing is drawn (houses, beacon tower, turbines, reservoirs, clinic, greenhouse, windmill, stalls, banners…).
 - `island.js`: rock undersides, cloud rims, grass, plazas, paths, fields, pools, decks.
-- `people.js`: bridge curves. The town has a population count, but no characters are drawn.
+- `people.js`: residents. Sky-folk (skywrights, farmers, lamplighters, couriers, villagers and kids with kites) walk the painted paths, cross bridges, tend crops, sit, look out and chat. Their number follows the population.
+- `walkGrid.js`: where residents can walk, traced from the island paintings by `frontend/scripts/trace_walkways.py`. Re-run it after repainting or moving an island.
+- `stairways.js`: painted stair corridors that keep shaded treads walkable, with movement guidance for the captain. They follow each island's scale and position; re-measure their source-image points when repainting stairs.
 - `WorldCanvas.jsx`: the render loop (static parts are cached as bitmaps per zoom level; moving parts redraw each frame).
 
 Islands you haven't connected are drawn in a cool night tint. Player-built buildings appear on the plots listed in `game/data.js`.
