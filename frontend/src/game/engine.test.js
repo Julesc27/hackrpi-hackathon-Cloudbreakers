@@ -296,7 +296,7 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 })
 
 
-test('starter timber, stone and water deplete; rejected harvesting grants neither XP nor effects', () => {
+test('starter timber, stone, water and food deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(state.deposits.wood, 0)
@@ -310,6 +310,14 @@ test('starter timber, stone and water deplete; rejected harvesting grants neithe
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
   assert.equal(state.deposits.water, 0)
   assert.match(gatherAvailability(state, 'collector'), /depleted/)
+  for (let i = 0; i < 2; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'garden' })
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
+  state = { ...state, connected: [...state.connected, 'verdant'], bridges: [{ route: 'verdant-haven', type: 'reinforced', condition: 100 }] }
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'forage' })
+  assert.ok(state.resources.seeds > 0)
+  assert.equal(state.deposits.food, 0)
+  assert.match(gatherAvailability(state, 'garden'), /depleted/)
 })
 
 test('outer resource sites require a working bridge and provide their distinct resources', () => {

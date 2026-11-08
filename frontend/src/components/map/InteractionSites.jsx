@@ -9,10 +9,8 @@ export function SiteActions({ island }) {
   return Object.entries(GATHER_SITES).filter(([, site]) => site.island === island).map(([id, site]) => {
     const reason = gatherAvailability(state, id)
     const remaining = site.deposit
-      ? (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit])
-      : site.cost?.seeds
-        ? Math.floor((state.resources.seeds || 0) / (site.cost.seeds || 1)) * (site.reward.food || 0)
-        : null
+      ? (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit] ?? 0)
+      : null
     return <button key={id} data-tutorial={id === 'grove' ? 'gather-wood-btn' : undefined} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
       <span>{site.label}</span>
       <small>Your captain will walk here and work on arrival.</small>
@@ -34,12 +32,10 @@ export default function InteractionSites() {
       const resource = Object.keys(site.reward)[0], Icon = RES_ICON[resource]
       const reason = gatherAvailability(state, id)
       const remaining = site.deposit
-        ? (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit])
-        : site.cost?.seeds
-          ? Math.floor((state.resources.seeds || 0) / (site.cost.seeds || 1)) * (site.reward.food || 0)
-          : null
+        ? (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit] ?? 0)
+        : null
       const depleted = remaining != null && remaining <= 0
-      const label = depleted ? (site.cost?.seeds ? 'Needs seeds from Verdant Reach' : 'Depleted · build outward') : site.label
+      const label = depleted ? 'Depleted · build outward' : site.label
       return <g key={id} transform={`translate(${x} ${y})`} role="button" tabIndex="0" aria-label={`${site.label}${remaining != null ? `, ${remaining} remaining` : ''}`} aria-disabled={Boolean(reason)}
         data-tutorial={id === 'grove' ? 'gather-wood-site' : undefined}
         className={`resource-site site-${site.kind}${reason ? ' is-unavailable' : ''}${depleted ? ' is-depleted' : ''}`}
