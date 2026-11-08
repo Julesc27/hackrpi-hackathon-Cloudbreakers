@@ -39,7 +39,7 @@ export function WeatherModal() {
   const { key, required, ready, total } = weatherReadiness(state), cycle = state.weatherCycle
   const shelters = state.buildings.filter(b => b.type === 'shelter')
   return <Modal title="Weather readiness" kicker="Prepare your town" onClose={() => ui.setPanel(null)} size="lg">
-    <div className={`weather-summary weather-${cycle.phase}`} role="status">
+    <div className={`weather-summary weather-${cycle.phase}`} role="status" data-tutorial="weather-summary">
       <h3>{WEATHER[key].name}</h3>
       <p>{cycle.phase === 'warning' ? `Arrives after ${jobs(cycle.remaining)}. ${ready} of ${total} shelters meet level ${required} protection.` : cycle.phase === 'active' ? `${jobs(cycle.remaining)} until clear skies. ${ready} of ${total} shelters meet level ${required} protection.` : `${cycle.remaining} calm jobs before the next warning. Use this time to upgrade homes and rebuild supplies.`}</p>
       <p>{WEATHER[key].text}</p>

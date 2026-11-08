@@ -3,6 +3,7 @@ import { Close, RES_ICON, Compass } from '../icons.jsx'
 import { eventShouldDismissOverlay } from '../../game/travelInput.js'
 import useDialogAccessibility from '../useDialogAccessibility.js'
 import { RESOURCES } from '../../game/data.js'
+import { useUI } from '../../game/GameContext.jsx'
 
 function SealClose({ onClose }) {
   return (
@@ -51,7 +52,8 @@ export function Drawer({ side = 'left', title, kicker, onClose, children, classN
 // Parchment modal, modelled on "The Skyway Chart"
 export function Modal({ title, kicker, onClose, children, footer, size = 'md', dismissable = true, crest = true, className = '' }) {
   const ref = useRef(null)
-  useDialogAccessibility(ref, { onClose, dismissable })
+  const ui = useUI()
+  useDialogAccessibility(ref, { modal: !ui?.tutorialActive, onClose, dismissable })
   return (
     <div className="modal-backdrop" onClick={(e) => dismissable && eventShouldDismissOverlay(e) && onClose?.()}>
       <div ref={ref} className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
