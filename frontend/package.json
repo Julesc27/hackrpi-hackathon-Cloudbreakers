@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --test src/game/engine.test.js src/game/travelInput.test.js",
+    "test": "node --test src/game/engine.test.js e2e/checkpoints.test.js src/game/travelInput.test.js",
     "test:e2e": "playwright test",
     "checkpoints": "node e2e/generate-checkpoints.js",
     "dev": "vite",

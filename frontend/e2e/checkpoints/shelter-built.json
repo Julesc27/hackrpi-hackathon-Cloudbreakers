@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "townName": "New Haven",
   "avatar": {
     "body": "woman",
@@ -36,10 +36,50 @@
     "fish": 0
   },
   "deposits": {
-    "wood": 36,
-    "stone": 18,
-    "water": 18,
-    "food": 10
+    "grove": {
+      "stock": 36,
+      "regrowAt": 0
+    },
+    "stone": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "garden": {
+      "stock": 10,
+      "regrowAt": 0
+    },
+    "collector": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "forest": {
+      "stock": 48,
+      "regrowAt": 0
+    },
+    "forage": {
+      "stock": 30,
+      "regrowAt": 0
+    },
+    "lumber": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "falls": {
+      "stock": 48,
+      "regrowAt": 0
+    },
+    "fishing": {
+      "stock": 12,
+      "regrowAt": 0
+    },
+    "crystals": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "salvage": {
+      "stock": 18,
+      "regrowAt": 0
+    }
   },
   "lastInteraction": null,
   "happiness": 62,
