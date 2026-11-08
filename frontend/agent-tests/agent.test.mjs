@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { defaultModel, parseAction, requestTimeoutMs, retryableStatus, stepBudgetMs } from './agent.mjs'
+import { defaultModel, parseAction, requestGemini, requestTimeoutMs, retryableStatus, stepBudgetMs, thinkingLevel } from './agent.mjs'
 import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
 
 const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
@@ -20,6 +20,57 @@ test('Gemini Flash gets more than the 60 seconds that aborted its first CI reque
 test('overload and rate-limit errors are retried, but bad keys and requests are not', () => {
   for (const status of [429, 503]) assert.ok(retryableStatus.has(status), `${status} should retry`)
   for (const status of [400, 401, 403, 404]) assert.ok(!retryableStatus.has(status), `${status} should fail fast`)
+})
+
+test('asks Gemini 3.8 Flash for low thinking, a level it supports (it rejects minimal)', () => {
+  assert.equal(thinkingLevel, 'low')
+})
+
+test('a step budget outlasts one slow answer, so a timeout is retried instead of ending the run', () => {
+  assert.ok(stepBudgetMs >= 2 * requestTimeoutMs)
+})
+
+// Stubbed Gemini: plays back a script of responses; 'timeout' waits until the request's own abort signal fires.
+async function withGemini(script, run) {
+  const realFetch = globalThis.fetch
+  const realLog = console.log
+  let calls = 0
+  globalThis.fetch = (url, { signal }) => {
+    const next = script[Math.min(calls++, script.length - 1)]
+    if (next === 'timeout') return new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)))
+    const [status, payload] = next
+    return Promise.resolve(new Response(JSON.stringify(payload), { status }))
+  }
+  console.log = () => {}
+  try {
+    return { result: await run(), calls }
+  } catch (error) {
+    return { error, calls }
+  } finally {
+    globalThis.fetch = realFetch
+    console.log = realLog
+  }
+}
+const fast = { budgetMs: 400, timeoutMs: 60, delaysMs: [5] }
+const overloaded = [503, { error: { status: 'UNAVAILABLE', message: 'This model is currently experiencing high demand.' } }]
+
+test('requestGemini retries overloads and slow answers, then returns the answer', async () => {
+  const { result, calls, error } = await withGemini([overloaded, 'timeout', [200, { ok: true }]], () => requestGemini('{}', 'key', 'test', fast))
+  assert.equal(error, undefined)
+  assert.deepEqual(result, { ok: true })
+  assert.equal(calls, 3)
+})
+
+test('requestGemini fails fast on a bad key and explains why', async () => {
+  const { error, calls } = await withGemini([[401, { error: { status: 'UNAUTHENTICATED', message: 'API key not valid' } }]], () => requestGemini('{}', 'key', 'test', fast))
+  assert.equal(calls, 1)
+  assert.match(error.message, /HTTP 401: UNAUTHENTICATED - API key not valid/)
+})
+
+test('requestGemini gives up when the step budget runs out, naming the last problem', async () => {
+  const { error, calls } = await withGemini([overloaded], () => requestGemini('{}', 'key', 'test', fast))
+  assert.ok(calls > 1)
+  assert.match(error.message, /step budget .*HTTP 503: UNAVAILABLE/)
 })
 
 test('every scenario has a unique id, a committed checkpoint, and fits its CI job', () => {
