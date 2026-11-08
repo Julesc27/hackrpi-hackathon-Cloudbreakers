@@ -222,6 +222,9 @@ export const LEVELS = [
   { level: 20, title: 'Ascendant of Cloudbreak', xp: 10450, unlocks: [] },
 ]
 
+// All current crossings are spokes from New Haven; a closed one earns no transit credit.
+const workingIsland = (state, id) => id === 'newHaven' || state.bridges.some(b => b.route === `${id}-haven` && b.condition > 0)
+
 // progress(state) => [value, goal]
 export const MISSIONS = [
   {
@@ -231,25 +234,25 @@ export const MISSIONS = [
     progress: (s) => [s.buildings.filter((b) => b.type === 'shelter').length, 1],
   },
   {
-    id: 'anchor', name: 'Hold Fast', chapter: 1,
+    id: 'anchor', name: 'Hold Fast', chapter: 1, requires: ['firstSteps'],
     objective: 'Unlock bridge construction in the workshop.',
     reward: { xp: 30 }, rewardText: '30 XP · bridges unlocked',
     progress: (s) => [s.buildings.filter((b) => b.type === 'bridgeAnchor').length, 1],
   },
   {
-    id: 'placeForWater', name: 'A Place for Water', chapter: 1,
+    id: 'firstBridge', name: 'The First Bridge', chapter: 1, requires: ['anchor'],
+    objective: 'Connect New Haven to any resource island.',
+    reward: { xp: 100, coins: 30 }, rewardText: '100 XP · 30 coins · island production',
+    progress: (s) => [['verdant', 'rain', 'prism'].some(id => workingIsland(s, id)) ? 1 : 0, 1],
+  },
+  {
+    id: 'placeForWater', name: 'A Place for Water', chapter: 2, requires: ['firstBridge'],
     objective: 'Maintain three actions of water reserves for 3 consecutive actions.',
     reward: { xp: 60, blueprint: 'waterCollector' }, rewardText: '60 XP · Water Collector blueprint',
     progress: (s) => [Math.min(s.counters.waterStreak, 3), 3],
   },
   {
-    id: 'firstBridge', name: 'The First Bridge', chapter: 1, requires: ['anchor'],
-    objective: 'Connect New Haven to any resource island.',
-    reward: { xp: 100, coins: 30 }, rewardText: '100 XP · 30 coins · island production',
-    progress: (s) => [Math.min(s.bridges.length, 1), 1],
-  },
-  {
-    id: 'gardenInSky', name: 'A Garden in the Sky', chapter: 2,
+    id: 'gardenInSky', name: 'A Garden in the Sky', chapter: 2, requires: ['firstBridge'],
     objective: 'Achieve a food surplus after an action.',
     reward: { xp: 75, flag: 'gardenUpgrade' }, rewardText: '75 XP · Starter Garden upgrade (+2 food)',
     progress: (s) => [s.counters.foodSurplus ? 1 : 0, 1],
@@ -257,35 +260,35 @@ export const MISSIONS = [
   {
     id: 'beaconWakes', name: 'The Beacon Wakes', chapter: 2, requires: ['firstBridge'],
     objective: 'Restore the navigation beacon on New Haven.',
-    reward: { xp: 120, coins: 40, reveal: true }, rewardText: '120 XP · 40 coins · whole sky map revealed',
+    reward: { xp: 120, coins: 40, reveal: true }, rewardText: '120 XP · 40 coins · navigation beacon restored',
     progress: (s) => [s.beaconRestored ? 1 : 0, 1],
   },
   {
-    id: 'keepLightsOn', name: 'Keep the Lights On', chapter: 2, requires: ['firstBridge'],
-    objective: 'Keep energy positive for 5 consecutive actions.',
-    reward: { xp: 100, blueprint: 'battery' }, rewardText: '100 XP · Crystal Battery blueprint',
-    progress: (s) => [Math.min(s.counters.energyStreak, 5), 5],
-  },
-  {
-    id: 'prismPower', name: 'From Crystal to Current', chapter: 2, requires: ['firstBridge'],
+    id: 'prismPower', name: 'From Crystal to Current', chapter: 2, requires: ['beaconWakes'],
     objective: 'Connect Prism Shelf and build a Solar Farm.',
     reward: { xp: 100, coins: 30 }, rewardText: '100 XP · 30 coins · clean power',
-    progress: (s) => [Number(s.connected.includes('prism')) + Number(s.buildings.some((b) => b.type === 'solarFarm')), 2],
+    progress: (s) => [Number(workingIsland(s, 'prism')) + Number(s.buildings.some(b => b.type === 'solarFarm' && workingIsland(s, b.island))), 2],
+  },
+  {
+    id: 'keepLightsOn', name: 'Keep the Lights On', chapter: 2, requires: ['prismPower'],
+    objective: 'Keep energy reserves positive without a production deficit for 5 consecutive actions.',
+    reward: { xp: 100, blueprint: 'battery' }, rewardText: '100 XP · Crystal Battery blueprint',
+    progress: (s) => [Math.min(s.counters.energyStreak, 5), 5],
   },
   {
     id: 'longSpan', name: 'The Long Span', chapter: 3, requires: ['firstBridge'],
     objective: 'Have a bridge with stability above 70%.',
     reward: { xp: 80, flag: 'stormBracing' }, rewardText: '80 XP · Storm Bracing (halves bridge damage)',
-    progress: (s) => [s.bridges.some((b) => BRIDGE_TYPES[b.type].stability > 70) ? 1 : 0, 1],
+    progress: (s) => [s.bridges.some((b) => b.condition > 0 && BRIDGE_TYPES[b.type].stability > 70) ? 1 : 0, 1],
   },
   {
-    id: 'cleanRoute', name: 'The Clean Route', chapter: 3, requires: ['firstBridge'],
+    id: 'cleanRoute', name: 'The Clean Route', chapter: 3, requires: ['longSpan'],
     objective: 'Connect Verdant Reach, Rain Island and Prism Shelf to New Haven.',
     reward: { xp: 250 }, rewardText: '250 XP · clean transit badge',
-    progress: (s) => [['verdant', 'rain', 'prism'].filter((id) => s.connected.includes(id)).length, 3],
+    progress: (s) => [['verdant', 'rain', 'prism'].filter(id => workingIsland(s, id)).length, 3],
   },
   {
-    id: 'balancedTown', name: 'Higher Tomorrows', chapter: 3, requires: ['cleanRoute'], final: true,
+    id: 'balancedTown', name: 'Higher Tomorrows', chapter: 3, requires: ['cleanRoute', 'placeForWater', 'gardenInSky', 'keepLightsOn'], final: true,
     objective: 'Water, food, energy and happiness all ≥ 50, and sustainability ≥ 60.',
     reward: { xp: 300, coins: 100 }, rewardText: '300 XP · the Skystead is founded',
     progress: (s) => [

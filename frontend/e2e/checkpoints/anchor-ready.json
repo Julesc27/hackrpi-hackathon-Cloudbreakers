@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i18",
+    "id": "i16",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
@@ -97,10 +97,8 @@
   "population": 10,
   "sustainability": 40,
   "sustainPenalty": 0,
-  "xp": 180,
-  "blueprints": [
-    "waterCollector"
-  ],
+  "xp": 120,
+  "blueprints": [],
   "flags": {},
   "buildings": [
     {
@@ -164,12 +162,11 @@
   },
   "completed": [
     "firstSteps",
-    "anchor",
-    "placeForWater"
+    "anchor"
   ],
   "counters": {
-    "waterStreak": 4,
-    "energyStreak": 4,
+    "waterStreak": 0,
+    "energyStreak": 0,
     "foodSurplus": 0
   },
   "journal": [
@@ -200,18 +197,11 @@
       "type": "level",
       "title": "Reached level 2: Settler",
       "text": "Unlocked Food Garden, Water Collector, Storage House."
-    },
-    {
-      "id": "j15",
-      "level": 2,
-      "type": "mission",
-      "title": "A Place for Water",
-      "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
     }
   ],
-  "journalUnread": 5,
+  "journalUnread": 4,
   "seenIntro": true,
-  "nextId": 21,
+  "nextId": 19,
   "player": {
     "island": "newHaven",
     "x": 642.5,

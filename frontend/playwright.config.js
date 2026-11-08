@@ -10,6 +10,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
+    // Exercise cloud saving against intercepted requests, without a real account/server.
+    env: { VITE_API_URL: 'http://127.0.0.1:4173/api' },
     command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,

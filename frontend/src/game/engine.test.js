@@ -1,12 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORAGE_PER_LEVEL, STORED_MATERIALS } from './data.js'
+import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS, STORAGE_CAP, STORED_MATERIALS, MISSIONS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageCapacity, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
+import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, housing, activeMissions, checkMissions, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+import { STAIRWAYS, WALKWAYS, stairProjection } from '../components/world/stairways.js'
 
 const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
 
@@ -666,8 +666,8 @@ test('building advances production and missions; rejected actions do neither', (
 })
 
 test('resource quests advance through actions and interface actions do not simulate production', () => {
-  let state = createInitialState()
-  for (let i = 0; i < 5; i++) state = gameReducer(state, { type: 'GATHER_WOOD' })
+  let state = { ...createInitialState(), completed: ['firstSteps', 'anchor', 'firstBridge'] }
+  for (let i = 0; i < 3; i++) state = deposit(gameReducer(state, { type: 'GATHER_WOOD' }))
   assert.ok(state.completed.includes('placeForWater'))
   const seen = gameReducer(state, { type: 'SEEN_INTRO' })
   assert.equal(seen.xp, state.xp)
@@ -1224,45 +1224,96 @@ test('every save version up to the current one loads, including saves just writt
   assert.equal(migrateSave({ ...fresh, xp: 123 }).xp, 123)
 })
 
-test('town storage grows with the town: every level and every Storage House adds room', () => {
-  const base = createInitialState()
-  assert.equal(storageCapacity(base), STORAGE_CAP)
-  const level3 = { ...base, xp: LEVELS.find(l => l.level === 3).xp }
-  assert.equal(storageCapacity(level3), STORAGE_CAP + 2 * STORAGE_PER_LEVEL)
-  const house = { id: 'h1', type: 'storageHouse', island: 'newHaven', slot: 0, builtLevel: 2 }
-  const withHouse = { ...level3, buildings: [...level3.buildings, house] }
-  assert.equal(storageCapacity(withHouse), STORAGE_CAP + 2 * STORAGE_PER_LEVEL + BUILDINGS.storageHouse.storage)
-  assert.ok(BUILDINGS.storageHouse.storage >= 100)
-
-  // a pile that is full for a new town still has room once the town has grown
-  const pile = { ...base.resources, wood: base.resources.wood + (STORAGE_CAP - storageUsed(base.resources)) }
-  assert.equal(storageUsed(pile), STORAGE_CAP)
-  const atCollector = { player: { island: 'newHaven', x: 635, y: 610 } }
-  assert.match(gatherAvailability({ ...base, ...atCollector, resources: pile }, 'collector', 1), /Storage is full \(250\/250\)/)
-  const grown = { ...withHouse, ...atCollector, resources: pile }
-  assert.equal(gatherAvailability(grown, 'collector', 1), null)
-  const gathered = gameReducer(grown, { type: 'GATHER_AT_SITE', siteId: 'collector', now: 1 })
-  assert.ok(gathered.resources.water > pile.water)
-  assert.ok(storageUsed(gathered.resources) > STORAGE_CAP && storageUsed(gathered.resources) <= storageCapacity(gathered))
-
-  // removing the house shrinks the room again, but nothing already stored is thrown away
-  const crowded = { ...withHouse, resources: { ...base.resources, wood: base.resources.wood + storageCapacity(withHouse) - storageUsed(base.resources) } }
-  const shrunk = { ...crowded, buildings: base.buildings }
-  assert.ok(storageUsed(shrunk.resources) > storageCapacity(shrunk))
-  assert.equal(storageAccepts(shrunk.resources, { wood: 1 }, storageCapacity(shrunk)), false)
-  assert.equal(storageAccepts(shrunk.resources, { wood: -5 }, storageCapacity(shrunk)), true)
+test('the opening quests guide shelter, workshop, then a resource crossing without passive early rewards', () => {
+  let state = createInitialState()
+  assert.deepEqual(activeMissions(state).map(m => m.id), ['firstSteps'])
+  for (let i = 0; i < 4; i++) state = deposit(gameReducer(state, { type: 'GATHER_WOOD' }))
+  assert.deepEqual(state.completed, [])
+  assert.deepEqual(state.counters, { waterStreak: 0, energyStreak: 0, foodSurplus: 0 })
+  state = gameReducer(state, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
+  assert.deepEqual(activeMissions(state).map(m => m.id), ['anchor'])
+  state = gameReducer(state, { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' })
+  assert.deepEqual(activeMissions(state).map(m => m.id), ['firstBridge'])
+  state = gameReducer(state, { type: 'BUILD_BRIDGE', routeId: 'verdant-haven', bridgeType: 'rope' })
+  assert.ok(state.completed.includes('firstBridge'))
+  assert.equal(state.counters.waterStreak, 0, 'unlocking action does not retroactively count')
+  assert.equal(state.completed.includes('keepLightsOn'), false)
+  const restored = migrateSave(state)
+  assert.deepEqual(restored.completed, state.completed)
+  assert.equal(checkMissions(restored).xp, restored.xp, 'loading never grants an already earned reward twice')
 })
 
-test('passive production keeps filling a grown town past the starting 250', () => {
-  const base = createInitialState()
-  const house = { id: 'h1', type: 'storageHouse', island: 'newHaven', slot: 0, builtLevel: 2 }
-  const garden = { id: 'g1', type: 'garden', island: 'newHaven', slot: 1, builtLevel: 2 }
-  const town = { ...base, xp: 100, buildings: [...base.buildings, house, garden] }
-  const start = { ...town.resources, food: 20, water: 80 }
-  start.wood += STORAGE_CAP + 20 - storageUsed(start) // over the starting cap, well under this town's
-  assert.ok(storageUsed(start) > STORAGE_CAP && storageUsed(start) < storageCapacity(town) - 10)
-  const after = gameReducer({ ...town, resources: start }, { type: 'END_TURN' })
-  const ticked = after.resources.food !== start.food ? after : gameReducer({ ...town, resources: start }, { type: 'GATHER_AT_SITE', siteId: 'grove', now: 1 })
-  assert.ok(ticked.resources.food > start.food, `food ${start.food} -> ${ticked.resources.food}`)
-  assert.ok(storageUsed(ticked.resources) <= storageCapacity(ticked))
+test('a hospital or village crossing does not complete the resource-island quest', () => {
+  const initial = createInitialState()
+  const state = { ...initial, completed: ['firstSteps', 'anchor'], bridges: [{ route: 'mercy-haven', type: 'rope', condition: 100 }] }
+  assert.equal(checkMissions(state).completed.includes('firstBridge'), false)
+  assert.equal(checkMissions({ ...state, bridges: [{ route: 'rain-haven', type: 'rope', condition: 100 }] }).completed.includes('firstBridge'), true)
+})
+
+test('energy streaks start after clean power is established and reset on a deficit', () => {
+  const initial = createInitialState()
+  let state = { ...initial, completed: ['firstSteps', 'anchor', 'firstBridge', 'beaconWakes', 'prismPower'] }
+  for (let i = 0; i < 4; i++) state = deposit(gameReducer(state, { type: 'GATHER_WOOD' }))
+  assert.equal(state.counters.energyStreak, 4)
+  assert.equal(state.completed.includes('keepLightsOn'), false)
+  state = { ...state, buildings: [...state.buildings, { id: 'clinic', type: 'clinic', island: 'newHaven', slot: 1 }] }
+  state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
+  assert.equal(state.counters.energyStreak, 0)
+  state = { ...state, buildings: state.buildings.filter(b => b.id !== 'clinic') }
+  for (let i = 0; i < 5; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone', now: i * 1_000_000 })
+  assert.ok(state.completed.includes('keepLightsOn'))
+})
+
+test('quest prerequisites have no cycles and the finale waits for survival and power milestones', () => {
+  const visit = (id, path = []) => {
+    assert.equal(path.includes(id), false, `quest cycle: ${[...path, id]}`)
+    const mission = MISSIONS.find(m => m.id === id)
+    assert.ok(mission, `missing quest ${id}`)
+    for (const required of mission.requires || []) visit(required, [...path, id])
+  }
+  MISSIONS.forEach(m => visit(m.id))
+  const initial = createInitialState()
+  const town = { ...initial, completed: ['cleanRoute'], resources: { ...initial.resources, water: 80, food: 80, energy: 80 }, sustainability: 80 }
+  assert.equal(checkMissions(town).completed.includes('balancedTown'), false)
+})
+
+test('closed or removed crossings disable remote housing and capacity until repaired', () => {
+  const initial = createInitialState()
+  const state = { ...initial, connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }], buildings: [...initial.buildings,
+    { id: 'remote-home', type: 'shelter', island: 'verdant', slot: 0 },
+    { id: 'remote-store', type: 'storageHouse', island: 'verdant', slot: 1 },
+    { id: 'remote-battery', type: 'battery', island: 'verdant', slot: 2 }] }
+  assert.equal(housing(state), housing(initial) + 4)
+  assert.equal(caps(state).energy, caps(initial).energy + 65)
+  const closed = { ...state, bridges: state.bridges.map(b => ({ ...b, condition: 0 })) }
+  assert.equal(housing(closed), housing(initial))
+  assert.deepEqual(caps(closed), caps(initial))
+  const repaired = gameReducer(closed, { type: 'REPAIR_BRIDGE', routeId: 'verdant-haven' })
+  assert.equal(housing(repaired), housing(state))
+  assert.deepEqual(caps(repaired), caps(state))
+  assert.equal(removalInfo(state, { routeId: 'verdant-haven' }).bedLoss, 4)
+})
+
+test('legacy counters, invalid bridges and long journals migrate to a playable cloud-save shape', () => {
+  const initial = createInitialState()
+  const entries = Array.from({ length: 2005 }, (_, i) => ({ id: `j${i}`, level: 1, type: 'event', title: 'Past event', text: '' }))
+  const legacy = { ...initial, version: 2, counters: {}, connected: ['prism'], journal: entries, journalUnread: 2005, bridges: [{ route: 'prism-haven', type: 'unknown', condition: 100 }] }
+  const loaded = migrateSave(legacy)
+  assert.deepEqual(loaded.connected, ['newHaven'])
+  assert.deepEqual(loaded.bridges, [])
+  assert.deepEqual(loaded.counters, initial.counters)
+  assert.equal(loaded.journal.length, 2000)
+  assert.equal(loaded.journalUnread, 2000)
+  assert.doesNotThrow(() => projectProduction(loaded))
+  const built = gameReducer(loaded, { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
+  assert.equal(built.journal.length, 2000)
+  assert.equal(built.journal.at(-1).title, 'First Steps')
+  assert.equal(built.journalUnread, 2000)
+  assert.equal(gameReducer(initial, { type: 'BUILD_BRIDGE', routeId: 'rain-haven', bridgeType: 'unknown' }), initial)
+})
+
+test('closed crossings cannot earn working transit or power milestones', () => {
+  const initial = createInitialState()
+  const town = { ...initial, connected: ['newHaven', 'verdant', 'rain', 'prism'], bridges: ['verdant', 'rain', 'prism'].map(id => ({ route: `${id}-haven`, type: 'reinforced', condition: 0 })), buildings: [...initial.buildings, { id: 'solar', type: 'solarFarm', island: 'prism', slot: 0 }] }
+  for (const id of ['firstBridge', 'longSpan', 'cleanRoute', 'prismPower']) assert.equal(MISSIONS.find(m => m.id === id).progress(town)[0], 0, id)
 })

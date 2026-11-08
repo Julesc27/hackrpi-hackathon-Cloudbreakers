@@ -8,7 +8,7 @@ import { WORLD_ISLANDS, BRIDGE_ENDS, bridgePoints } from './layout.js'
 import { WALK, CELL } from './walkGrid.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { shiftIslandPoint } from '../../game/mapLayout.js'
-import { STAIRWAYS, stairProjection } from './stairways.js'
+import { STAIRWAYS, WALKWAYS, stairProjection } from './stairways.js'
 import { buildingObstacle } from './buildingLayout.js'
 import { drawTaskTool } from './taskAnimation.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
@@ -83,9 +83,9 @@ for (const [id, g] of Object.entries(WALK)) {
     base.fill(+g.cells[k], i, i + n); i += n
   }
   const [x, y] = shiftIslandPoint(id, [g.x, g.y])
-  // Explicit tread corridors bridge the grey/shadowed risers missed by tracing.
-  // Keep the overrides confined to the actual painted stair widths.
-  for (const stair of STAIRWAYS.filter(stair => stair.island === id)) {
+  // Explicit corridors cover shaded stairs and the workshop's painted paving.
+  // Keep overrides within their measured widths; building obstacles apply below.
+  for (const stair of [...STAIRWAYS, ...WALKWAYS].filter(stair => stair.island === id)) {
     const radius = stair.halfWidth + .5
     const c0 = Math.max(0, Math.floor((Math.min(stair.from[0], stair.to[0])-radius-x)/CELL))
     const c1 = Math.min(g.cols-1, Math.ceil((Math.max(stair.from[0], stair.to[0])+radius-x)/CELL))

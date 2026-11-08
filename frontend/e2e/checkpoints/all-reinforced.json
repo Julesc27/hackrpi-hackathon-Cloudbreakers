@@ -17,10 +17,10 @@
   "avatarSet": false,
   "resources": {
     "wood": 9,
-    "water": 95,
-    "food": 82,
+    "water": 75,
+    "food": 80,
     "energy": 62,
-    "coins": 151,
+    "coins": 51,
     "stone": 35,
     "seeds": 14,
     "crystals": 23,
@@ -82,7 +82,7 @@
     }
   },
   "lastInteraction": {
-    "id": "i148",
+    "id": "i146",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
@@ -97,10 +97,9 @@
   "population": 7,
   "sustainability": 91,
   "sustainPenalty": 0,
-  "xp": 1665,
+  "xp": 1265,
   "blueprints": [
-    "waterCollector",
-    "battery"
+    "waterCollector"
   ],
   "flags": {
     "gardenUpgrade": true,
@@ -145,11 +144,11 @@
       }
     },
     {
-      "id": "b177",
+      "id": "b171",
       "type": "market",
       "island": "newHaven",
       "slot": 1,
-      "builtLevel": 6,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 15,
         "coins": 20,
@@ -190,7 +189,7 @@
       "route": "rain-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 4,
       "paidCost": {
         "wood": 34,
         "coins": 20,
@@ -201,7 +200,7 @@
       "route": "prism-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 4,
       "paidCost": {
         "wood": 31,
         "coins": 20,
@@ -212,7 +211,7 @@
       "route": "mercy-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 6,
+      "builtLevel": 4,
       "paidCost": {
         "wood": 38,
         "coins": 20,
@@ -223,7 +222,7 @@
       "route": "hearth-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 6,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 38,
         "coins": 20,
@@ -243,19 +242,17 @@
   "completed": [
     "firstSteps",
     "anchor",
-    "placeForWater",
     "firstBridge",
     "gardenInSky",
-    "keepLightsOn",
-    "cleanRoute",
+    "placeForWater",
     "beaconWakes",
     "longSpan",
-    "balancedTown"
+    "cleanRoute"
   ],
   "counters": {
-    "waterStreak": 11,
-    "energyStreak": 50,
-    "foodSurplus": 1
+    "waterStreak": 0,
+    "energyStreak": 0,
+    "foodSurplus": 0
   },
   "journal": [
     {
@@ -287,28 +284,21 @@
       "text": "Unlocked Food Garden, Water Collector, Storage House."
     },
     {
-      "id": "j15",
-      "level": 2,
-      "type": "mission",
-      "title": "A Place for Water",
-      "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
-    },
-    {
-      "id": "j37",
+      "id": "j35",
       "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food. Residents are worried."
     },
     {
-      "id": "j38",
+      "id": "j36",
       "level": 2,
       "type": "event",
       "title": "Mine stone is resting",
       "text": "Mine stone is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j42",
+      "id": "j40",
       "level": 2,
       "type": "event",
       "title": "Shortage",
@@ -316,76 +306,76 @@
     },
     {
       "id": "j44",
-      "level": 3,
-      "type": "level",
-      "title": "Reached level 3: Builder",
-      "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
+      "level": 2,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
       "id": "j48",
-      "level": 3,
+      "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
       "id": "j52",
-      "level": 3,
+      "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
       "id": "j56",
-      "level": 3,
+      "level": 2,
       "type": "event",
       "title": "Shortage",
       "text": "New Haven ran out of food and water. Residents are worried."
     },
     {
       "id": "j60",
-      "level": 3,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j64",
-      "level": 3,
+      "level": 2,
       "type": "event",
       "title": "Mine stone is resting",
       "text": "Mine stone is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j80",
+      "id": "j65",
+      "level": 3,
+      "type": "level",
+      "title": "Reached level 3: Builder",
+      "text": "Unlocked Solar Farm, Reinforced Stone bridges, Market."
+    },
+    {
+      "id": "j78",
       "level": 3,
       "type": "event",
       "title": "Gather wood is resting",
       "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j91",
+      "id": "j89",
       "level": 3,
       "type": "event",
       "title": "Weather warning",
       "text": "Heat Wave arrives after 6 completed jobs. Prepare level 2 shelters and stock food, water and energy."
     },
     {
-      "id": "j101",
+      "id": "j99",
       "level": 3,
       "type": "event",
       "title": "Gather wood is resting",
       "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
-      "id": "j112",
+      "id": "j110",
       "level": 3,
       "type": "event",
       "title": "Heat Wave",
       "text": "Thirsty crops, thirsty people. This event lasts 5 completed jobs. Shelters need level 2 protection."
     },
     {
-      "id": "j116",
+      "id": "j114",
       "level": 3,
       "type": "event",
       "title": "Shortage",
@@ -393,73 +383,80 @@
     },
     {
       "id": "j118",
+      "level": 3,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j122",
+      "level": 3,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j123",
+      "level": 3,
+      "type": "event",
+      "title": "Gather wood is resting",
+      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
+    },
+    {
+      "id": "j127",
+      "level": 3,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j131",
+      "level": 3,
+      "type": "event",
+      "title": "Shortage",
+      "text": "New Haven ran out of food and water. Residents are worried."
+    },
+    {
+      "id": "j133",
+      "level": 3,
+      "type": "event",
+      "title": "Shelter damaged",
+      "text": "A shelter on New Haven lost its protection during Heat Wave. Its residents need repairs before their home can be used again."
+    },
+    {
+      "id": "j135",
+      "level": 3,
+      "type": "event",
+      "title": "Clear skies return",
+      "text": "The weather has passed. You have 14 calm jobs before another warning. Repair homes and replenish supplies."
+    },
+    {
+      "id": "j143",
       "level": 4,
       "type": "level",
       "title": "Reached level 4: Steward",
       "text": "Unlocked Clinic, Community Hall."
     },
     {
-      "id": "j122",
-      "level": 4,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j126",
-      "level": 4,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j127",
-      "level": 4,
-      "type": "event",
-      "title": "Gather wood is resting",
-      "text": "Gather wood is depleted and will regrow on its own. Nothing is added to storage while it waits."
-    },
-    {
-      "id": "j131",
-      "level": 4,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j135",
-      "level": 4,
-      "type": "event",
-      "title": "Shortage",
-      "text": "New Haven ran out of food and water. Residents are worried."
-    },
-    {
-      "id": "j137",
-      "level": 4,
-      "type": "event",
-      "title": "Shelter damaged",
-      "text": "A shelter on New Haven lost its protection during Heat Wave. Its residents need repairs before their home can be used again."
-    },
-    {
-      "id": "j139",
-      "level": 4,
-      "type": "event",
-      "title": "Clear skies return",
-      "text": "The weather has passed. You have 14 calm jobs before another warning. Repair homes and replenish supplies."
-    },
-    {
-      "id": "j152",
+      "id": "j150",
       "level": 4,
       "type": "discovery",
       "title": "Reached Verdant Reach",
       "text": "A living forest and farming island. Bring back timber, food, seeds and building materials; preserve its grove as your settlement grows."
     },
     {
-      "id": "j154",
+      "id": "j152",
       "level": 4,
       "type": "mission",
       "title": "The First Bridge",
       "text": "Connect New Haven to any resource island. Reward: 100 XP · 30 coins · island production."
+    },
+    {
+      "id": "j154",
+      "level": 4,
+      "type": "discovery",
+      "title": "Reached Rain Island",
+      "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
       "id": "j156",
@@ -470,113 +467,85 @@
     },
     {
       "id": "j158",
+      "level": 4,
+      "type": "discovery",
+      "title": "Reached Prism Shelf",
+      "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
+    },
+    {
+      "id": "j160",
+      "level": 4,
+      "type": "discovery",
+      "title": "Reached Mercy Rise",
+      "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
+    },
+    {
+      "id": "j162",
+      "level": 4,
+      "type": "mission",
+      "title": "A Place for Water",
+      "text": "Maintain three actions of water reserves for 3 consecutive actions. Reward: 60 XP · Water Collector blueprint."
+    },
+    {
+      "id": "j164",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j160",
+      "id": "j166",
+      "level": 5,
+      "type": "discovery",
+      "title": "Reached Hearthside",
+      "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
+    },
+    {
+      "id": "j168",
+      "level": 5,
+      "type": "story",
+      "title": "The Beacon Wakes",
+      "text": "Cloud, the old planning assistant, blinks awake inside the beacon: \"Oh! Visitors. Wonderful. I have notes.\""
+    },
+    {
+      "id": "j170",
       "level": 5,
       "type": "mission",
-      "title": "Keep the Lights On",
-      "text": "Keep energy positive for 5 consecutive actions. Reward: 100 XP · Crystal Battery blueprint."
+      "title": "The Beacon Wakes",
+      "text": "Restore the navigation beacon on New Haven. Reward: 120 XP · 40 coins · navigation beacon restored."
     },
     {
-      "id": "j162",
+      "id": "j175",
       "level": 5,
-      "type": "discovery",
-      "title": "Reached Rain Island",
-      "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
+      "type": "mission",
+      "title": "The Long Span",
+      "text": "Have a bridge with stability above 70%. Reward: 80 XP · Storm Bracing (halves bridge damage)."
     },
     {
-      "id": "j164",
-      "level": 5,
-      "type": "discovery",
-      "title": "Reached Prism Shelf",
-      "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
-    },
-    {
-      "id": "j166",
+      "id": "j177",
       "level": 5,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j168",
+      "id": "j179",
       "level": 6,
       "type": "level",
       "title": "Reached level 6: Cloud Mayor",
       "text": ""
     },
     {
-      "id": "j170",
+      "id": "j184",
       "level": 6,
-      "type": "discovery",
-      "title": "Reached Mercy Rise",
-      "text": "The white-stone hospital and its airship landing return to the skyways. Connect the island for care, happier residents and room for community buildings."
-    },
-    {
-      "id": "j172",
-      "level": 6,
-      "type": "discovery",
-      "title": "Reached Hearthside",
-      "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
-    },
-    {
-      "id": "j174",
-      "level": 6,
-      "type": "story",
-      "title": "The Beacon Wakes",
-      "text": "Cloud, the old planning assistant, blinks awake inside the beacon: \"Oh! Visitors. Wonderful. I have notes.\""
-    },
-    {
-      "id": "j176",
-      "level": 6,
-      "type": "mission",
-      "title": "The Beacon Wakes",
-      "text": "Restore the navigation beacon on New Haven. Reward: 120 XP · 40 coins · whole sky map revealed."
-    },
-    {
-      "id": "j181",
-      "level": 6,
-      "type": "mission",
-      "title": "The Long Span",
-      "text": "Have a bridge with stability above 70%. Reward: 80 XP · Storm Bracing (halves bridge damage)."
-    },
-    {
-      "id": "j186",
-      "level": 7,
-      "type": "level",
-      "title": "Reached level 7: Sky Warden",
-      "text": ""
-    },
-    {
-      "id": "j188",
-      "level": 7,
-      "type": "mission",
-      "title": "Higher Tomorrows",
-      "text": "Water, food, energy and happiness all ≥ 50, and sustainability ≥ 60. Reward: 300 XP · the Skystead is founded."
-    },
-    {
-      "id": "j189",
-      "level": 7,
-      "type": "story",
-      "title": "A Skystead is founded",
-      "text": "Water, food, energy and spirits are all holding. The sky network glows from end to end. Higher tomorrows."
-    },
-    {
-      "id": "j191",
-      "level": 7,
       "type": "event",
       "title": "Weather warning",
       "text": "Crosswind arrives after 6 completed jobs. Prepare level 2 shelters and stock food, water and energy."
     }
   ],
-  "journalUnread": 45,
+  "journalUnread": 41,
   "seenIntro": true,
-  "nextId": 193,
+  "nextId": 186,
   "player": {
     "island": "newHaven",
     "x": 642.5,

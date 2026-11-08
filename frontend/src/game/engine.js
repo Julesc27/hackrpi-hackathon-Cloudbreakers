@@ -124,12 +124,14 @@ export const hasAnchor = (state) => countType(state, 'bridgeAnchor') > 0
 export function housing(state) {
   const access = islandAccess(state)
   const islandHomes = Object.keys(access).reduce((s, id) => s + (ISLANDS[id].housing || 0), 0)
-  return BASE_HOUSING + islandHomes + state.buildings.reduce((s, b) => s + (b.type === 'shelter' && shelterCondition(b) === 0 ? 0 : BUILDINGS[b.type].housing || 0), 0)
+  return BASE_HOUSING + islandHomes + state.buildings.reduce((s, b) => s + (!access[b.island] || (b.type === 'shelter' && shelterCondition(b) === 0) ? 0 : BUILDINGS[b.type].housing || 0), 0)
 }
 
 export function caps(state) {
-  const bonus = state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].capBonus || 0), 0)
-  const eBonus = state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].energyCap || 0), 0)
+  const access = islandAccess(state)
+  const buildings = state.buildings.filter(b => access[b.island])
+  const bonus = buildings.reduce((s, b) => s + (BUILDINGS[b.type].capBonus || 0), 0)
+  const eBonus = buildings.reduce((s, b) => s + (BUILDINGS[b.type].energyCap || 0), 0)
   return { water: BASE_CAP + bonus, food: BASE_CAP + bonus, energy: BASE_CAP + bonus + eBonus }
 }
 
@@ -360,8 +362,8 @@ function journal(state, type, title, text) {
   return {
     ...state,
     nextId: state.nextId + 1,
-    journal: [...state.journal, { id, level: getLevelInfo(state.xp).level, type, title, text }],
-    journalUnread: state.journalUnread + 1,
+    journal: [...state.journal, { id, level: getLevelInfo(state.xp).level, type, title, text }].slice(-2000),
+    journalUnread: Math.min(2000, state.journalUnread + 1),
   }
 }
 
@@ -564,10 +566,12 @@ function progressSettlement(state, xp) {
   target = clamp(target, 0, 100)
   const sustainability = clamp(state.sustainability + clamp(target - state.sustainability, -5, 5), 0, 100)
 
+  // Only jobs begun with an unlocked quest count towards its survival challenge.
+  const quests = new Set(activeMissions(state).map(m => m.id))
   const counters = {
-    waterStreak: res.water >= 3 * proj.use.water ? state.counters.waterStreak + 1 : 0,
-    energyStreak: proj.net.energy >= 0 && res.energy > 0 ? state.counters.energyStreak + 1 : 0,
-    foodSurplus: proj.net.food > 0 ? 1 : 0,
+    waterStreak: quests.has('placeForWater') && res.water >= 3 * proj.use.water ? state.counters.waterStreak + 1 : 0,
+    energyStreak: quests.has('keepLightsOn') && proj.net.energy >= 0 && res.energy > 0 ? state.counters.energyStreak + 1 : 0,
+    foodSurplus: quests.has('gardenInSky') && proj.net.food > 0 ? 1 : 0,
   }
 
   let s = {
@@ -758,6 +762,7 @@ export function gameReducer(state, action) {
     case 'BUILD_BRIDGE': {
       const { routeId, bridgeType } = action
       const route = ROUTE_MAP[routeId]
+      if (!route || !BRIDGE_TYPES[bridgeType]) return state
       if (!openRoutes(state).some((r) => r.id === routeId)) return state
       if (!hasAnchor(state)) return toast(state, 'warn', 'Build a Bridge Anchor on New Haven first.')
       if (!isUnlocked(state, bridgeType)) return toast(state, 'warn', `${BRIDGE_TYPES[bridgeType].name} bridges unlock at level ${unlockLevel(bridgeType)}.`)
@@ -874,14 +879,14 @@ export function migrateSave(saved) {
   const bridges = new Map()
   for (const { builtTurn, ...b } of saved.bridges || []) {
     const route = routeMap[b.route] || b.route
-    if (!ROUTE_MAP[route]) continue
+    if (!ROUTE_MAP[route] || !BRIDGE_TYPES[b.type]) continue
     const prior = bridges.get(route)
     bridges.set(route, { builtLevel: 1, ...b, route,
       type: prior?.type === 'reinforced' ? 'reinforced' : b.type,
-      condition: Math.max(prior?.condition || 0, b.condition),
+      condition: Math.max(prior?.condition || 0, Number.isFinite(b.condition) ? clamp(b.condition, 0, 100) : 100),
     })
   }
-  return {
+  const result = {
     ...createInitialState(), ...rest, version: SAVE_VERSION, toasts: [],
     ...normalizeWeatherSave(saved),
     avatar: normalizeAvatar(saved.avatar),
@@ -889,10 +894,18 @@ export function migrateSave(saved) {
     resources: { ...createInitialState().resources, ...saved.resources },
     backpack: Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, Number.isFinite(saved.backpack?.[key]) ? Math.max(0, Math.floor(saved.backpack[key])) : 0])),
     deposits: normalizeDeposits(saved.deposits),
-    connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),
+    connected: linkedIslands([...bridges.values()]),
     discovered: Object.keys(ISLANDS),
     buildings: originals.map((b) => buildings.get(b.id)).filter(Boolean),
     bridges: [...bridges.values()],
-    journal: (saved.journal || []).map(({ turn, ...entry }) => ({ level: 1, ...entry })),
+    counters: Object.fromEntries(Object.keys(createInitialState().counters).map(key => [key, Number.isFinite(saved.counters?.[key]) ? Math.max(0, Math.floor(saved.counters[key])) : 0])),
+    journal: (saved.journal || []).slice(-2000).map(({ turn, ...entry }) => ({ level: 1, ...entry })),
+    journalUnread: Math.min(2000, Math.max(0, saved.journalUnread || 0)),
   }
+  // Older versions accumulated survival streaks even while the quest was locked.
+  const active = new Set(activeMissions(result).map(m => m.id))
+  for (const [quest, counter] of [['placeForWater', 'waterStreak'], ['keepLightsOn', 'energyStreak'], ['gardenInSky', 'foodSurplus']]) {
+    if (!active.has(quest)) result.counters[counter] = 0
+  }
+  return result
 }

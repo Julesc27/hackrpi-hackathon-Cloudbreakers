@@ -15,13 +15,27 @@ export default function PlayerControls() {
     keys.current.clear()
     player.current.setInput(0, 0)
   }, [uiBusy, player])
+  // The camera glides after the Captain every frame while they walk (Camera.track).
+  useEffect(() => {
+    let untrack = null, retry = null
+    const attach = () => {
+      if (untrack || !ui.camera.current?.track) return
+      clearInterval(retry)
+      untrack = ui.camera.current.track(() => {
+        const a = player.current?.avatar
+        return a && Number.isFinite(a.x) && Number.isFinite(a.y) ? { x: a.x, y: a.y, moving: a.act === 'walk' } : null
+      })
+    }
+    attach()
+    if (!untrack) retry = setInterval(attach, 250) // the camera may mount after us
+    return () => { clearInterval(retry); untrack?.() }
+  }, [player, ui.camera])
   useEffect(() => {
     const refresh = () => {
       const p = player.current, a = p.avatar
       if (!a) return
       setView({ x: a.x, y: a.y, island: a.isl, busy: Boolean(p.pending),
         task: a.task?.kind || '', progress: a.task ? a.task.progress : null })
-      if (a.act === 'walk') ui.camera.current?.followPoint(a.x, a.y)
     }
     refresh()
     const timer = setInterval(refresh, 150)
