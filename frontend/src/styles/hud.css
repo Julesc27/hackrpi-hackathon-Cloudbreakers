@@ -411,6 +411,7 @@
 @media (max-width: 1350px) {
   .nav-btn { min-width: 0; padding: 0 14px; }
   .nav-btn span { display: none; }
+  .nav-btn .storage-badge { display: block; }
 }
 @media (max-width: 1250px) {
   .title-block .town-stats { display: none; }

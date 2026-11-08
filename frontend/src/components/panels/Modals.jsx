@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots, storageUsed } from '../../game/engine.js'
+import { STORAGE_CAP } from '../../game/data.js'
+import '../../styles/storage.css'
 import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
@@ -156,12 +158,22 @@ export function StorageModal() {
   const cap = caps(state)
   const { gain, use, net } = projectProduction(state)
   const rows = Object.keys(RESOURCES)
+  const used = storageUsed(state.resources)
+  const full = used >= STORAGE_CAP
   return (
     <Modal
       title="Storehouse"
       kicker="Stock and flow next action"
       onClose={() => ui.setPanel(null)}
     >
+      <p className={`storage-total${full ? ' is-full' : ''}`} data-tutorial="storage-total" role="status">
+        <strong>{used}/{STORAGE_CAP}</strong>
+        {used > STORAGE_CAP
+          ? ' Storage is over 250. These supplies stay. Spend some before anything new can be stored.'
+          : full
+            ? ' Storage is full. Spend wood, stone, food, water, seeds, fish, materials, or crystals to make room.'
+            : ' Shared storage for wood, stone, food, seeds, water, fish, materials, and crystals. Energy and coins are separate.'}
+      </p>
       <p className="muted small">Town stock is available for building and upgrades. Supplies in your backpack become available here after you deposit them.</p>
       <table className="table" data-tutorial="storage-table">
         <thead>

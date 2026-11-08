@@ -2,6 +2,7 @@
 import {
   BASE_CAP, BASE_HOUSING, BEACON_COST, BRIDGE_TYPES, BUILDINGS, CONSULT_COST,
   GATHER_AMOUNT, HARVEST, GATHER_SITES, RESOURCES, ISLANDS, LEVELS, MISSIONS, REPAIR_COST, ROUTES, ROUTE_MAP, WEATHER,
+  STORAGE_CAP, STORED_MATERIALS,
 } from './data.js'
 import { freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './deposits.js'
 import { DEFAULT_AVATAR, normalizeAvatar } from './avatar.js'
@@ -90,6 +91,26 @@ export function caps(state) {
   const bonus = state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].capBonus || 0), 0)
   const eBonus = state.buildings.reduce((s, b) => s + (BUILDINGS[b.type].energyCap || 0), 0)
   return { water: BASE_CAP + bonus, food: BASE_CAP + bonus, energy: BASE_CAP + bonus + eBonus }
+}
+
+export function storageUsed(resources = {}) {
+  return STORED_MATERIALS.reduce((sum, key) => sum + Math.max(0, Number(resources[key]) || 0), 0)
+}
+
+export function storageFullMessage(resources) {
+  return `Storage is full (${storageUsed(resources)}/${STORAGE_CAP})`
+}
+
+// Net change of stored goods. Costs free space; the whole yield must fit.
+export function storageAccepts(resources, delta = {}) {
+  const used = storageUsed(resources)
+  let next = used
+  for (const [key, amount] of Object.entries(delta)) {
+    if (STORED_MATERIALS.includes(key)) next += amount
+  }
+  if (next < 0) return false
+  if (used > STORAGE_CAP) return next <= used
+  return next <= STORAGE_CAP
 }
 
 export function canAfford(resources, cost = {}) {
@@ -312,11 +333,30 @@ function progressSettlement(state, xp) {
   const res = { ...state.resources }
   const shortages = []
 
-  for (const key of ALL_RES) if (!METERS.includes(key)) res[key] = Math.max(0, (res[key] || 0) + proj.net[key])
-  for (const k of METERS) {
-    res[k] += proj.net[k]
-    if (res[k] < 0) { shortages.push(k); res[k] = 0 }
-    res[k] = Math.min(res[k], cap[k])
+  res.energy = (res.energy || 0) + (proj.net.energy || 0)
+  if (res.energy < 0) { shortages.push('energy'); res.energy = 0 }
+  res.energy = Math.min(res.energy, cap.energy)
+  res.coins = Math.max(0, (res.coins || 0) + (proj.net.coins || 0))
+  for (const key of STORED_MATERIALS) {
+    const net = proj.net[key] || 0
+    if (net >= 0) continue
+    res[key] = (res[key] || 0) + net
+    if (res[key] < 0) {
+      if (METERS.includes(key)) shortages.push(key)
+      res[key] = 0
+    }
+  }
+  let room = STORAGE_CAP - storageUsed(res)
+  if (room < 0) room = 0
+  for (const key of STORED_MATERIALS) {
+    const net = proj.net[key] || 0
+    if (net <= 0 || room <= 0) continue
+    let add = net
+    if (cap[key] != null) add = Math.min(add, Math.max(0, cap[key] - (res[key] || 0)))
+    add = Math.min(add, room)
+    if (add <= 0) continue
+    res[key] = (res[key] || 0) + add
+    room -= add
   }
 
   // Happiness
@@ -427,6 +467,42 @@ function withRegrowth(state, now) {
   return { ...state, deposits }
 }
 
+function planGather(state, site, stock) {
+  const primary = primaryReward(site)
+  const carried = (key) => BACKPACK_RESOURCES.includes(key)
+  const cap = caps(state)
+  let room = Math.max(0, backpackCapacity(state) - backpackUsed(state))
+  const space = (key) => (carried(key) ? room : (cap[key] ?? Infinity) - ((state.resources[key] || 0) - (site.cost?.[key] || 0)))
+  const take = Math.min(site.reward[primary], stock, space(primary))
+  if (take <= 0) return { blocked: carried(primary) ? 'backpack' : 'meter' }
+  const reward = { [primary]: take }
+  if (carried(primary)) room -= take
+  const fraction = take / site.reward[primary]
+  for (const [key, value] of Object.entries(site.reward)) {
+    if (key === primary) continue
+    const amount = Math.max(0, Math.min(Math.round(value * fraction), (() => {
+      const pocket = carried(key) ? room : (cap[key] ?? Infinity) - ((state.resources[key] || 0) - (site.cost?.[key] || 0))
+      return pocket
+    })()))
+    if (amount > 0) {
+      reward[key] = amount
+      if (carried(key)) room -= amount
+    }
+  }
+  const townReward = Object.fromEntries(Object.entries(reward).filter(([key]) => !carried(key)))
+  if (!storageAccepts(state.resources, storedChange(site.cost, townReward))) return { blocked: 'shared' }
+  return { reward }
+}
+
+function storedChange(cost = {}, reward = {}) {
+  const delta = {}
+  for (const key of STORED_MATERIALS) {
+    const change = (reward[key] || 0) - (cost[key] || 0)
+    if (change) delta[key] = change
+  }
+  return delta
+}
+
 export function gatherAvailability(state, siteId, now = Date.now()) {
   const site = GATHER_SITES[siteId]
   if (!site) return 'Unknown resource site'
@@ -434,12 +510,10 @@ export function gatherAvailability(state, siteId, now = Date.now()) {
   const view = viewDeposit(state.deposits, siteId, now)
   if (!view?.ready) return 'Depleted — regrowing'
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
-  // Materials ride in the backpack; survival supplies go straight to town storage. A full
-  // backpack only blocks sites whose main reward is a material (water and food still flow).
-  const primary = primaryReward(site)
-  if (BACKPACK_RESOURCES.includes(primary) && backpackUsed(state) >= backpackCapacity(state)) return 'Backpack full — return to town and deposit supplies'
-  const cap = caps(state)
-  if (!BACKPACK_RESOURCES.includes(primary) && (state.resources[primary] || 0) >= (cap[primary] ?? Infinity)) return 'Storage is full'
+  const plan = planGather(state, site, view.stock)
+  if (plan.blocked === 'backpack') return 'Backpack full — return to town and deposit supplies'
+  if (plan.blocked === 'shared') return storageFullMessage(state.resources)
+  if (plan.blocked) return 'Storage is full'
   return null
 }
 
@@ -449,32 +523,19 @@ function gatherAtSite(state, siteId, now = Date.now()) {
   if (reason) return toast(ready, 'warn', reason)
   const site = GATHER_SITES[siteId]
   const primary = primaryReward(site)
+  const plan = planGather(ready, site, ready.deposits[siteId].stock)
+  if (plan.blocked) return toast(ready, 'warn', plan.blocked === 'backpack' ? 'Backpack full — return to town and deposit supplies' : plan.blocked === 'shared' ? storageFullMessage(ready.resources) : 'Storage is full')
   const resources = pay(ready.resources, site.cost)
   const backpack = { ...emptyBackpack(), ...ready.backpack }
-  let room = Math.max(0, backpackCapacity(ready) - backpackUsed(ready))
   const deposits = { ...ready.deposits }
   const node = { ...deposits[siteId] }
-  const cap = caps(ready)
-  const reward = {}
-  // where each reward goes, and how much fits: the backpack for materials, town storage otherwise
+  const reward = plan.reward
   const carried = (key) => BACKPACK_RESOURCES.includes(key)
-  const space = (key) => (carried(key) ? room : (cap[key] ?? Infinity) - (resources[key] || 0))
-  const add = (key, amount) => {
-    if (carried(key)) { backpack[key] = (backpack[key] || 0) + amount; room -= amount }
+  for (const [key, amount] of Object.entries(reward)) {
+    if (carried(key)) backpack[key] = (backpack[key] || 0) + amount
     else resources[key] = (resources[key] || 0) + amount
-    reward[key] = amount
   }
-  // the site's main reward sets how much of its stock is used; the rest comes along in proportion
-  const taken = Math.min(site.reward[primary], node.stock, space(primary))
-  if (taken <= 0) return toast(ready, 'warn', carried(primary) ? 'Backpack full — return to town and deposit supplies' : 'Storage is full')
-  add(primary, taken)
-  const fraction = taken / site.reward[primary]
-  for (const [key, value] of Object.entries(site.reward)) {
-    if (key === primary) continue
-    const amount = Math.max(0, Math.min(Math.round(value * fraction), space(key)))
-    if (amount > 0) add(key, amount)
-  }
-  node.stock -= taken
+  node.stock -= reward[primary]
   if (node.stock <= 0) { node.stock = 0; node.regrowAt = now + site.regrowMs }
   deposits[siteId] = node
   let s = { ...ready, resources, backpack, deposits, nextId: ready.nextId + 1,
@@ -494,6 +555,9 @@ export function gameReducer(state, action) {
     case 'DEPOSIT_BACKPACK': {
       if (!backpackUsed(state)) return state
       if (!atTownStorage(state, action.storageId)) return toast(state, 'warn', 'Walk to the workshop or a connected storage house to deposit supplies.')
+      const incoming = {}
+      for (const key of BACKPACK_RESOURCES) if (state.backpack?.[key]) incoming[key] = state.backpack[key]
+      if (!storageAccepts(state.resources, incoming)) return toast(state, 'warn', storageFullMessage(state.resources))
       const resources = { ...state.resources }
       for (const key of BACKPACK_RESOURCES) resources[key] = (resources[key] || 0) + (state.backpack?.[key] || 0)
       return toast({ ...state, resources, backpack: emptyBackpack(), nextId: state.nextId+1 }, 'success', 'Backpack deposited into town storage.')
