@@ -5,6 +5,12 @@
 .captain-info strong span { font-weight:400; color:#adc6d8; font-size:11px; margin-left:8px; }
 .captain-info [role=status] { font-size:12px; }
 .captain-info small { color:#9bb3c8; font-size:10px; }
+.captain-task { display:flex; align-items:center; gap:7px; }
+.captain-task progress { appearance:none; width:100%; min-width:70px; height:6px; border:0; border-radius:5px; overflow:hidden; background:#0d1e32; accent-color:var(--task-color); }
+.captain-task progress::-webkit-progress-bar { background:#0d1e32; border-radius:5px; }
+.captain-task progress::-webkit-progress-value { background:var(--task-color); border-radius:5px; }
+.captain-task progress::-moz-progress-bar { background:var(--task-color); border-radius:5px; }
+.captain-task span { min-width:28px; text-align:right; color:#f3dfaf; font-size:10px; font-variant-numeric:tabular-nums; }
 .captain-use,.captain-locate,.captain-dpad button { border:1px solid #d7bd7d88; border-radius:10px; background:#294761; color:#ffe5a8; padding:9px; font:inherit; font-size:12px; cursor:pointer; }
 .captain-use { min-width:110px; max-width:180px; }
 .captain-use:disabled { opacity:.55; cursor:default; }

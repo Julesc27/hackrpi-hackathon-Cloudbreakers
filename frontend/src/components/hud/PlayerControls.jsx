@@ -12,6 +12,7 @@ export default function PlayerControls() {
       const p = player.current, a = p.avatar, target = p.nearby()
       if (!a) return
       setView({ x: a.x, y: a.y, island: a.isl, status: p.status, busy: Boolean(p.pending),
+        work: a.task ? { ...a.task } : null,
         target: target?.reason || target?.label, available: target && !target.reason })
       if (a.act === 'walk') ui.camera.current?.followPoint(a.x, a.y)
     }
@@ -48,10 +49,12 @@ export default function PlayerControls() {
     const a = player.current.avatar, camera = ui.camera.current
     camera?.flyTo(a.x, a.y, Math.max(1.2, camera.view().s), { duration: 300 })
   }
-  return <section className="player-controls" aria-label="Captain controls" data-player-island={view.island || 'bridge'} data-player-x={view.x.toFixed(1)} data-player-y={view.y.toFixed(1)} data-player-busy={view.busy}>
+  return <section className="player-controls" aria-label="Captain controls" data-player-island={view.island || 'bridge'} data-player-x={view.x.toFixed(1)} data-player-y={view.y.toFixed(1)} data-player-busy={view.busy} data-player-task={view.work?.kind || ''}>
     <div className="captain-badge" aria-hidden="true">✦</div>
     <div className="captain-info"><strong>Your captain <span>{ISLANDS[view.island]?.name || 'Crossing the sky'}</span></strong>
-      <span role="status">{view.status}</span><small>WASD / arrows to walk · E to interact · tap a path to walk</small></div>
+      <span role="status">{view.status}</span>
+      {view.work && <div className="captain-task" style={{ '--task-color': view.work.color }}><progress aria-label={view.work.label} max="1" value={view.work.progress} /><span>{Math.round(view.work.progress*100)}%</span></div>}
+      <small>WASD / arrows to walk · E to interact · tap a path to walk</small></div>
     <button className="captain-use" aria-label={view.busy ? 'Cancel task' : undefined} onClick={() => view.busy ? player.current.cancel() : player.current.interact()} disabled={!view.busy && !view.available} title={view.busy ? 'Stop this task without spending resources' : view.target || 'Walk closer to a resource or workshop'}><kbd>{view.busy ? 'Esc' : 'E'}</kbd> {view.busy ? 'Cancel task' : view.target || 'Explore'}</button>
     <button className="captain-locate" onClick={locate} aria-label="Find my avatar" title="Find my avatar">◎</button>
     <div className="captain-dpad" aria-label="Walk controls">
