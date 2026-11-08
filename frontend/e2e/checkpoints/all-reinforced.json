@@ -1,31 +1,71 @@
 {
-  "version": 5,
+  "version": 6,
   "townName": "New Haven",
   "resources": {
-    "wood": 17,
-    "water": 75,
-    "food": 57,
-    "energy": 84,
+    "wood": 12,
+    "water": 80,
+    "food": 58,
+    "energy": 90,
     "coins": 129,
-    "stone": 4,
+    "stone": 8,
     "seeds": 22,
-    "crystals": 25,
-    "materials": 43,
-    "fish": 17
+    "crystals": 28,
+    "materials": 46,
+    "fish": 18
   },
   "deposits": {
-    "wood": 24,
-    "stone": 18,
-    "water": 18,
-    "food": 10
+    "grove": {
+      "stock": 6,
+      "regrowAt": 0
+    },
+    "stone": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "garden": {
+      "stock": 10,
+      "regrowAt": 0
+    },
+    "collector": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "forest": {
+      "stock": 0,
+      "regrowAt": 75000
+    },
+    "forage": {
+      "stock": 30,
+      "regrowAt": 0
+    },
+    "lumber": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "falls": {
+      "stock": 48,
+      "regrowAt": 0
+    },
+    "fishing": {
+      "stock": 12,
+      "regrowAt": 0
+    },
+    "crystals": {
+      "stock": 18,
+      "regrowAt": 0
+    },
+    "salvage": {
+      "stock": 18,
+      "regrowAt": 0
+    }
   },
   "lastInteraction": {
-    "id": "i66",
-    "siteId": "forest",
-    "island": "verdant",
+    "id": "i67",
+    "siteId": "grove",
+    "island": "newHaven",
     "kind": "wood",
     "reward": {
-      "wood": 8
+      "wood": 6
     }
   },
   "happiness": 100,
@@ -71,7 +111,7 @@
       "builtLevel": 1
     },
     {
-      "id": "b50",
+      "id": "b51",
       "type": "market",
       "island": "newHaven",
       "slot": 1,
@@ -238,35 +278,35 @@
       "text": "Bridges sway. Turbines sing."
     },
     {
-      "id": "j34",
+      "id": "j33",
       "level": 4,
       "type": "discovery",
       "title": "Reached Rain Island",
       "text": "Waterfalls, rain collectors and quiet fishing pools supply fresh water, irrigation and aquatic materials. Upgrade collection to support a larger town."
     },
     {
-      "id": "j37",
+      "id": "j36",
       "level": 4,
       "type": "discovery",
       "title": "Reached Prism Shelf",
       "text": "Blue energy crystals rise through ancient stone shelves. Mine crystals and recover power-generation materials for solar farms, batteries and advanced buildings."
     },
     {
-      "id": "j39",
+      "id": "j38",
       "level": 4,
       "type": "mission",
       "title": "The Clean Route",
       "text": "Connect Verdant Reach, Rain Island and Prism Shelf to New Haven. Reward: 250 XP · clean transit badge."
     },
     {
-      "id": "j41",
+      "id": "j40",
       "level": 5,
       "type": "level",
       "title": "Reached level 5: Sky Engineer",
       "text": "Unlocked Wind Turbine, Crystal Battery."
     },
     {
-      "id": "j42",
+      "id": "j41",
       "level": 5,
       "type": "event",
       "title": "Solar Storm",
@@ -285,6 +325,13 @@
       "type": "discovery",
       "title": "Reached Hearthside",
       "text": "Lantern-lit cottages, gardens and quiet lanes offer homes for eight more residents. Bridge the village to New Haven when the town is ready to grow."
+    },
+    {
+      "id": "j50",
+      "level": 5,
+      "type": "event",
+      "title": "Harvest timber is resting",
+      "text": "Harvest timber is depleted and will regrow on its own. Nothing is added to storage while it waits."
     },
     {
       "id": "j55",
@@ -322,7 +369,7 @@
       "text": "The clouds are holding on to their water."
     }
   ],
-  "journalUnread": 25,
+  "journalUnread": 26,
   "seenIntro": true,
-  "nextId": 68
+  "nextId": 69
 }
