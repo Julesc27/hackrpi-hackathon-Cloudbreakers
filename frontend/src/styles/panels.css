@@ -235,6 +235,8 @@ h3.section {
 .modal .p-head { padding-top: 30px; }
 .modal-body { padding: 12px 34px 20px; overflow-y: auto; user-select: text; }
 .modal-foot { padding: 10px 34px 26px; display: flex; justify-content: center; }
+.modal-backdrop:has(.intro-modal) { padding: 16px; }
+.modal-foot .btn-gold { position: relative; z-index: 10; cursor: pointer; pointer-events: auto; }
 .lead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--font-hand); font-size: 18px; justify-content: center; text-align: center; }
 
 /* Skyway Chart */

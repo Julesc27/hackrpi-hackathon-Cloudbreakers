@@ -4,8 +4,8 @@ import { caps, projectProduction } from '../../game/engine.js'
 import { RES_ICON } from '../icons.jsx'
 
 function Delta({ v }) {
-  if (!v) return <span className="delta zero">±0</span>
-  return <span className={`delta ${v > 0 ? 'up' : 'down'}`}>{v > 0 ? `+${v}` : v}</span>
+  if (!v) return <span className="delta zero" data-tutorial="hud-resource-delta">±0</span>
+  return <span className={`delta ${v > 0 ? 'up' : 'down'}`} data-tutorial="hud-resource-delta">{v > 0 ? `+${v}` : v}</span>
 }
 
 /**
@@ -77,6 +77,7 @@ export default function TopBar() {
   const cap = caps(state)
   const { net } = projectProduction(state)
   const r = state.resources
+  const isFlowStep = ui.tutorialActive && ui.tutorialStep === 8
 
   // gains: { [res]: { amount, epoch } } — only tracks explicit rewards & tapped bubbles,
   // NOT passive background production.
@@ -127,7 +128,14 @@ export default function TopBar() {
   }, [triggerGain])
 
   return (
-    <div className="topbar panel" data-tutorial="hud-resources" onClick={() => ui.setPanel('storage')} role="button" tabIndex={0} aria-label="Resources — open storage">
+    <div
+      className={`topbar panel${isFlowStep ? ' highlight-deltas' : ''}`}
+      data-tutorial="hud-resources"
+      onClick={() => ui.setPanel('storage')}
+      role="button"
+      tabIndex={0}
+      aria-label="Resources — open storage"
+    >
       <Meter k="energy"    label="Energy"    value={r.energy}        max={cap.energy}  net={net.energy}    gain={gains.energy}    color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
       <Meter k="water"     label="Water"     value={r.water}         max={cap.water}   net={net.water}     gain={gains.water}     color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
       <Meter k="happiness" label="Happiness" value={state.happiness} max={100}                             gain={gains.happiness}  color="linear-gradient(90deg,#b796f0,#e6d4ff)" />

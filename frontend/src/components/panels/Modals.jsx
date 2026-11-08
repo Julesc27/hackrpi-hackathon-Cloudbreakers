@@ -638,8 +638,17 @@ export function IntroModal() {
       kicker="Chapter 1"
       onClose={close}
       size="md"
+      className="intro-modal"
       footer={
-        <button className="btn-gold" onClick={close} autoFocus>
+        <button
+          type="button"
+          className="btn-gold"
+          onClick={(e) => {
+            e.stopPropagation()
+            close()
+          }}
+          autoFocus
+        >
           Let's begin
         </button>
       }

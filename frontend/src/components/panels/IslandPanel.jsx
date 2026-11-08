@@ -68,6 +68,10 @@ export default function IslandPanel() {
 
       {status === 'connected' && (
         <>
+          <div className="action-stack" style={{ marginTop: '10px' }}>
+            <SiteActions island={id} />
+          </div>
+
           <h3 className="section">
             Buildings <span className="muted">· {freeSlots} free plot{freeSlots === 1 ? '' : 's'}</span>
           </h3>
@@ -86,7 +90,6 @@ export default function IslandPanel() {
           </ul>
 
           <div className="action-stack">
-            <SiteActions island={id} />
             {id === 'newHaven' && !state.beaconRestored && (
               <button
                 className="btn-action"
