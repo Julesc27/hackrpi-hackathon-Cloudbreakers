@@ -232,7 +232,7 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
   for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
-  e_mistral: [586, 380], e_rain: [907, 374], e_mercy: [500, 530],
+  e_mistral: [586, 380], e_rain: [907, 374], e_mercy: [478, 517],
   e_hearth: [1075, 525], e_verdant: [586, 380], e_prism: [1050, 652], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
@@ -250,9 +250,14 @@ export const BRIDGE_ENDS = {
 export const BRIDGE_GATE_INSETS = {
   'verdant-haven': { home: 22, away: 8 },
   'rain-haven': { home: 12, away: 8 },
-  'mercy-haven': { home: 30, away: 10 },
+  'mercy-haven': { home: 0, away: 10 },
   'hearth-haven': { home: 10, away: 12 },
   'prism-haven': { home: 8, away: 8 },
+}
+// The west landing has an oblique opening. Its two stone shoulders are not a
+// perpendicular slice through the span, so preserve their painted positions.
+export const BRIDGE_GATEWAYS = {
+  'mercy-haven': { home: { cross: [-5.5, -9.5], far: [470, 503], near: [486, 531] } },
 }
 // Land on the walking surface inside the dock posts, not on its outer corner.
 WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = shiftIslandPoint('verdant', [535, 239])

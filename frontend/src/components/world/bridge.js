@@ -1,5 +1,5 @@
 import { bridgeCurve } from './people.js'
-import { WORLD_ISLANDS, PRISM_GATE, BRIDGE_GATE_INSETS } from './layout.js'
+import { WORLD_ISLANDS, PRISM_GATE, BRIDGE_GATE_INSETS, BRIDGE_GATEWAYS } from './layout.js'
 import { col, poly, line, circle, glow } from './iso.js'
 import { getPaintedAtlas } from './paintedArt.js'
 
@@ -76,13 +76,17 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
   const cross = crossVector(start, end)
   const stone = bridge.type === 'reinforced', damaged = bridge.condition < 40
   const halfWidth = stone ? 12 : 10.5
+  const gateway = BRIDGE_GATEWAYS[bridge.route]?.home
   const count = Math.max(12, Math.ceil(length / 6))
   const sample = (t, side = 0, width = halfWidth) => {
     const f = Math.max(0, Math.min(1, t)) * (points.length - 1)
     const i = Math.min(points.length - 2, Math.floor(f)), mix = f - i
     const entryWidth = .8 + .2 * Math.min(1, t * length / 18, (1-t) * length / 18)
-    return [points[i][0] + (points[i + 1][0] - points[i][0]) * mix + cross[0] * side * width * entryWidth,
-      points[i][1] + (points[i + 1][1] - points[i][1]) * mix + cross[1] * side * width * entryWidth]
+    const shoulder = gateway ? Math.max(0, 1 - t * length / 35) : 0
+    const offset = cross.map((value, axis) => value * halfWidth * entryWidth
+      + shoulder * ((gateway?.cross[axis] || 0) - value * halfWidth * .8))
+    return [points[i][0] + (points[i + 1][0] - points[i][0]) * mix + offset[0] * side * width / halfWidth,
+      points[i][1] + (points[i + 1][1] - points[i][1]) * mix + offset[1] * side * width / halfWidth]
   }
   const trace = (pts, color, width) => {
     ctx.beginPath()
@@ -133,9 +137,16 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
     line(ctx, x-2.6, y+.5, x+2.6, y+.5, col('#96703d'), 1)
     if (lights) lights.push([x, y-4, 12])
   }
+  const towerPosition = (t, side) => {
+    if (gateway && t === homeGate) {
+      const p = side === near ? gateway.near : gateway.far
+      return [p[0], p[1] + (WORLD_ISLANDS.newHaven._bob || 0)]
+    }
+    return sample(t, side, halfWidth + 7)
+  }
   const tower = (t, side) => {
     // Stand outside the walking surface, leaving a clear gateway between piers.
-    const [x, floor] = sample(t, side, halfWidth + 7)
+    const [x, floor] = towerPosition(t, side)
     const base = floor + 4, height = 40, width = 21
     if (materials.ready) {
       const [sx, sy, sw, sh] = materials.cells[3]
@@ -160,6 +171,9 @@ export function drawBridge(ctx, bridge, time, lights = null, progress = 1) {
       const t = homeGate + (awayGate - homeGate) * u
       const height = 11 + 19 * (2*u-1)**2
       const p = sample(t, side, halfWidth + 7 * Math.abs(2*u-1)**6)
+      const anchor = towerPosition(homeGate, side), shoulder = sample(homeGate, side, halfWidth + 7)
+      p[0] += (anchor[0] - shoulder[0]) * (1-u)**4
+      p[1] += (anchor[1] - shoulder[1]) * (1-u)**4
       return [p[0], p[1] - height]
     }
     const cablePoints = points.map((_, i) => cable(i/(points.length-1)))
