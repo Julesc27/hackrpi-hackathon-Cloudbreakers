@@ -119,6 +119,38 @@ class DeployProtocolTests(unittest.TestCase):
         self.assertEqual(hook._load_jobs()["job"]["status"], "failed")
         self.assertIn("temporary state failure", hook._load_jobs()["job"]["error"])
 
+    def test_status_reads_do_not_overlap_state_replacement(self):
+        hook._save_job("job", {"status": "queued"})
+        reading, release, writing, written = (threading.Event() for _ in range(4))
+        original = hook.json.load
+
+        def slow_read(stream):
+            reading.set()
+            release.wait(3)
+            return original(stream)
+
+        def write():
+            writing.set()
+            hook._save_job("job", {"status": "running"})
+            written.set()
+
+        with patch.object(hook.json, "load", side_effect=slow_read):
+            reader = threading.Thread(target=hook._load_jobs)
+            writer = threading.Thread(target=write)
+            reader.start()
+            try:
+                self.assertTrue(reading.wait(1))
+                writer.start()
+                self.assertTrue(writing.wait(1))
+                self.assertFalse(written.wait(0.05))
+            finally:
+                release.set()
+                reader.join(3)
+                if writer.ident is not None:
+                    writer.join(3)
+        self.assertTrue(written.is_set())
+        self.assertEqual(hook._load_jobs()["job"]["status"], "running")
+
 
 if __name__ == "__main__":
     unittest.main()

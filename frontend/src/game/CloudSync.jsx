@@ -41,9 +41,8 @@ export function SyncProvider({ children }) {
   const dirty = useRef(ls.get(DIRTY_KEY) === '1')
   const ready = useRef(false) // login reconcile finished; safe to upload
   const reconciling = useRef(null) // username currently being reconciled
-  const inFlight = useRef(false)
+  const inFlight = useRef(null)
   const pushAfterRender = useRef(false)
-  const pushAgain = useRef(false) // a save was asked for while another was uploading
   const pushRef = useRef(null)
 
   const setDirty = (v) => { dirty.current = v; ls.set(DIRTY_KEY, v ? '1' : null) }
@@ -58,26 +57,34 @@ export function SyncProvider({ children }) {
   }, [])
 
   const push = useCallback(async ({ keepalive = false, force = false } = {}) => {
-    if (!username || !ready.current) return
-    if (inFlight.current) { if (dirty.current || force) pushAgain.current = true; return }
-    if (!dirty.current && !force) return
-    inFlight.current = true
+    if (!username || !ready.current || authRef.current.player?.username !== username) return false
+    if (inFlight.current) {
+      await inFlight.current
+      return pushRef.current?.({ keepalive, force })
+    }
+    if (!dirty.current && !force) return true
     // Clear only the in-memory flag; the persisted one is cleared after the server confirms,
     // so a save cut off by a page unload isn't forgotten.
     dirty.current = false
     setSync((s) => ({ ...s, status: 'saving' }))
-    try {
-      const res = await api.saveTown(toSave(stateRef.current), { keepalive })
-      ls.set(DIRTY_KEY, dirty.current ? '1' : null)
-      setSync({ status: 'saved', savedAt: res.saved_at, error: null })
-      authRef.current.setPlayer(res.player)
-    } catch (e) {
-      setDirty(true)
-      handleError(e)
-    } finally {
-      inFlight.current = false
-      if (pushAgain.current) { pushAgain.current = false; pushRef.current?.() }
+    const upload = async () => {
+      try {
+        const res = await api.saveTown(toSave(stateRef.current), { keepalive })
+        if (authRef.current.player?.username !== username) return false
+        ls.set(DIRTY_KEY, dirty.current ? '1' : null)
+        setSync({ status: 'saved', savedAt: res.saved_at, error: null })
+        authRef.current.setPlayer(res.player)
+        return true
+      } catch (e) {
+        setDirty(true)
+        if (authRef.current.player?.username === username) handleError(e)
+        return false
+      } finally {
+        inFlight.current = null
+      }
     }
+    inFlight.current = upload()
+    return inFlight.current
   }, [username, handleError])
   pushRef.current = push
 
@@ -187,13 +194,18 @@ export function SyncProvider({ children }) {
 
   // Explicit "Log out": save, then wipe this device's copy so the next person starts fresh.
   const logout = useCallback(async () => {
-    await push()
+    // Never erase the local backup until the latest town is confirmed saved.
+    // Waiting for an older upload alone is not enough if a job finished meanwhile.
+    let saved = await push({ force: true })
+    while (saved && dirty.current) saved = await push()
+    if (!saved) return false
     ready.current = false
     ls.set(OWNER_KEY, null)
     setDirty(false)
     prevState.current = null
     dispatch({ type: 'NEW_GAME' })
     authRef.current.logout()
+    return true
   }, [push, dispatch])
 
   return (
