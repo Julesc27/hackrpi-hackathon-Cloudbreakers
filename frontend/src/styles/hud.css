@@ -127,6 +127,20 @@
 .delta.up { color: var(--up); }
 .delta.down { color: var(--down); }
 .delta.zero { color: var(--dim); }
+
+/* Highlight the delta numbers during the resource flow tutorial step */
+.topbar.highlight-deltas .delta {
+  animation: deltaGlow 1.2s ease-in-out infinite alternate;
+  background: rgba(243, 217, 143, 0.28);
+  border-radius: 4px;
+  padding: 1px 4px;
+  box-shadow: 0 0 10px rgba(243, 217, 143, 0.8), inset 0 0 6px rgba(243, 217, 143, 0.5);
+  font-weight: 900;
+}
+@keyframes deltaGlow {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.25); filter: brightness(1.6); }
+}
 /* Temporary "+X" badge that pops up when you gain a resource */
 .res-num, .res-big { position: relative; }
 .gain-flash {

@@ -2,9 +2,10 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'gather-wood.spec.js',
+  testMatch: 'agent.spec.js',
   outputDir: '../agent-results',
-  timeout: 540_000,
+  // Each scenario sets its own timeout from its step limit (see agent.spec.js).
+  timeout: 1_800_000,
   retries: 0,
   use: {
     baseURL: 'http://127.0.0.1:4173',

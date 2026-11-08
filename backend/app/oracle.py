@@ -19,11 +19,19 @@ log = logging.getLogger("uvicorn.error")  # uvicorn prints this logger; the root
 
 ADVISOR_DIR = Path(__file__).resolve().parents[1] / "advisor"
 GAME_FILES = ("data.js", "engine.js")  # copied by tools/sync_advisor_context.py
-TIMEOUT_SECONDS = 45
+TIMEOUT_SECONDS = 90  # high reasoning effort takes ~30-50s per attempt
 ATTEMPTS = 2
 MAX_POEM_CHARS = 1200
 MIN_POEM_LINES = 4
 MAX_POEM_LINES = 12
+
+# What the strategy is mainly about, so Friendly Cloud can tell when the gods disagree with it.
+# Building keys = build one; island ids = bridge to it. Keep in sync with data.js (tested).
+FOCUS_BUILDINGS = ("shelter", "bridgeAnchor", "waterCollector", "garden", "storageHouse", "solarFarm",
+                   "market", "clinic", "battery", "communityHall", "windTurbine")
+FOCUS_ISLANDS = ("verdant", "rain", "prism", "mercy", "hearth")
+FOCUS_OTHER = ("gather", "beacon", "repair", "balance")
+FOCUSES = FOCUS_BUILDINGS + FOCUS_ISLANDS + FOCUS_OTHER
 
 RULES = """You are the gods of Cloudbreakers, a game about building a sustainable town in the sky.
 Below are the game's design document and its source code: the true laws beneath the sky.
@@ -53,8 +61,15 @@ A player has lit a lantern and asked for your counsel. Do two things.
    Right:     "Before the larder echoes, / bury small suns in the wet dark; / the hungry season is patient."
    (That is only an example of tone. Never reuse its words.)
 
+3. "focus": one word naming what the strategy is mainly about. Pick exactly one of:
+   - a building key to build first: {buildings}
+   - an island id to bridge to next: {islands}
+   - "gather" (collect or mine), "beacon" (restore it), "repair" (fix bridges), "balance" (keep things steady)
+   The player never sees this either.
+
 Reply with only a JSON object, no other text:
-{"strategy": "...", "poem": "first line\\nsecond line\\n..."}"""
+{{"strategy": "...", "poem": "first line\\nsecond line\\n...", "focus": "..."}}""".format(
+    buildings=", ".join(FOCUS_BUILDINGS), islands=", ".join(FOCUS_ISLANDS))
 
 
 class OracleUnavailable(Exception):
@@ -85,6 +100,7 @@ def forbidden_names() -> tuple[str, ...]:
     """Island, building and mission names taken from the game data; poems must not say them."""
     data = (ADVISOR_DIR / "game" / "data.js").read_text(encoding="utf-8")
     names = {n.lower() for n in re.findall(r"\bname: '([^']+)'", data)}
+    names |= {k.lower() for k in FOCUS_BUILDINGS if k.isalpha() and k.islower()}  # "garden" for "Food Garden"
     return tuple(sorted(names))
 
 
@@ -124,11 +140,15 @@ def parse_reply(text: str) -> dict:
     strategy, poem = obj.get("strategy"), obj.get("poem")
     if not isinstance(strategy, str) or not isinstance(poem, str):
         raise ValueError("strategy and poem must be strings")
+    if "\n" not in poem.strip() and " / " in poem:  # one-line poems with slash breaks, like the prompt's example
+        poem = poem.replace(" / ", "\n")
     lines = [line.strip() for line in poem.strip().splitlines()]
     poem = "\n".join(lines).strip()
     if not poem or len(poem) > MAX_POEM_CHARS or len([l for l in lines if l]) > MAX_POEM_LINES:
         raise ValueError("poem is empty or too long")
-    return {"strategy": strategy.strip(), "poem": poem}
+    focus = obj.get("focus")
+    # A bad focus isn't worth a retry; Cloud just won't compare.
+    return {"strategy": strategy.strip(), "poem": poem, "focus": focus if focus in FOCUSES else None}
 
 
 def short(poem: str) -> bool:
@@ -144,33 +164,51 @@ def leaks(poem: str) -> list[str]:
     return found
 
 
-async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str, messages: list[dict]) -> str:
+EFFORTS = ("low", "medium", "high")
+
+
+async def _call(client: httpx.AsyncClient, host: str, token: str, endpoint: str, messages: list[dict],
+                effort: str | None) -> str:
+    # Reasoning models (e.g. databricks-gpt-oss-120b) think before answering: low ~3s, medium ~8s, high ~30-50s.
+    # effort=None for models without thinking, like Llama.
+    body = {"messages": messages, "max_tokens": 1000, "temperature": 0.9}
+    if effort in EFFORTS:
+        body = {"messages": messages, "max_tokens": 12000, "reasoning_effort": effort}  # thinking tokens count too
     res = await client.post(
         f"{host}/serving-endpoints/{endpoint}/invocations",
         headers={"Authorization": f"Bearer {token}"},
-        json={"messages": messages, "max_tokens": 1000, "temperature": 0.9},
+        json=body,
     )
     if res.status_code != 200:
         log.warning("oracle: Databricks returned %s: %s", res.status_code, res.text[:300])
         raise OracleUnavailable(f"Databricks returned {res.status_code}")
-    return extract_text(res.json())
+    data = res.json()
+    text = extract_text(data)
+    if not text.strip():
+        log.warning("oracle: empty reply (effort %s), finish_reason=%s", effort,
+                    (data.get("choices") or [{}])[0].get("finish_reason"))
+    return text
 
 
 async def consult(town: dict) -> dict:
-    """Ask the gods. Returns {"strategy", "poem"}; raises OracleUnavailable."""
+    """Ask the gods. Returns {"strategy", "poem", "focus"}; raises OracleUnavailable."""
     host, token, endpoint = _config()
     messages = build_messages(town)
+    effort = os.getenv("DATABRICKS_REASONING_EFFORT", "").strip().lower() or None
     best = None
     async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
         for attempt in range(1, ATTEMPTS + 1):
+            text = ""
             try:
-                text = await _call(client, host, token, endpoint, messages)
+                text = await _call(client, host, token, endpoint, messages, effort)
                 reply = parse_reply(text)
             except httpx.HTTPError as e:
                 log.warning("oracle: request failed (attempt %s): %r", attempt, e)
                 continue
             except (ValueError, json.JSONDecodeError) as e:
-                log.warning("oracle: unusable reply (attempt %s): %s", attempt, e)
+                log.warning("oracle: unusable reply (attempt %s): %s | reply starts: %r", attempt, e, text[:200])
+                if not text.strip() and effort in EFFORTS[1:]:
+                    effort = EFFORTS[EFFORTS.index(effort) - 1]  # thought itself out of room: think less next time
                 continue
             leaked = leaks(reply["poem"])
             if short(reply["poem"]):
@@ -181,5 +219,5 @@ async def consult(town: dict) -> dict:
             log.info("oracle: poem gave away %s (attempt %s)", leaked, attempt)
     if best is None:
         raise OracleUnavailable("The gods are silent")
-    log.info("oracle: strategy=%r", best["strategy"])
+    log.info("oracle: focus=%s strategy=%r", best["focus"], best["strategy"])
     return best

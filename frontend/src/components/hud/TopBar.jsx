@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { caps, projectProduction } from '../../game/engine.js'
 import { RES_ICON } from '../icons.jsx'
 
 function Delta({ v }) {
-  if (!v) return <span className="delta zero">±0</span>
-  return <span className={`delta ${v > 0 ? 'up' : 'down'}`}>{v > 0 ? `+${v}` : v}</span>
+  if (!v) return <span className="delta zero" data-tutorial="hud-resource-delta">±0</span>
+  return <span className={`delta ${v > 0 ? 'up' : 'down'}`} data-tutorial="hud-resource-delta">{v > 0 ? `+${v}` : v}</span>
 }
 
-/** Briefly shown "+X" badge that floats up and fades when resources are gained. */
-function GainFlash({ amount }) {
+/**
+ * Briefly shown "+X" badge that floats up and fades when resources are gained.
+ * Uses a unique key so React re-mounts it and restarts the CSS animation each time
+ * the same resource is gained multiple times in quick succession.
+ */
+function GainFlash({ amount, epoch }) {
   if (!amount) return null
   return (
-    <span key={amount} className="gain-flash" aria-live="polite">
+    <span key={epoch} className="gain-flash" aria-live="polite">
       +{amount}
     </span>
   )
@@ -36,14 +40,11 @@ function Meter({ k, label, value, max, net, color, gain }) {
           {net != null && <Delta v={net} />}
         </div>
         <div className="bar">
-          <div
-            className="bar-fill"
-            style={{ width: `${pct}%`, background: color }}
-          />
+          <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
         </div>
         <div className="res-num">
           {value} / {max}
-          {gain ? <GainFlash amount={gain} /> : null}
+          {gain ? <GainFlash amount={gain.amount} epoch={gain.epoch} /> : null}
         </div>
       </div>
     </div>
@@ -63,7 +64,7 @@ function Count({ k, label, value, net, gain }) {
         </div>
         <div className="res-big">
           {value.toLocaleString()}
-          {gain ? <GainFlash amount={gain} /> : null}
+          {gain ? <GainFlash amount={gain.amount} epoch={gain.epoch} /> : null}
         </div>
       </div>
     </div>
@@ -76,55 +77,72 @@ export default function TopBar() {
   const cap = caps(state)
   const { net } = projectProduction(state)
   const r = state.resources
+  const isFlowStep = ui.tutorialActive && ui.tutorialStep === 8
 
-  // Track short-lived "+X" gain badges per resource
-  const prevResRef = useRef(r)
+  // gains: { [res]: { amount, epoch } } — only tracks explicit rewards & tapped bubbles,
+  // NOT passive background production.
+  const prevInteractionRef = useRef(state.lastInteraction)
   const gainTimers = useRef({})
+  const epochRef = useRef(0)
   const [gains, setGains] = useState({})
 
+  const triggerGain = useCallback((key, diff) => {
+    const epoch = ++epochRef.current
+    setGains((g) => ({
+      ...g,
+      [key]: { amount: (g[key]?.amount || 0) + diff, epoch },
+    }))
+    clearTimeout(gainTimers.current[key])
+    gainTimers.current[key] = setTimeout(() => {
+      setGains((g) => {
+        const next = { ...g }
+        delete next[key]
+        return next
+      })
+    }, 1600)
+  }, [])
+
   useEffect(() => {
-    const prev = prevResRef.current
-    prevResRef.current = r
+    const prev = prevInteractionRef.current
+    prevInteractionRef.current = state.lastInteraction
 
-    // Find resources that increased this tick
-    const increased = {}
-    for (const [key, val] of Object.entries(r)) {
-      const diff = val - (prev[key] ?? 0)
-      if (diff > 0) increased[key] = diff
+    // Only react to a brand-new interaction (different id)
+    if (!state.lastInteraction || state.lastInteraction.id === prev?.id) return
+
+    const reward = state.lastInteraction.reward || {}
+    const gained = Object.entries(reward).filter(([, v]) => v > 0)
+    if (gained.length === 0) return
+
+    for (const [key, diff] of gained) {
+      triggerGain(key, diff)
     }
+  }, [state.lastInteraction, triggerGain])
 
-    if (Object.keys(increased).length === 0) return
-
-    // Accumulate the gains and start/reset a clear timer per resource
-    setGains((g) => {
-      const next = { ...g }
-      for (const [key, diff] of Object.entries(increased)) {
-        next[key] = (next[key] || 0) + diff
-      }
-      return next
-    })
-
-    for (const key of Object.keys(increased)) {
-      clearTimeout(gainTimers.current[key])
-      gainTimers.current[key] = setTimeout(() => {
-        setGains((g) => {
-          const next = { ...g }
-          delete next[key]
-          return next
-        })
-      }, 1600)
+  useEffect(() => {
+    const onBubbleArrive = (e) => {
+      if (!e.detail?.fromBubble || !e.detail?.isLast) return
+      triggerGain(e.detail.res, e.detail.totalAmount || e.detail.amount)
     }
-  }, [r])
+    window.addEventListener('cloudbreakers:resource-token-arrive', onBubbleArrive)
+    return () => window.removeEventListener('cloudbreakers:resource-token-arrive', onBubbleArrive)
+  }, [triggerGain])
 
   return (
-    <div className="topbar panel" data-tutorial="hud-resources" onClick={() => ui.setPanel('storage')} role="button" tabIndex={0} aria-label="Resources — open storage">
-      <Meter k="energy"    label="Energy"    value={r.energy}    max={cap.energy}    net={net.energy}    gain={gains.energy}    color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
-      <Meter k="water"     label="Water"     value={r.water}     max={cap.water}     net={net.water}     gain={gains.water}     color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
-      <Meter k="happiness" label="Happiness" value={state.happiness} max={100}       gain={gains.happiness}                     color="linear-gradient(90deg,#b796f0,#e6d4ff)" />
-      <Meter k="food"      label="Food"      value={r.food}      max={cap.food}      net={net.food}      gain={gains.food}      color="linear-gradient(90deg,#5fb24f,#a8e08a)" />
-      <Count k="wood"      label="Wood"      value={r.wood}      net={net.wood}      gain={gains.wood} />
-      <Count k="stone"     label="Stone"     value={r.stone}     net={net.stone}     gain={gains.stone} />
-      <Count k="coins"     label="Coins"     value={r.coins}     net={net.coins}     gain={gains.coins} />
+    <div
+      className={`topbar panel${isFlowStep ? ' highlight-deltas' : ''}`}
+      data-tutorial="hud-resources"
+      onClick={() => ui.setPanel('storage')}
+      role="button"
+      tabIndex={0}
+      aria-label="Resources — open storage"
+    >
+      <Meter k="energy"    label="Energy"    value={r.energy}        max={cap.energy}  net={net.energy}    gain={gains.energy}    color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
+      <Meter k="water"     label="Water"     value={r.water}         max={cap.water}   net={net.water}     gain={gains.water}     color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
+      <Meter k="happiness" label="Happiness" value={state.happiness} max={100} net={net.happiness} gain={gains.happiness} color="linear-gradient(90deg,#b796f0,#e6d4ff)" />
+      <Meter k="food"      label="Food"      value={r.food}          max={cap.food}    net={net.food}      gain={gains.food}      color="linear-gradient(90deg,#5fb24f,#a8e08a)" />
+      <Count k="wood"      label="Wood"      value={r.wood}          net={net.wood}    gain={gains.wood} />
+      <Count k="stone"     label="Stone"     value={r.stone}         net={net.stone}   gain={gains.stone} />
+      <Count k="coins"     label="Coins"     value={r.coins}         net={net.coins}   gain={gains.coins} />
     </div>
   )
 }

@@ -172,6 +172,11 @@ export function StorageModal() {
         </div>
         <div>
           <Smile size={20} /> Happiness <strong>{state.happiness}</strong>
+          {net.happiness != null && (
+            <span className={`delta ${net.happiness > 0 ? 'up' : net.happiness < 0 ? 'down' : 'zero'}`} style={{ marginLeft: 6 }}>
+              {net.happiness > 0 ? `+${net.happiness}` : net.happiness === 0 ? '±0' : net.happiness}
+            </span>
+          )}
         </div>
         <div>
           <Leaf size={20} /> Sustainability <strong>{state.sustainability}%</strong>
@@ -346,9 +351,32 @@ const STORE_ITEMS = [
     name: 'Consult the Gods',
     icon: 'ancestors',
     desc: 'Light a lantern and ask the founders who came before.',
+    promise: 'The gods have read the laws beneath the sky. Their counsel is always right, and never plain.',
     cost: CONSULT_COST,
   },
 ]
+
+// The poem walks in line by line; Cloud's reaction waits until the last line has landed.
+const LINE_DELAY_MS = 900
+
+function RevealPoem({ poem }) {
+  const lines = poem.split('\n')
+  return (
+    <>
+      <blockquote className="oracle-poem" aria-label={poem}>
+        {lines.map((line, i) => (
+          <span key={i} className="oracle-line" style={{ animationDelay: `${i * LINE_DELAY_MS}ms` }} aria-hidden="true">
+            {line || '\u00a0'}
+          </span>
+        ))}
+      </blockquote>
+      <p className="oracle-cloud oracle-line" style={{ animationDelay: `${lines.length * LINE_DELAY_MS + 400}ms` }}>
+        <ArtIcon name="cloud" size={22} />
+        <span><strong>Friendly Cloud:</strong> Oh, that’s far beyond me. But the gods have never once been wrong.</span>
+      </p>
+    </>
+  )
+}
 
 function ConsultGodsCard({ item }) {
   const { state, dispatch } = useGame()
@@ -366,7 +394,7 @@ function ConsultGodsCard({ item }) {
       const res = await consultGods(state)
       setPoem(res.poem)
       setPhase('spoken')
-      dispatch({ type: 'CONSULT_GODS', poem: res.poem }) // charged only once a poem arrives
+      dispatch({ type: 'CONSULT_GODS', poem: res.poem, focus: res.focus }) // charged only once a poem arrives
     } catch (e) {
       setError(e.status === 429 ? 'The gods grow weary of questions. Return later.' : 'The gods are silent. Nothing was spent.')
       setPhase('silent')
@@ -382,6 +410,7 @@ function ConsultGodsCard({ item }) {
       <div className="store-body">
         <h3 className="store-name">{item.name}</h3>
         <p className="store-desc">{item.desc}</p>
+        <p className="store-promise">{item.promise}</p>
         <CostChips cost={item.cost} resources={state.resources} />
       </div>
       <button
@@ -392,7 +421,7 @@ function ConsultGodsCard({ item }) {
       >
         {label}
       </button>
-      {phase === 'spoken' && <blockquote className="oracle-poem">{poem}</blockquote>}
+      {phase === 'spoken' && <RevealPoem key={poem} poem={poem} />}
       {phase === 'silent' && <p className="oracle-silent">{error}</p>}
     </div>
   )
@@ -613,8 +642,17 @@ export function IntroModal() {
       kicker="Chapter 1"
       onClose={close}
       size="md"
+      className="intro-modal"
       footer={
-        <button className="btn-gold" onClick={close} autoFocus>
+        <button
+          type="button"
+          className="btn-gold"
+          onClick={(e) => {
+            e.stopPropagation()
+            close()
+          }}
+          autoFocus
+        >
           Let's begin
         </button>
       }

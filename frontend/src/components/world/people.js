@@ -7,26 +7,29 @@
 import { WORLD_ISLANDS, BRIDGE_ENDS, bridgePoints } from './layout.js'
 import { WALK, CELL } from './walkGrid.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
+import { shiftIslandPoint } from '../../game/mapLayout.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
 
 /* ---------------- bridges ---------------- */
 /** Point on a bridge deck, t in [0, 1] from end a to end b. Includes the islands' bob. */
-export function bridgeAt(routeId, t) {
+export function bridgeAt(routeId, t, type = 'rope') {
   const p = bridgePoints(routeId)
   if (!p) return null
+  const length = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1])
+  const sag = type === 'reinforced' ? Math.min(6, Math.max(3, length * .012)) : Math.min(24, Math.max(10, length * .065))
   const ends = BRIDGE_ENDS[routeId]
   const bobA = WORLD_ISLANDS[ends.a[0]]._bob || 0
   const bobB = WORLD_ISLANDS[ends.b[0]]._bob || 0
   return [
     p.a[0] + (p.b[0] - p.a[0]) * t,
-    p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t + Math.sin(t * Math.PI) * 5,
+    p.a[1] + bobA + (p.b[1] + bobB - p.a[1] - bobA) * t + Math.sin(t * Math.PI) * sag,
   ]
 }
 
-export function bridgeCurve(routeId, n = 10) {
+export function bridgeCurve(routeId, n = 10, type = 'rope') {
   if (!bridgePoints(routeId)) return []
   const out = []
-  for (let i = 0; i <= n; i++) out.push(bridgeAt(routeId, i / n))
+  for (let i = 0; i <= n; i++) out.push(bridgeAt(routeId, i / n, type))
   return out
 }
 
@@ -39,7 +42,17 @@ for (const [id, g] of Object.entries(WALK)) {
     const n = parseInt(g.cells[k + 1], 36)
     base.fill(+g.cells[k], i, i + n); i += n
   }
-  GRIDS[id] = { id, x: g.x, y: g.y, cols: g.cols, rows: g.rows, base, cost: base.slice(), poi: g.poi, paved: [] }
+  // The art tracer joins diagonal cells; pathfinding deliberately forbids corner
+  // cutting. Add a single step at those contacts so traced paths stay connected.
+  const traced = base.slice()
+  for (let row = 0; row < g.rows - 1; row++) for (let column = 0; column < g.cols - 1; column++) {
+    const a = row * g.cols + column, b = a + 1, c = a + g.cols, d = c + 1
+    if (traced[a] && traced[d] && !traced[b] && !traced[c]) base[b] = 3
+    if (traced[b] && traced[c] && !traced[a] && !traced[d]) base[a] = 3
+  }
+  // Apply the same island movement as the painting, resources and bridge landings.
+  const [x, y] = shiftIslandPoint(id, [g.x, g.y])
+  GRIDS[id] = { id, x, y, cols: g.cols, rows: g.rows, base, cost: base.slice(), poi: g.poi, paved: [] }
 }
 const cellOf = (G, x, y) => {
   const c = Math.floor((x - G.x) / CELL), r = Math.floor((y - G.y) / CELL)
@@ -210,6 +223,7 @@ export class Crowd {
     this.nextId = 1
     this.islands = []
     this.links = {}
+    this.bridgeTypes = {}
   }
 
   /** Rebuild walkable areas for the current game state and resize the crowd. */
@@ -217,9 +231,11 @@ export class Crowd {
     applyBuildings(state)
     this.islands = Object.keys(GRIDS).filter((id) => access[id] && state.connected.includes(id) && GRIDS[id].paved.length)
     this.links = {}
+    this.bridgeTypes = {}
     for (const b of state.bridges) {
       const e = BRIDGE_ENDS[b.route]
       if (!e || b.condition <= 0 || !this.islands.includes(e.a[0]) || !this.islands.includes(e.b[0])) continue
+      this.bridgeTypes[b.route] = b.type
       ;(this.links[e.a[0]] ||= []).push({ to: e.b[0], route: b.route, from: 0 })
       ;(this.links[e.b[0]] ||= []).push({ to: e.a[0], route: b.route, from: 1 })
     }
@@ -335,7 +351,7 @@ export class Crowd {
         const len = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]) || 1
         a.isl = null
         leg.u = Math.min(1, leg.u + step / len)
-        const [x, y] = bridgeAt(leg.route, leg.from === 0 ? leg.u : 1 - leg.u)
+        const [x, y] = bridgeAt(leg.route, leg.from === 0 ? leg.u : 1 - leg.u, this.bridgeTypes[leg.route])
         if (Math.abs(x - a.x) > 0.05) a.dir = x > a.x ? 1 : -1
         a.back = y < a.y - Math.abs(x - a.x) * 0.3
         a.x = x; a.y = y

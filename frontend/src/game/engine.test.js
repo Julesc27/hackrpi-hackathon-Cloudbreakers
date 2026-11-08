@@ -178,10 +178,66 @@ test('every bridge span stays attached to both independently floating islands', 
       assert.deepEqual(points[0], [base.a[0], base.a[1] + 2.2])
       assert.ok(Math.abs(points.at(-1)[0] - base.b[0]) < 1e-8)
       assert.ok(Math.abs(points.at(-1)[1] - (base.b[1] - 1.8)) < 1e-8)
+      const midpoint = points[10], straightY = (points[0][1] + points.at(-1)[1]) / 2
+      assert.ok(midpoint[1] > straightY + 9, 'suspension decks must sag below their shore anchors')
+      const reinforced = bridgeCurve(route.id, 20, 'reinforced')
+      assert.deepEqual(reinforced[0], points[0])
+      assert.deepEqual(reinforced.at(-1), points.at(-1))
+      assert.ok(reinforced[10][1] > straightY && reinforced[10][1] < midpoint[1], 'reinforced decks must stay shallower and share the same landings')
     } finally { a._bob = oldA; b._bob = oldB }
   }
 })
 
+
+test('the full network has separated decks and walkable terrace entrances', async () => {
+  const { bridgeCurve, Crowd } = await import('../components/world/people.js')
+  const { WORLD_ISLANDS } = await import('../components/world/layout.js')
+  const islands = Object.values(WORLD_ISLANDS), oldBobs = islands.map(i => i._bob)
+  try {
+    for (const phase of [0, 1, -1]) {
+      islands.forEach((island, i) => { island._bob = phase * (i % 2 ? 2.2 : -2.2) })
+      const curves = ROUTES.map(route => bridgeCurve(route.id, 100))
+      for (let a = 0; a < curves.length; a++) for (let b = a + 1; b < curves.length; b++) {
+        const clearance = Math.min(...curves[a].flatMap(p => curves[b].map(q => Math.hypot(p[0]-q[0], p[1]-q[1]))))
+        assert.ok(clearance > 32, `${ROUTES[a].id} overlaps ${ROUTES[b].id}`)
+      }
+    }
+  } finally { islands.forEach((island, i) => { island._bob = oldBobs[i] }) }
+  const initial = createInitialState()
+  const crowd = new Crowd()
+  crowd.setState(initial, { newHaven: true }, 1)
+  assert.deepEqual(crowd.links, {})
+  const connected = ['newHaven', 'verdant', 'rain', 'prism', 'mercy', 'hearth']
+  const state = { ...initial, connected, bridges: ROUTES.map(r => ({ route: r.id, type: 'rope', condition: 100 })) }
+  crowd.setState(state, Object.fromEntries(connected.map(id => [id, true])), 1)
+  const { bridgePoints } = await import('../components/world/layout.js')
+  for (const route of ROUTES) {
+    assert.ok(crowd.links[route.a].some(link => link.to === route.b && link.route === route.id))
+    assert.ok(crowd.links[route.b].some(link => link.to === route.a && link.route === route.id))
+    const ends = bridgePoints(route.id)
+    for (const [island, end] of [[route.b, ends.a], [route.a, ends.b]]) {
+      const [x, y] = ISLANDS[island].hit
+      assert.ok(crowd.gridLeg(island, x, y, ...end), `Residents must reach the ${island} bridge landing`)
+    }
+  }
+})
+
+test('residents follow the live rope and reinforced decks when bridges are upgraded', async () => {
+  const { Crowd, bridgeAt } = await import('../components/world/people.js')
+  const crowd = new Crowd(), access = { newHaven: true, verdant: true }
+  let state = { ...createInitialState(), connected: ['newHaven', 'verdant'],
+    bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }] }
+  crowd.setState(state, access, 1)
+  const person = crowd.agents[0]
+  Object.assign(person, { isl: null, wait: 0, speed: 0, legs: [],
+    leg: { route: 'verdant-haven', from: 0, toIsl: 'newHaven', u: .5 } })
+  crowd.update(.1)
+  assert.deepEqual([person.x, person.y], bridgeAt('verdant-haven', .5, 'rope'))
+  state = { ...state, bridges: [{ ...state.bridges[0], type: 'reinforced' }] }
+  crowd.setState(state, access, 1)
+  crowd.update(.1)
+  assert.deepEqual([person.x, person.y], bridgeAt('verdant-haven', .5, 'reinforced'))
+})
 
 test('bridge access is a one-time workshop upgrade that does not require a free plot', () => {
   const initial = createInitialState()
@@ -229,4 +285,23 @@ test('the gods take nothing without a poem or the full price', () => {
   assert.deepEqual(refused.resources, poor.resources)
   assert.equal(refused.journal.length, poor.journal.length)
   assert.equal(gameReducer(poor, { type: 'CONSULT_GODS', poem: '   ' }), poor)
+})
+
+test('Friendly Cloud points to the Store and notices when the gods disagree', async () => {
+  const { getAdvice, godsWord, GODS_FRESH_XP } = await import('./advisor.js')
+  const start = { ...createInitialState(), resources: { ...createInitialState().resources, energy: 30, coins: 60 } }
+  const tip = getAdvice(start)[0]
+  assert.equal(tip.focus, 'shelter')
+  assert.equal(godsWord(start, tip).kind, 'nudge')
+  assert.match(godsWord(start, tip).link, /Store/)
+
+  const differ = gameReducer(start, { type: 'CONSULT_GODS', poem: 'riddle', focus: 'verdant' })
+  assert.deepEqual(differ.oracle, { focus: 'verdant', xp: start.xp })
+  assert.equal(godsWord(differ, tip).kind, 'differ')
+  assert.match(godsWord(differ, tip).link, /Store/)
+
+  const agree = gameReducer(start, { type: 'CONSULT_GODS', poem: 'riddle', focus: 'shelter' })
+  assert.equal(godsWord(agree, tip).kind, 'agree')
+  assert.equal(godsWord({ ...agree, xp: agree.xp + GODS_FRESH_XP }, tip).kind, 'nudge') // stale
+  assert.ok(getAdvice(start).every((t) => t.focus))
 })

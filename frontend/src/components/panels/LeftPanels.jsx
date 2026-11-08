@@ -7,6 +7,7 @@ import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
 import { Check, Lock, Close, ArtIcon, Plus } from '../icons.jsx'
 import BuildingArt from '../BuildingArt.jsx'
 import Vignette from '../vignettes.jsx'
+import GodsLine from '../GodsLine.jsx'
 
 const CHAPTERS = { 1: 'A Place to Begin', 2: 'The First Connection', 3: 'A Town Needs More' }
 const QUEST_ART = {
@@ -236,6 +237,7 @@ export function AdvisorPanel() {
             </div>
           </div>
           {a.alternative && <p className="hand alt"><em>Or:</em> {a.alternative}</p>}
+          <GodsLine tip={a} />
         </div>
         <div className="confidence">
           <div>

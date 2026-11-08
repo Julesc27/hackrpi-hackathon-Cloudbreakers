@@ -2,30 +2,61 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { defaultModel, gradeGatherWood, parseAction, requestTimeoutMs } from './agent.mjs'
+import { defaultModel, parseAction, requestTimeoutMs, retryableStatus, stepBudgetMs } from './agent.mjs'
+import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
 
 const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
+const play = (...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(start))
+const buildShelter = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
 
-test('defaults to the Flash Lite model that answers text and image requests with this key', () => {
-  assert.equal(defaultModel, 'gemini-3.5-flash-lite')
+test('defaults to free-tier Flash, which can tell the wood and stone markers apart better than Flash Lite', () => {
+  assert.equal(defaultModel, 'gemini-3.8-flash')
 })
 
-test('Gemini gets more than the 25 seconds that aborted the first CI request', () => {
-  assert.ok(requestTimeoutMs > 25_000)
-  assert.ok(requestTimeoutMs <= 60_000)
+test('Gemini Flash gets more than the 60 seconds that aborted its first CI request', () => {
+  assert.ok(requestTimeoutMs > 60_000)
+})
+
+test('overload and rate-limit errors are retried, but bad keys and requests are not', () => {
+  for (const status of [429, 503]) assert.ok(retryableStatus.has(status), `${status} should retry`)
+  for (const status of [400, 401, 403, 404]) assert.ok(!retryableStatus.has(status), `${status} should fail fast`)
+})
+
+test('every scenario has a unique id, a committed checkpoint, and fits its CI job', () => {
+  const jobTimeoutMs = 60 * 60_000
+  assert.equal(new Set(scenarios.map((s) => s.id)).size, scenarios.length)
+  for (const scenario of scenarios) {
+    readFileSync(new URL(`../e2e/checkpoints/${scenario.checkpoint}.json`, import.meta.url))
+    // Worst case: every step uses its full Gemini budget, plus the 2-minute setup allowance in agent.spec.js.
+    assert.ok(scenario.maxSteps * stepBudgetMs + 120_000 < jobTimeoutMs, `${scenario.id} could outlive its CI job`)
+  }
 })
 
 test('grader requires a real grove gathering action, not just extra XP or wood', () => {
   assert.equal(gradeGatherWood(start, start), false)
-  assert.equal(gradeGatherWood(start, gameReducer(migrateSave(start), { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })), false)
-  assert.equal(gradeGatherWood(start, gameReducer(migrateSave(start), { type: 'GATHER_WOOD' })), true)
+  assert.equal(gradeGatherWood(start, play(buildShelter)), false)
+  assert.equal(gradeGatherWood(start, play({ type: 'GATHER_WOOD' })), true)
 })
 
-test('model action parser accepts visible coordinates and rejects unsafe clicks', () => {
+test('First Steps grader requires a newly built shelter, not just gathering or a stale completion', () => {
+  assert.equal(gradeFirstSteps(start, start), false)
+  assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, { type: 'GATHER_WOOD' })), false)
+  assert.equal(gradeFirstSteps(start, play(buildShelter)), true)
+  assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, buildShelter)), true)
+  const alreadyDone = play(buildShelter)
+  assert.equal(gradeFirstSteps(alreadyDone, alreadyDone), false)
+})
+
+test('model action parser scales normalized 0-1000 points to the viewport and rejects unsafe clicks', () => {
   const response = (action) => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(action) }] } }] })
   const viewport = { width: 1440, height: 900 }
-  assert.equal(parseAction(response({ action: 'click', x: 50, y: 60, message: 'Open the island' }), viewport).x, 50)
-  assert.throws(() => parseAction(response({ action: 'click', x: 1440, y: 60, message: 'Outside' }), viewport), /outside/)
+  const parsed = parseAction(response({ action: 'click', x: 500, y: 500, message: 'Open the island' }), viewport)
+  assert.deepEqual([parsed.x, parsed.y, parsed.modelX, parsed.modelY], [720, 450, 500, 500])
+  // The failing CI run's "18 wood node" click: normalized (395,516) is the stone marker, not empty sky at pixel (395,516).
+  const quarry = parseAction(response({ action: 'click', x: 395, y: 516, message: 'Click the node' }), viewport)
+  assert.deepEqual([quarry.x, quarry.y], [569, 464])
+  assert.equal(parseAction(response({ action: 'click', x: 1000, y: 1000, message: 'Corner' }), viewport).x, 1439)
+  assert.throws(() => parseAction(response({ action: 'click', x: 1001, y: 60, message: 'Outside' }), viewport), /outside/)
   assert.throws(() => parseAction(response({ action: 'evaluate', message: 'Change the save' }), viewport), /invalid action/)
   assert.throws(() => parseAction({ candidates: [{ finishReason: 'MAX_TOKENS' }] }, viewport), /did not finish normally/)
 })
