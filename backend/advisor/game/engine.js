@@ -56,9 +56,14 @@ export function weatherReadiness(state, key = state.weatherCycle?.phase === 'war
   return { key, required, total: shelters.length, ready, vulnerable: shelters.length-ready }
 }
 
+// Current save format. Every loader (local save, cloud save) accepts versions 2..SAVE_VERSION,
+// so bumping this one number is enough when the format changes.
+export const SAVE_VERSION = 7
+export const isSupportedSave = (saved) => Number.isInteger(saved?.version) && saved.version >= 2 && saved.version <= SAVE_VERSION
+
 export function createInitialState(weatherSeed) {
   return {
-    version: 7,
+    version: SAVE_VERSION,
     townName: 'New Haven',
     avatar: { ...DEFAULT_AVATAR },
     avatarSet: false, // true once the player has designed their Captain
@@ -838,7 +843,7 @@ export function gameReducer(state, action) {
 
 // Map the older eight-island town into the current chapter without losing buildings.
 export function migrateSave(saved) {
-  if (!saved || ![2, 3, 4, 5, 6, 7].includes(saved.version)) return createInitialState()
+  if (!isSupportedSave(saved)) return createInitialState()
   const { turn, actionsLeft, report, showReport, ...rest } = saved
   const islandMap = { mistral: 'prism', gardens: 'verdant', skyport: 'prism' }
   const remap = (id) => islandMap[id] || id
@@ -870,7 +875,7 @@ export function migrateSave(saved) {
     })
   }
   return {
-    ...createInitialState(), ...rest, version: 7, toasts: [],
+    ...createInitialState(), ...rest, version: SAVE_VERSION, toasts: [],
     ...normalizeWeatherSave(saved),
     avatar: normalizeAvatar(saved.avatar),
     avatarSet: saved.avatarSet === true,

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react'
-import { createInitialState, gameReducer, migrateSave } from './engine.js'
+import { createInitialState, gameReducer, isSupportedSave, migrateSave } from './engine.js'
 import { Player, isPlayerTask } from './player.js'
 
 const SAVE_KEY = 'cloudbreakers-save-v1'
@@ -10,7 +10,7 @@ function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const s = JSON.parse(raw)
-      if ([2, 3, 4, 5, 6, 7].includes(s?.version)) return migrateSave(s)
+      if (isSupportedSave(s)) return migrateSave(s)
     }
   } catch { /* storage unavailable — start fresh */ }
   return createInitialState(weatherSeed())

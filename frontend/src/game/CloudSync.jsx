@@ -11,7 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import * as api from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useGame } from './GameContext.jsx'
-import { getLevelInfo, migrateSave } from './engine.js'
+import { getLevelInfo, isSupportedSave, migrateSave } from './engine.js'
 
 const SYNC_MS = 30_000
 const OWNER_KEY = 'cloudbreakers-save-owner' // username the local save belongs to (absent = guest save)
@@ -88,7 +88,7 @@ export function SyncProvider({ children }) {
     setSync({ status: 'loading', savedAt: null, error: null })
     try {
       const res = await api.loadTown()
-      const town = [2, 3, 4, 5, 6].includes(res.town?.version) ? migrateSave(res.town) : null
+      const town = isSupportedSave(res.town) ? migrateSave(res.town) : null
       const saved_at = res.saved_at
       const local = stateRef.current
       const owner = ls.get(OWNER_KEY)
