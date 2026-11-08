@@ -10,6 +10,15 @@ const BEACON = [795, 407]
 const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON'])
 export const isPlayerTask = action => TASKS.has(action.type)
 
+/** Move the camera onto the captain. Their place in the world, and the current zoom, stay put. */
+export function centerCameraOnAvatar(camera, avatar) {
+  if (!camera?.flyTo || !camera.view || avatar == null || !Number.isFinite(avatar.x) || !Number.isFinite(avatar.y)) return false
+  const scale = camera.view().s
+  if (!Number.isFinite(scale)) return false
+  camera.flyTo(avatar.x, avatar.y, scale, { duration: 300 })
+  return true
+}
+
 // The player uses the same traced paths and live bridge curves as the residents,
 // but moves only under the player's control and completes tasks on arrival.
 export class Player extends Crowd {
