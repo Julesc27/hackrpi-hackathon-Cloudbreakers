@@ -427,7 +427,9 @@ function ConsultGodsCard({ item }) {
       setPhase('spoken')
       dispatch({ type: 'CONSULT_GODS', poem: res.poem, focus: res.focus }) // charged only once a poem arrives
     } catch (e) {
-      setError(e.status === 429 ? 'The gods grow weary of questions. Return later.' : 'The gods are silent. Nothing was spent.')
+      setError(e.status === 429 ? 'The gods grow weary of questions. Return later.'
+        : e.status === 503 && /cannot be done/.test(e.message) ? 'The gods would only counsel what cannot be done right now, so they hold their tongue. Nothing was spent.'
+        : 'The gods are silent. Nothing was spent.')
       setPhase('silent')
     }
   }
