@@ -26,7 +26,7 @@ test('events give a 24-job grace period, six warning jobs, five active jobs and 
 test('saved random streams vary by town, survive reloads and never schedule back-to-back events', () => {
   const forecasts=new Set()
   for(const seed of [1,519,91831,4294967290,708234]){
-    let s={...createInitialState(seed),xp:1000,connected:['newHaven','prism']}, lastEnd=null, lastWeather=null, activeStart=null
+    let s={...createInitialState(seed),xp:1000,connected:['newHaven','prism'],bridges:[{route:'prism-haven',type:'reinforced',condition:100}]}, lastEnd=null, lastWeather=null, activeStart=null
     for(let n=1;n<250;n++){
       const before=s
       s=job(s,n)

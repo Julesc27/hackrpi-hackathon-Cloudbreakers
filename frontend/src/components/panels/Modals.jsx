@@ -62,9 +62,9 @@ function AccountBox() {
           </button>
           <button
             className="btn-ghost"
-            onClick={() => {
-              ui.closeAll()
-              sync.logout()
+            disabled={sync.status === 'saving' || sync.status === 'loading'}
+            onClick={async () => {
+              if (await sync.logout()) ui.closeAll()
             }}
           >
             Log out
@@ -176,7 +176,7 @@ export function StorageModal() {
             ? ' Storage is full. Spend wood, stone, food, water, seeds, fish, materials, or crystals to make room.'
             : ' Shared storage for wood, stone, food, seeds, water, fish, materials, and crystals. Energy and coins are separate.'}
       </p>
-      <p className="muted small">Town stock is available for building and upgrades. Supplies in your backpack become available here after you deposit them.</p>
+      <p className="muted small">Buildings and upgrades use materials from your backpack first, then Town Storage. Deposit carried supplies to add them to the stock shown here.</p>
       <table className="table" data-tutorial="storage-table">
         <thead>
           <tr>

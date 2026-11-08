@@ -51,9 +51,10 @@ export function QuestBook() {
 
   const go = (m) => {
     const id = m.id
-    if (['firstSteps', 'anchor', 'keepLightsOn'].includes(id)) ui.setPanel('build')
+    if (['firstSteps', 'anchor', 'placeForWater', 'gardenInSky', 'keepLightsOn'].includes(id)) ui.setPanel('build')
     else if (['firstBridge', 'cleanRoute', 'longSpan'].includes(id)) ui.setPanel('map')
     else if (id === 'beaconWakes') ui.openIsland('newHaven')
+    else if (id === 'prismPower') ui.openIsland('prism')
     else if (id === 'balancedTown') ui.setPanel('storage')
     else ui.setPanel(null)
 
@@ -93,7 +94,7 @@ export function QuestBook() {
                   className={`qcard${featured ? ' is-featured' : ''}${done ? ' is-done' : ''}${!isActive && !done ? ' is-locked' : ''}`}
                   data-tutorial={featured || i === 0 ? 'quest-featured' : undefined}
                 >
-                  <div className="qnum">{i + 1}</div>
+                  <div className="qnum">{MISSIONS.indexOf(m) + 1}</div>
                   <div className="qbody">
                     <div className="qtitle">{m.name}</div>
                     <div className="qrow">
