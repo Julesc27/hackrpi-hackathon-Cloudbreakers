@@ -148,7 +148,7 @@
       "type": "market",
       "island": "newHaven",
       "slot": 1,
-      "builtLevel": 5,
+      "builtLevel": 6,
       "paidCost": {
         "wood": 15,
         "coins": 20,
@@ -178,7 +178,7 @@
       "route": "verdant-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 2,
+      "builtLevel": 4,
       "paidCost": {
         "wood": 24,
         "coins": 20,
@@ -189,7 +189,7 @@
       "route": "rain-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 4,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 34,
         "coins": 20,
@@ -200,7 +200,7 @@
       "route": "prism-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 4,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 31,
         "coins": 20,
@@ -211,7 +211,7 @@
       "route": "mercy-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 6,
       "paidCost": {
         "wood": 38,
         "coins": 20,
@@ -222,7 +222,7 @@
       "route": "hearth-haven",
       "type": "reinforced",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 6,
       "paidCost": {
         "wood": 38,
         "coins": 20,

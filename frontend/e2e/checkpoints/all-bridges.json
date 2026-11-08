@@ -164,8 +164,8 @@
     {
       "route": "verdant-haven",
       "type": "rope",
-      "condition": 90,
-      "builtLevel": 2,
+      "condition": 98,
+      "builtLevel": 4,
       "paidCost": {
         "wood": 14
       }
@@ -173,8 +173,8 @@
     {
       "route": "rain-haven",
       "type": "rope",
-      "condition": 94,
-      "builtLevel": 4,
+      "condition": 100,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 20
       }
@@ -182,8 +182,8 @@
     {
       "route": "prism-haven",
       "type": "rope",
-      "condition": 98,
-      "builtLevel": 4,
+      "condition": 100,
+      "builtLevel": 5,
       "paidCost": {
         "wood": 18
       }
@@ -192,7 +192,7 @@
       "route": "mercy-haven",
       "type": "rope",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 6,
       "paidCost": {
         "wood": 22
       }
@@ -201,7 +201,7 @@
       "route": "hearth-haven",
       "type": "rope",
       "condition": 100,
-      "builtLevel": 5,
+      "builtLevel": 6,
       "paidCost": {
         "wood": 22
       }
