@@ -30,6 +30,36 @@ test('every painted stair flight is walkable in both directions using up and dow
   assert.equal(player.canStep('newHaven', [780,760], [780,765]), false, 'Cliffs must remain blocked')
 })
 
+test('Prism stairs remain reversible after landing overshoot at different frame rates', () => {
+  const state = { ...createInitialState(), connected: ['newHaven', 'prism'], bridges: [
+    { route: 'prism-haven', type: 'rope', condition: 100 },
+  ] }
+  const stair = STAIRWAYS.find(stair => stair.id === 'prism-west-terrace')
+  for (const frames of [[1/60], [1/30], [.05], [.1], [.016, .1, .033]]) {
+    for (const extraFrames of [0, 2, 8]) {
+      const player = new Player(state), a = player.avatar
+      Object.assign(a, { isl: stair.island, x: stair.from[0], y: stair.from[1], legs: [], leg: null })
+      let frame = 0
+      const tick = () => player.update(frames[frame++ % frames.length])
+      const progress = () => stairProjection(stair, [a.x, a.y]).t
+      const context = `frames ${frames}, landing delay ${extraFrames}`
+      player.setInput(0, 1)
+      for (let i = 0; i < 300 && progress() < .98; i++) tick()
+      assert.ok(progress() >= .98, `Cannot descend: ${context}`)
+      // Browser polling/key release can arrive several frames after the foot.
+      for (let i = 0; i < extraFrames; i++) tick()
+      player.setInput(0, -1)
+      for (let i = 0; i < 500 && progress() > .02; i++) tick()
+      assert.ok(progress() <= .02, `Cannot return from the lower landing: ${context}`)
+      for (let i = 0; i < extraFrames; i++) tick()
+      player.setInput(0, 1)
+      for (let i = 0; i < 500 && progress() < .98; i++) tick()
+      assert.ok(progress() >= .98, `Cannot return from the upper landing: ${context}`)
+      assert.equal(a.isl, 'prism')
+    }
+  }
+})
+
 test('the captain walks to a task before gathering, and movement itself grants no resources or XP', () => {
   let state = createInitialState()
   const player = new Player(state), before = { ...state.resources }, start = [player.avatar.x, player.avatar.y]
