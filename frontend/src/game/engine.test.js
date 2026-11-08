@@ -133,7 +133,9 @@ test('manual bridge landings save island coordinates without adding the floating
 test('building through the captain waits for arrival and leaves the captain outside the new footprint', () => {
   let state = createInitialState()
   const player = new Player(state), wood = state.resources.wood
+  let workingPosition
   assert.equal(player.request({ type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }, action => {
+    workingPosition = [player.avatar.x, player.avatar.y]
     state = gameReducer(state, action); player.sync(state)
   }), true)
   assert.equal(state.resources.wood, wood)
@@ -142,6 +144,48 @@ test('building through the captain waits for arrival and leaves the captain outs
   assert.ok(state.buildings.some(b => b.type === 'shelter'))
   const a = player.avatar
   assert.equal(player.canStep(a.isl, [a.x,a.y], [a.x,a.y]), true)
+  assert.deepEqual([a.x, a.y], workingPosition, 'The captain should already be clear when the building appears')
+  assert.ok(player.gridLeg(a.isl, a.x, a.y, 635, 610), 'There must be a path back to the workshop')
+})
+
+test('construction leaves a clear working spot and exit on crowded islands', async () => {
+  const { bridgePoints } = await import('../components/world/layout.js')
+  for (const [island, def] of Object.entries(ISLANDS)) {
+    for (const type of ['shelter', 'communityHall']) for (let slot = 0; slot < def.plots.length; slot++) {
+      const state = { ...createInitialState(), connected: Object.keys(ISLANDS), bridges: ROUTES.map(route => ({ route: route.id, type: 'reinforced', condition: 100 })) }
+      state.buildings = [...state.buildings, ...def.plots.flatMap((_, index) => index === slot ? [] : [{ id: `neighbor${index}`, type: 'shelter', island, slot: index }])]
+      const player = new Player(state), point = player.constructionPoint(type, island, slot)
+      const context = `${type} on ${island} plot ${slot}`
+      assert.ok(point, `No clear working spot for ${context}`)
+      Object.assign(player.avatar, { isl: island, x: point[0], y: point[1] })
+      player.sync({ ...state, buildings: [...state.buildings, { id: 'new-building', type, island, slot }] })
+      assert.deepEqual([player.avatar.x, player.avatar.y], point, `Construction overlaps the captain: ${context}`)
+      const exit = island === 'newHaven' ? [635, 610] : bridgePoints(ROUTES.find(route => route.b === island).id).a
+      assert.ok(player.gridLeg(island, ...point, ...exit), `Construction blocks the exit: ${context}`)
+    }
+  }
+})
+
+test('a building appearing under the captain recovers and saves a usable position', () => {
+  const state = createInitialState(), player = new Player(state), plot = ISLANDS.newHaven.plots[0]
+  Object.assign(player.avatar, { isl: 'newHaven', x: plot[0], y: plot[1] })
+  player.remember()
+  let saved
+  player.onSave = position => { saved = position }
+  const built = { ...state, buildings: [...state.buildings, { id: 'new-building', type: 'shelter', island: 'newHaven', slot: 0 }] }
+  player.sync(built)
+  const a = player.avatar, safe = [a.x, a.y]
+  assert.notDeepEqual(safe, plot)
+  assert.equal(player.canStep(a.isl, safe, safe), true)
+  assert.deepEqual(saved, { island: a.isl, x: a.x, y: a.y })
+  assert.ok(player.gridLeg(a.isl, ...safe, 635, 610))
+  assert.equal(player.go('newHaven', [635, 610]), true)
+  for (let i = 0; player.pending && i < 1000; i++) player.update(.1)
+  assert.equal(player.pending, null)
+  assert.ok(Math.hypot(a.x-safe[0], a.y-safe[1]) > 10, 'The captain must be able to leave after recovery')
+  const restored = new Player({ ...built, player: { island: 'newHaven', x: plot[0], y: plot[1] } })
+  assert.notDeepEqual([restored.avatar.x, restored.avatar.y], plot, 'Old saves inside buildings must also recover')
+  assert.ok(restored.gridLeg('newHaven', restored.avatar.x, restored.avatar.y, 635, 610))
 })
 
 test('actions remain available and award XP beyond the former action limit', () => {

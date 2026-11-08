@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { STAIRWAYS, stairProjection } from '../src/components/world/stairways.js'
+import { ISLANDS } from '../src/game/data.js'
 
 const saveKey = 'cloudbreakers-save-v1'
 const checkpoint = (name) => JSON.parse(readFileSync(new URL(`./checkpoints/${name}.json`, import.meta.url), 'utf8'))
@@ -235,6 +236,18 @@ test('new town can build a shelter and finish First Steps', async ({ page }) => 
   await page.locator('[data-tutorial="build-btn-shelter"]').click()
   await page.locator('[data-tutorial="plot-newHaven"]').click()
   await expectSave(page, (town) => town.completed.includes('firstSteps') && town.buildings.some((b) => b.type === 'shelter'))
+  const captain = page.getByRole('region', { name: 'Captain controls' })
+  await expect(captain).toHaveAttribute('data-player-busy', 'false')
+  const start = [Number(await captain.getAttribute('data-player-x')), Number(await captain.getAttribute('data-player-y'))]
+  const town = await savedTown(page), shelter = town.buildings.find(b => b.type === 'shelter')
+  const plot = ISLANDS[shelter.island].plots[shelter.slot], dx = start[0]-plot[0], dy = start[1]-plot[1]
+  const key = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 'ArrowRight' : 'ArrowLeft' : dy > 0 ? 'ArrowDown' : 'ArrowUp'
+  await page.keyboard.down(key)
+  try {
+    await expect.poll(async () => Math.hypot(Number(await captain.getAttribute('data-player-x'))-start[0], Number(await captain.getAttribute('data-player-y'))-start[1])).toBeGreaterThan(4)
+  } finally { await page.keyboard.up(key) }
+  await expectSave(page, s => Math.hypot(s.player.x-start[0], s.player.y-start[1]) > 4)
+  expect((await savedTown(page)).resources).toEqual(town.resources)
   await page.locator('[data-tutorial="rail-quests"]').click()
   await expect(page.getByRole('dialog', { name: "Captain's Log" }).getByText('First Steps')).toBeVisible()
 })
