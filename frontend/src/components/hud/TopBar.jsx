@@ -120,7 +120,7 @@ export default function TopBar() {
 
   useEffect(() => {
     const onBubbleArrive = (e) => {
-      if (!e.detail?.fromBubble || !e.detail?.isLast) return
+      if ((!e.detail?.fromBubble && !e.detail?.fromDeposit) || !e.detail?.isLast) return
       triggerGain(e.detail.res, e.detail.totalAmount || e.detail.amount)
     }
     window.addEventListener('cloudbreakers:resource-token-arrive', onBubbleArrive)

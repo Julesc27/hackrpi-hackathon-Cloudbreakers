@@ -185,6 +185,18 @@ export function useWorldEvents() {
       }
     }
 
+    // Animate only successful deposits. Backpack contents do not count as town stock
+    // until DEPOSIT_BACKPACK creates a new receipt in the reducer.
+    const deposit = state.lastDeposit
+    if (deposit && deposit.id !== p.lastDeposit?.id) {
+      Object.entries(deposit.items).forEach(([res, amount], i) => {
+        if (amount <= 0) return
+        window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
+          detail: { res, amount, fromBackpack: true, fromDeposit: true, delayOffset: i * 120 },
+        }))
+      })
+    }
+
     // beacon
     if (state.beaconRestored && !p.beaconRestored) {
       out.push({ kind: 'burst', x: STARTER_BEACON[0], y: STARTER_BEACON[1], ttl: 1200 }, { kind: 'float', x: STARTER_BEACON[0], y: STARTER_BEACON[1] - 45, text: 'The beacon wakes!', ttl: 2400 })

@@ -125,6 +125,7 @@ export default function FlyingResources() {
           amount: p.amount,
           isLast: p.isLast,
           fromBubble: p.fromBubble,
+          fromDeposit: p.fromDeposit,
           totalAmount: p.totalAmount,
         },
       })
@@ -144,7 +145,13 @@ export default function FlyingResources() {
       const cam = ui.camera?.current
 
       let startPos
-      if (detail.startX != null && detail.startY != null) {
+      if (detail.fromBackpack) {
+        const el = document.querySelector('[data-tutorial="rail-backpack"]')
+        const r = el?.getBoundingClientRect()
+        startPos = r && r.width && r.height
+          ? { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+          : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      } else if (detail.startX != null && detail.startY != null) {
         startPos = { x: detail.startX, y: detail.startY }
       } else {
         startPos = getSiteScreenPos(detail.siteId, detail.worldX, detail.worldY, cam)
@@ -153,8 +160,8 @@ export default function FlyingResources() {
       const { x: targetX, y: targetY, inTopBar } = getResourceTargetPos(res, detail.backpack)
 
       // 2–5 tokens per resource, staggered
-      const count = Math.min(5, Math.max(2, Math.round(totalAmount / 1.5)))
-      const portion = Math.max(1, Math.floor(totalAmount / count))
+      const count = Math.min(5, Math.max(1, Math.round(totalAmount / 1.5)))
+      const portion = Math.floor(totalAmount / count)
       const remainder = totalAmount - portion * count
 
       const now = performance.now()
@@ -189,6 +196,7 @@ export default function FlyingResources() {
           amount: tokenAmount,
           totalAmount,
           fromBubble: detail.fromBubble,
+          fromDeposit: Boolean(detail.fromDeposit),
           backpack: Boolean(detail.backpack),
           isLast: i === count - 1,
           inTopBar,

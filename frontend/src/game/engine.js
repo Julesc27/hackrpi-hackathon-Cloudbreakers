@@ -7,7 +7,7 @@ import { freshDeposits, normalizeDeposits, primaryReward, viewDeposit } from './
 import { DEFAULT_AVATAR, normalizeAvatar } from './avatar.js'
 
 export const METERS = ['energy', 'water', 'food']
-export const BACKPACK_RESOURCES = ['wood', 'stone', 'seeds', 'crystals', 'materials', 'fish']
+export const BACKPACK_RESOURCES = ['wood', 'stone', 'seeds', 'crystals', 'materials', 'fish', 'food']
 export const backpackCapacity = () => 20
 export const backpackUsed = state => BACKPACK_RESOURCES.reduce((sum, key) => sum + (state.backpack?.[key] || 0), 0)
 const emptyBackpack = () => Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, 0]))
@@ -31,6 +31,7 @@ export function createInitialState() {
     backpack: emptyBackpack(),
     deposits: freshDeposits(),
     lastInteraction: null,
+    lastDeposit: null,
     happiness: 62,
     population: 6,
     sustainability: 40,
@@ -471,8 +472,8 @@ export function gatherAvailability(state, siteId, now = Date.now()) {
   const view = viewDeposit(state.deposits, siteId, now)
   if (!view?.ready) return 'Depleted — regrowing'
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
-  // Materials ride in the backpack; survival supplies go straight to town storage. A full
-  // backpack only blocks sites whose main reward is a material (water and food still flow).
+  // Materials and manually gathered food ride in the backpack; water goes straight to town storage. A full
+  // backpack blocks sites whose main reward must be carried (water still flows).
   const primary = primaryReward(site)
   if (BACKPACK_RESOURCES.includes(primary) && backpackUsed(state) >= backpackCapacity(state)) return 'Backpack full — return to town and deposit supplies'
   const cap = caps(state)
@@ -545,8 +546,13 @@ export function gameReducer(state, action) {
       if (!backpackUsed(state)) return state
       if (!atTownStorage(state, action.storageId)) return toast(state, 'warn', 'Walk to the workshop or a connected storage house to deposit supplies.')
       const resources = { ...state.resources }
-      for (const key of BACKPACK_RESOURCES) resources[key] = (resources[key] || 0) + (state.backpack?.[key] || 0)
-      return toast({ ...state, resources, backpack: emptyBackpack(), nextId: state.nextId+1 }, 'success', 'Backpack deposited into town storage.')
+      const items = Object.fromEntries(BACKPACK_RESOURCES
+        .map(key => [key, state.backpack?.[key] || 0])
+        .filter(([, amount]) => amount > 0))
+      for (const [key, amount] of Object.entries(items)) resources[key] = (resources[key] || 0) + amount
+      return toast({ ...state, resources, backpack: emptyBackpack(),
+        lastDeposit: { id: `d${state.nextId}`, items }, nextId: state.nextId + 1
+      }, 'success', 'Backpack deposited into town storage.')
     }
     case 'GATHER_WOOD':
       return gatherAtSite(state, 'grove', action.now)
