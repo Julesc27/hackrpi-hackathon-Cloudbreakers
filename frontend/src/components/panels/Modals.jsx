@@ -172,6 +172,11 @@ export function StorageModal() {
         </div>
         <div>
           <Smile size={20} /> Happiness <strong>{state.happiness}</strong>
+          {net.happiness != null && (
+            <span className={`delta ${net.happiness > 0 ? 'up' : net.happiness < 0 ? 'down' : 'zero'}`} style={{ marginLeft: 6 }}>
+              {net.happiness > 0 ? `+${net.happiness}` : net.happiness === 0 ? '±0' : net.happiness}
+            </span>
+          )}
         </div>
         <div>
           <Leaf size={20} /> Sustainability <strong>{state.sustainability}%</strong>

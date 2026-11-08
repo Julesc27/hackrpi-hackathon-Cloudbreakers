@@ -138,7 +138,7 @@ export default function TopBar() {
     >
       <Meter k="energy"    label="Energy"    value={r.energy}        max={cap.energy}  net={net.energy}    gain={gains.energy}    color="linear-gradient(90deg,#f0c53c,#ffe28a)" />
       <Meter k="water"     label="Water"     value={r.water}         max={cap.water}   net={net.water}     gain={gains.water}     color="linear-gradient(90deg,#3aa2f0,#8fd3ff)" />
-      <Meter k="happiness" label="Happiness" value={state.happiness} max={100}                             gain={gains.happiness}  color="linear-gradient(90deg,#b796f0,#e6d4ff)" />
+      <Meter k="happiness" label="Happiness" value={state.happiness} max={100} net={net.happiness} gain={gains.happiness} color="linear-gradient(90deg,#b796f0,#e6d4ff)" />
       <Meter k="food"      label="Food"      value={r.food}          max={cap.food}    net={net.food}      gain={gains.food}      color="linear-gradient(90deg,#5fb24f,#a8e08a)" />
       <Count k="wood"      label="Wood"      value={r.wood}          net={net.wood}    gain={gains.wood} />
       <Count k="stone"     label="Stone"     value={r.stone}         net={net.stone}   gain={gains.stone} />
