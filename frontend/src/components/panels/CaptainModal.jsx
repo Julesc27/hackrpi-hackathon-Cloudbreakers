@@ -1,11 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
+import { useAuth } from '../../auth/AuthContext.jsx'
+import { useSync } from '../../game/CloudSync.jsx'
 import { AVATAR_OPTIONS, normalizeAvatar, randomAvatar } from '../../game/avatar.js'
 import AvatarPortrait from '../AvatarPortrait.jsx'
 import { Modal } from './Panel.jsx'
 
 // "Your Captain": choose how you appear on the map and in the HUD.
 // Changes preview live and are only kept when you press Save.
+//
+// New accounts are sent here automatically (useCaptainOnboarding): the editor opens as a
+// "Create your Captain" step that can't be dismissed, and saving uploads the town (with the
+// avatar) to the account straight away. Accounts made before avatars existed get the same
+// one-time step on their next login.
+
+/** Open the Captain editor for a logged-in player who hasn't designed their Captain yet. */
+export function useCaptainOnboarding() {
+  const { state } = useGame()
+  const ui = useUI()
+  const auth = useAuth()
+  const sync = useSync()
+  // wait until the account's save has been loaded or uploaded, so we ask about the right town
+  const ready = auth.status === 'authed' && sync && !['off', 'loading'].includes(sync.status)
+  const needed = ready && !state.avatarSet && !auth.loginOpen
+  useEffect(() => {
+    if (needed && ui.panel !== 'captain') { ui.setPlacing?.(null); ui.setPanel('captain') }
+  }, [needed, ui.panel]) // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 function Choice({ label, field, draft, set, swatch = false }) {
   return (
@@ -31,6 +52,9 @@ function Choice({ label, field, draft, set, swatch = false }) {
 export function CaptainModal() {
   const { state, dispatch } = useGame()
   const ui = useUI()
+  const auth = useAuth()
+  // first time for a logged-in player: a welcome step that ends by saving
+  const [welcome] = useState(() => auth.status === 'authed' && !state.avatarSet)
   const [draft, setDraft] = useState(() => normalizeAvatar(state.avatar))
   const set = (field, value) => setDraft((d) => normalizeAvatar({ ...d, [field]: value }))
   const close = () => ui.setPanel(null)
@@ -38,18 +62,20 @@ export function CaptainModal() {
 
   return (
     <Modal
-      title="Your Captain"
-      kicker="How you appear in the sky"
+      title={welcome ? 'Create your Captain' : 'Your Captain'}
+      kicker={welcome ? `Welcome aboard${auth.player?.username ? `, ${auth.player.username}` : ''}!` : 'How you appear in the sky'}
       onClose={close}
+      dismissable={!welcome}
       size="lg"
       className="captain-modal"
       footer={
         <div className="row-btns cap-foot">
           <button type="button" className="btn-ghost" onClick={() => setDraft(randomAvatar())}>Surprise me</button>
-          <button type="button" className="btn-gold" onClick={save}>Save Captain</button>
+          <button type="button" className="btn-gold" onClick={save}>{welcome ? 'Set sail' : 'Save Captain'}</button>
         </div>
       }
     >
+      {welcome && <p className="cap-welcome">Your Captain is saved to your account, so they’ll be waiting on any device you log in from. You can change their look any time from the Captain button.</p>}
       <div className="captain-editor">
         <div className="cap-preview">
           <AvatarPortrait avatar={draft} mode="full" animate size={150} label="Preview of your Captain" />

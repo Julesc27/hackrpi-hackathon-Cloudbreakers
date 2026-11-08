@@ -5,7 +5,7 @@ etc.). It does NOT re-run game rules, so a determined player can still edit thei
 extra="allow" keeps fields the frontend adds later instead of silently dropping them.
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +46,26 @@ class Bridge(_Loose):
     builtTurn: NonNegInt | None = None  # compatibility with version 2 saves
 
 
+Colour = Annotated[str, Field(pattern=r"^#[0-9a-fA-F]{6}$")]
+
+
+class Avatar(_Loose):
+    """The player's Captain (frontend/src/game/avatar.js). Choices are checked against the
+    editor's options; colours must be plain #rrggbb hex so nothing odd can be injected."""
+
+    body: Literal["man", "woman"]
+    skin: Colour
+    eyes: Literal["round", "lashes", "happy", "wide", "sleepy"] = "round"
+    eyeColor: Colour = "#2a1f2e"
+    hairStyle: Literal["short", "curly", "long", "ponytail", "bun", "bald"]
+    hair: Colour
+    beard: Literal["none", "stubble", "beard"] = "none"
+    outfit: Literal["coat", "tunic", "cloak", "dress", "apron"]
+    top: Colour
+    bottom: Colour
+    hat: Literal["none", "captain", "aviator", "straw", "cap", "hood"]
+
+
 class JournalEntry(_Loose):
     id: str
     level: int = Field(default=1, ge=1)
@@ -58,6 +78,8 @@ class JournalEntry(_Loose):
 class TownSave(_Loose):
     version: int = Field(ge=1)
     townName: str = Field(max_length=60)
+    avatar: Avatar | None = None  # None only for saves from before the Captain editor
+    avatarSet: bool = False  # the player has designed their Captain (asked once after sign-up)
     turn: int | None = Field(default=None, ge=1)  # legacy saves only
     actionsLeft: NonNegInt | None = None
     resources: Resources

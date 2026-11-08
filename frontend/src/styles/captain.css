@@ -19,6 +19,7 @@
 @media (max-width: 800px) { .rail-item:has([data-tutorial="rail-captain"]) { display: none; } }
 
 /* ---------- Editor ---------- */
+.cap-welcome { margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; background: rgba(63, 98, 184, 0.1); border: 1px solid rgba(63, 98, 184, 0.3); color: var(--ink); font-size: 14px; line-height: 1.45; }
 .captain-editor { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: start; }
 .cap-preview {
   position: sticky; top: 0; z-index: 2;

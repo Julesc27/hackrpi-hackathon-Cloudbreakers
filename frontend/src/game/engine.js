@@ -14,6 +14,7 @@ export function createInitialState() {
     version: 5,
     townName: 'New Haven',
     avatar: { ...DEFAULT_AVATAR },
+    avatarSet: false, // true once the player has designed their Captain
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
     deposits: { ...STARTER_DEPOSITS },
     lastInteraction: null,
@@ -549,7 +550,7 @@ export function gameReducer(state, action) {
     case 'SEEN_INTRO':
       return { ...state, seenIntro: true }
     case 'SET_AVATAR':
-      return { ...state, avatar: normalizeAvatar(action.avatar) }
+      return { ...state, avatar: normalizeAvatar(action.avatar), avatarSet: true }
     case 'READ_JOURNAL':
       return { ...state, journalUnread: 0 }
     case 'NEW_GAME':
@@ -597,6 +598,7 @@ export function migrateSave(saved) {
   return {
     ...createInitialState(), ...rest, version: 5, toasts: [],
     avatar: normalizeAvatar(saved.avatar),
+    avatarSet: saved.avatarSet === true,
     resources: { ...createInitialState().resources, ...saved.resources },
     deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
     connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),

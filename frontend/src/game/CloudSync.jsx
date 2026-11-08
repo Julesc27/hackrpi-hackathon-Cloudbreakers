@@ -43,6 +43,8 @@ export function SyncProvider({ children }) {
   const reconciling = useRef(null) // username currently being reconciled
   const inFlight = useRef(false)
   const pushAfterRender = useRef(false)
+  const pushAgain = useRef(false) // a save was asked for while another was uploading
+  const pushRef = useRef(null)
 
   const setDirty = (v) => { dirty.current = v; ls.set(DIRTY_KEY, v ? '1' : null) }
 
@@ -56,7 +58,8 @@ export function SyncProvider({ children }) {
   }, [])
 
   const push = useCallback(async ({ keepalive = false, force = false } = {}) => {
-    if (!username || !ready.current || inFlight.current) return
+    if (!username || !ready.current) return
+    if (inFlight.current) { if (dirty.current || force) pushAgain.current = true; return }
     if (!dirty.current && !force) return
     inFlight.current = true
     // Clear only the in-memory flag; the persisted one is cleared after the server confirms,
@@ -73,8 +76,10 @@ export function SyncProvider({ children }) {
       handleError(e)
     } finally {
       inFlight.current = false
+      if (pushAgain.current) { pushAgain.current = false; pushRef.current?.() }
     }
   }, [username, handleError])
+  pushRef.current = push
 
   // Decide whose save wins when a player logs in on this device.
   const reconcile = useCallback(async () => {
@@ -150,7 +155,8 @@ export function SyncProvider({ children }) {
       return
     }
     setDirty(true)
-    if (pushAfterRender.current || prev.xp !== state.xp) {
+    // gameplay progress and a new Captain look go to the server straight away
+    if (pushAfterRender.current || prev.xp !== state.xp || prev.avatar !== state.avatar) {
       pushAfterRender.current = false
       push()
     }

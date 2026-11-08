@@ -539,3 +539,13 @@ test('Captain eyes are a style and a colour from the editor', () => {
   const bad = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { eyes: 'laser', eyeColor: 'red' } })
   assert.deepEqual([bad.avatar.eyes, bad.avatar.eyeColor], ['lashes', '#5a3a24'])
 })
+
+test('designing the Captain marks it as set, and that survives saving and loading', () => {
+  const fresh = createInitialState()
+  assert.equal(fresh.avatarSet, false)
+  const set = gameReducer(fresh, { type: 'SET_AVATAR', avatar: fresh.avatar })
+  assert.equal(set.avatarSet, true)
+  assert.equal(migrateSave(JSON.parse(JSON.stringify(set))).avatarSet, true)
+  const { avatarSet, ...old } = fresh
+  assert.equal(migrateSave(old).avatarSet, false)
+})
