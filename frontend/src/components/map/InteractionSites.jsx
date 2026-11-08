@@ -30,6 +30,7 @@ export default function InteractionSites() {
       const depleted = site.deposit && state.deposits[site.deposit] <= 0
       const label = depleted ? 'Depleted · build outward' : site.label
       return <g key={id} transform={`translate(${x} ${y})`} role="button" tabIndex="0" aria-label={`${site.label}${site.deposit ? `, ${state.deposits[site.deposit]} remaining` : ''}`} aria-disabled={Boolean(reason)}
+        data-tutorial={id === 'grove' ? 'gather-wood-site' : undefined}
         className={`resource-site site-${site.kind}${reason ? ' is-unavailable' : ''}${depleted ? ' is-depleted' : ''}`}
         onClick={() => activate(id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(id) } }}>
         <title>{reason || `${site.label} · ${Object.entries(site.reward).map(([key, value]) => `+${value} ${RESOURCES[key].label}`).join(', ')}`}</title>
