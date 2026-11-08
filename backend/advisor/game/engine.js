@@ -46,7 +46,7 @@ export function shelterWork(state, buildingId, repair = false) {
   const reason = !islandAccess(state)[building.island] ? 'Reconnect this island first.'
     : repair ? (shelterCondition(building) >= 100 ? 'This shelter is already in good condition.' : null)
     : !next ? 'This shelter is already stormproof.' : getLevelInfo(state.xp).level < next.unlock ? `Reach player level ${next.unlock} first.` : null
-  return { building, next, cost, reason: reason || (!canAfford(state.resources,cost) ? 'Deposit more construction supplies in Town Storage.' : null) }
+  return { building, next, cost, reason: reason || (!canAffordConstruction(state,cost) ? 'Gather more construction supplies.' : null) }
 }
 export function weatherReadiness(state, key = state.weatherCycle?.phase === 'warning' ? state.forecast : state.weather) {
   const required = WEATHER[key]?.shelterLevel || 1
@@ -129,6 +129,23 @@ export function caps(state) {
 
 export function canAfford(resources, cost = {}) {
   return Object.entries(cost).every(([k, v]) => (resources[k] ?? 0) >= v)
+}
+export function constructionResources(state) {
+  const resources = { ...state.resources }
+  for (const key of BACKPACK_RESOURCES) resources[key] = (resources[key] || 0)+(state.backpack?.[key] || 0)
+  return resources
+}
+export const canAffordConstruction = (state, cost) => canAfford(constructionResources(state),cost)
+
+// Spend carried materials first to free backpack space. Call only after validating the job.
+function payConstruction(state, cost) {
+  const resources = { ...state.resources }, backpack = { ...state.backpack }
+  for (const [key, amount] of Object.entries(cost)) {
+    const carried = BACKPACK_RESOURCES.includes(key) ? Math.min(backpack[key] || 0,amount) : 0
+    if (carried) backpack[key] -= carried
+    resources[key] = (resources[key] || 0)-(amount-carried)
+  }
+  return { resources, backpack }
 }
 function pay(resources, cost = {}) {
   const r = { ...resources }
@@ -592,7 +609,7 @@ function gatherAtSite(state, siteId, now = Date.now()) {
       carried: Object.fromEntries(Object.entries(reward).filter(([key]) => carried(key))) },
   }
   s = progressSettlement(s, 10)
-  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Backpack in the side bar to return and deposit your supplies.')
+  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Build with carried materials or open Backpack to deposit supplies.')
   if (node.stock === 0) s = journal(s, 'event', `${site.label} is resting`, `${site.label} is depleted and will regrow on its own. Nothing is added to storage while it waits.`)
   return s
 }
@@ -611,7 +628,7 @@ export function gameReducer(state, action) {
         ...b, condition: 100, shelterLevel: repair ? shelterLevel(b) : shelterLevel(b)+1,
         ...(!repair && { paidCost: addCosts(recordedCost(b,BUILDINGS.shelter.cost),work.cost) }),
       })
-      return progressSettlement(toast({ ...state, buildings, resources: pay(state.resources,work.cost) },'build',repair ? 'Shelter repaired.' : `Shelter upgraded to level ${work.next === SHELTER_LEVELS[3] ? 3 : 2}: ${work.next.name}.`),10)
+      return progressSettlement(toast({ ...state, buildings, ...payConstruction(state,work.cost) },'build',repair ? 'Shelter repaired.' : `Shelter upgraded to level ${work.next === SHELTER_LEVELS[3] ? 3 : 2}: ${work.next.name}.`),10)
     }
     case 'REMOVE_BUILDING':
     case 'REMOVE_BRIDGE': {
@@ -649,12 +666,12 @@ export function gameReducer(state, action) {
       if (!ISLANDS[island]) return toast(state, 'warn', 'Unknown island.')
       if (def.homeOnly && island !== 'newHaven') return toast(state, 'warn', `${def.name} must be built on New Haven.`)
       if (!islandAccess(state)[island]) return toast(state, 'warn', `Connect ${ISLANDS[island]?.name || 'that island'} before building there.`)
-      if (!canAfford(state.resources, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
+      if (!canAffordConstruction(state, def.cost)) return toast(state, 'warn', `Not enough resources for a ${def.name}.`)
       if (!def.infrastructure && (!Number.isInteger(slot) || slot < 0 || slot >= ISLANDS[island].plots.length)) return state
       if (!def.infrastructure && state.buildings.some((b) => !BUILDINGS[b.type].infrastructure && b.island === island && b.slot === slot)) return state
       let s = {
         ...state,
-        resources: pay(state.resources, def.cost),
+        ...payConstruction(state, def.cost),
         buildings: [...state.buildings, { id: `b${state.nextId}`, type: buildingType, island, slot: def.infrastructure ? -3 : slot, builtLevel: getLevelInfo(state.xp).level, paidCost: { ...def.cost } }],
         nextId: state.nextId + 1,
       }
@@ -669,11 +686,11 @@ export function gameReducer(state, action) {
       if (!hasAnchor(state)) return toast(state, 'warn', 'Build a Bridge Anchor on New Haven first.')
       if (!isUnlocked(state, bridgeType)) return toast(state, 'warn', `${BRIDGE_TYPES[bridgeType].name} bridges unlock at level ${unlockLevel(bridgeType)}.`)
       const cost = bridgeCost(route, bridgeType)
-      if (!canAfford(state.resources, cost)) return toast(state, 'warn', 'Not enough resources for this bridge.')
+      if (!canAffordConstruction(state, cost)) return toast(state, 'warn', 'Not enough resources for this bridge.')
       const dest = otherEnd(route, state.connected)
       let s = {
         ...state,
-        resources: pay(state.resources, cost),
+        ...payConstruction(state, cost),
         bridges: [...state.bridges, { route: routeId, type: bridgeType, condition: 100, builtLevel: getLevelInfo(state.xp).level, paidCost: { ...cost } }],
         connected: [...state.connected, dest],
       }
@@ -689,10 +706,10 @@ export function gameReducer(state, action) {
       if (!isUnlocked(state, 'reinforced')) return toast(state, 'warn', `Reinforced bridges unlock at level ${unlockLevel('reinforced')}.`)
       const full = bridgeCost(ROUTE_MAP[b.route], 'reinforced')
       const cost = { wood: Math.ceil(full.wood / 2), coins: full.coins, stone: full.stone }
-      if (!canAfford(state.resources, cost)) return toast(state, 'warn', 'Not enough resources to reinforce.')
+      if (!canAffordConstruction(state, cost)) return toast(state, 'warn', 'Not enough resources to reinforce.')
       let s = {
         ...state,
-        resources: pay(state.resources, cost),
+        ...payConstruction(state, cost),
         bridges: state.bridges.map((x) => (x === b ? { ...x, type: 'reinforced', condition: 100, paidCost: addCosts(recordedCost(b,bridgeCost(ROUTE_MAP[b.route],b.type)),cost) } : x)),
       }
       s = toast(s, 'build', `${bridgeLabel(b.route)} reinforced`)
@@ -702,10 +719,10 @@ export function gameReducer(state, action) {
     case 'REPAIR_BRIDGE': {
       const b = state.bridges.find((x) => x.route === action.routeId)
       if (!b || b.condition >= 100) return state
-      if (!canAfford(state.resources, REPAIR_COST)) return toast(state, 'warn', 'Not enough wood to repair.')
+      if (!canAffordConstruction(state, REPAIR_COST)) return toast(state, 'warn', 'Not enough wood to repair.')
       let s = {
         ...state,
-        resources: pay(state.resources, REPAIR_COST),
+        ...payConstruction(state, REPAIR_COST),
         bridges: state.bridges.map((x) => (x === b ? { ...x, condition: 100 } : x)),
       }
       s = toast(s, 'build', `${bridgeLabel(b.route)} repaired`)
@@ -714,8 +731,8 @@ export function gameReducer(state, action) {
 
     case 'RESTORE_BEACON': {
       if (state.beaconRestored) return state
-      if (!canAfford(state.resources, BEACON_COST)) return toast(state, 'warn', 'The beacon needs 20 wood and 10 energy.')
-      let s = { ...state, resources: pay(state.resources, BEACON_COST), beaconRestored: true }
+      if (!canAffordConstruction(state, BEACON_COST)) return toast(state, 'warn', 'The beacon needs 20 wood and 10 energy.')
+      let s = { ...state, ...payConstruction(state, BEACON_COST), beaconRestored: true }
       s = toast(s, 'bridge', 'The navigation beacon hums back to life.', 'Beacon restored')
       s = journal(s, 'story', 'The Beacon Wakes', 'Cloud, the old planning assistant, blinks awake inside the beacon: "Oh! Visitors. Wonderful. I have notes."')
       return progressSettlement(s, 10)

@@ -1,6 +1,6 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, ROUTE_MAP, BRIDGE_TYPES, REPAIR_COST } from '../../game/data.js'
-import { bridgeCost, canAfford, hasAnchor, isUnlocked, otherEnd, unlockLevel, bridgeStatus } from '../../game/engine.js'
+import { bridgeCost, canAffordConstruction, constructionResources, hasAnchor, isUnlocked, otherEnd, unlockLevel, bridgeStatus } from '../../game/engine.js'
 import { Modal, CostChips, YieldChips, Progress } from './Panel.jsx'
 import { Lock } from '../icons.jsx'
 import IslandArt from '../IslandArt.jsx'
@@ -38,16 +38,16 @@ export default function BridgeModal() {
           {st === 'closed' ? 'Closed — the island beyond produces nothing until repaired.' : st === 'strained' ? 'Strained — islands beyond produce at half strength.' : 'Holding steady.'}
         </p>
         <div className="row-btns">
-          <button className="btn-gold" disabled={existing.condition >= 100 || !canAfford(state.resources, REPAIR_COST)} onClick={() => { dispatch({ type: 'REPAIR_BRIDGE', routeId: route.id }); close() }}>
-            Repair <CostChips cost={REPAIR_COST} resources={state.resources} />
+          <button className="btn-gold" disabled={existing.condition >= 100 || !canAffordConstruction(state, REPAIR_COST)} onClick={() => { dispatch({ type: 'REPAIR_BRIDGE', routeId: route.id }); close() }}>
+            Repair <CostChips cost={REPAIR_COST} resources={constructionResources(state)} />
           </button>
           {existing.type === 'rope' && (
             <button
               className="btn-ghost"
-              disabled={!isUnlocked(state, 'reinforced') || !canAfford(state.resources, upCost)}
+              disabled={!isUnlocked(state, 'reinforced') || !canAffordConstruction(state, upCost)}
               onClick={() => { dispatch({ type: 'UPGRADE_BRIDGE', routeId: route.id }); close() }}
             >
-              {isUnlocked(state, 'reinforced') ? <>Reinforce <CostChips cost={upCost} resources={state.resources} /></> : <><Lock size={14} /> Reinforce at level {unlockLevel('reinforced')}</>}
+              {isUnlocked(state, 'reinforced') ? <>Reinforce <CostChips cost={upCost} resources={constructionResources(state)} /></> : <><Lock size={14} /> Reinforce at level {unlockLevel('reinforced')}</>}
             </button>
           )}
         </div>
@@ -68,14 +68,14 @@ export default function BridgeModal() {
         {Object.entries(BRIDGE_TYPES).map(([key, t]) => {
           const cost = bridgeCost(route, key)
           const unlocked = isUnlocked(state, key)
-          const affordable = canAfford(state.resources, cost)
+          const affordable = canAffordConstruction(state, cost)
           const disabled = !anchor || !unlocked || !affordable
           const why = !anchor ? 'Needs anchor' : !unlocked ? `Level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : null
           return (
             <div key={key} className={`bridge-option card${!unlocked ? ' is-locked' : ''}`}>
               <h3>{t.name}</h3>
               <p className="muted small">{t.desc}</p>
-              <div className="kv"><span>Cost</span><CostChips cost={cost} resources={state.resources} /></div>
+              <div className="kv"><span>Cost</span><CostChips cost={cost} resources={constructionResources(state)} /></div>
               <Stat label="Stability" value={t.stability} color="linear-gradient(90deg,#7fb8ff,#cfe4ff)" />
               <Stat label="Capacity" value={t.capacity} max={8} suffix=" carts" color="linear-gradient(90deg,#e3b84f,#ffe28a)" />
               <div className="small muted">Island output {Math.round(t.yieldMult * 100)}%</div>

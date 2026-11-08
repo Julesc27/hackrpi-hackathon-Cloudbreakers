@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, removalInfo, bridgeCost, openRoutes } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
@@ -211,12 +211,93 @@ test('depositing requires town storage and transfers supplies exactly once witho
   assert.equal(gameReducer(stored, { type: 'DEPOSIT_BACKPACK' }), stored)
 })
 
-test('carried materials cannot pay for buildings until deposited', () => {
+test('carried materials can build without depositing and are used before town supplies', () => {
   const initial = createInitialState()
   const carrying = { ...initial, resources: { ...initial.resources, wood: 0 }, backpack: { wood: 20 } }
   const action = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
-  assert.equal(gameReducer(carrying, action).buildings.length, carrying.buildings.length)
+  const built = gameReducer(carrying, action)
+  assert.equal(built.buildings.length, carrying.buildings.length+1)
+  assert.equal(built.backpack.wood,10)
+  assert.equal(built.resources.wood,0)
   assert.equal(gameReducer(deposit(carrying), action).buildings.length, carrying.buildings.length+1)
+})
+
+test('every building recipe combines backpack and storage without spending unrelated materials', () => {
+  for (const type of BUILD_ORDER) {
+    const initial=createInitialState(), cost=BUILDINGS[type].cost
+    const resources={...initial.resources,wood:0,stone:0,seeds:0,crystals:0,materials:0,coins:1000}
+    const backpack={fish:1}
+    for(const key of BACKPACK_RESOURCES) if(cost[key]) {
+      backpack[key]=Math.min(2,cost[key]);resources[key]=cost[key]-backpack[key]
+    }
+    const state={...initial,xp:1000,resources,backpack}
+    const combined=constructionResources(state)
+    assert.ok(canAffordConstruction(state,cost),type)
+    const built=gameReducer(state,{type:'BUILD',buildingType:type,island:'newHaven',slot:0})
+    assert.ok(built.buildings.some(b=>b.type===type),type)
+    for(const key of BACKPACK_RESOURCES) {
+      const spent=Math.min(backpack[key]||0,cost[key]||0)
+      assert.equal(built.backpack[key]||0,(backpack[key]||0)-spent,`${type}: backpack ${key}`)
+      assert.equal(built.resources[key],resources[key]-((cost[key]||0)-spent),`${type}: stored ${key}`)
+    }
+    assert.deepEqual(constructionResources(state),combined,'No mutation of either inventory')
+  }
+})
+
+test('insufficient combined stock and occupied plots never spend supplies; coins cannot be invented in a backpack', () => {
+  const initial=createInitialState()
+  const state={...initial,resources:{...initial.resources,wood:5},backpack:{wood:4,stone:2}}
+  const build={type:'BUILD',buildingType:'shelter',island:'newHaven',slot:0}
+  const failed=gameReducer(state,build)
+  assert.deepEqual(failed.resources,state.resources);assert.deepEqual(failed.backpack,state.backpack)
+  const occupied={...state,backpack:{wood:10,stone:2},buildings:[...state.buildings,{id:'occupied',type:'shelter',island:'newHaven',slot:0}]}
+  assert.equal(gameReducer(occupied,build),occupied)
+  const noCoins={...initial,xp:300,resources:{...initial.resources,coins:0},backpack:{coins:100,crystals:3,materials:2}}
+  const solar=gameReducer(noCoins,{type:'BUILD',buildingType:'solarFarm',island:'newHaven',slot:0})
+  assert.deepEqual(solar.backpack,noCoins.backpack);assert.deepEqual(solar.resources,noCoins.resources)
+})
+
+test('backpack-funded construction charges only after work completes and refunds the original recipe once', () => {
+  const initial=createInitialState()
+  let s={...initial,resources:{...initial.resources,wood:4,stone:0},backpack:{wood:6,stone:2}}
+  const player=new Player(s), action={type:'BUILD',buildingType:'shelter',island:'newHaven',slot:0}
+  const dispatch=a=>{s=gameReducer(s,a);player.sync(s)}
+  assert.ok(player.request(action,dispatch))
+  for(let i=0;i<1000&&!player.avatar.task;i++)player.update(.05)
+  assert.ok(player.avatar.task);player.cancel()
+  assert.deepEqual(s.backpack,{wood:6,stone:2});assert.equal(s.resources.wood,4)
+  assert.ok(player.request(action,dispatch))
+  for(let i=0;i<1000&&player.pending;i++)player.update(.05)
+  assert.equal(s.backpack.wood,0);assert.equal(s.backpack.stone,0);assert.equal(s.resources.wood,0)
+  const house=s.buildings.find(b=>b.type==='shelter')
+  assert.deepEqual(house.paidCost,{wood:10,stone:2})
+  const remove={type:'REMOVE_BUILDING',buildingId:house.id}
+  s=gameReducer(s,remove)
+  assert.equal(s.resources.wood,5);assert.equal(s.resources.stone,1)
+  assert.equal(gameReducer(s,remove),s)
+})
+
+test('bridges, shelter protection and the beacon accept carried construction materials', () => {
+  const initial=createInitialState()
+  let s={...initial,xp:1000,resources:{...initial.resources,wood:0,stone:0,materials:0,coins:100},backpack:{wood:14},buildings:[...initial.buildings,{id:'anchor',type:'bridgeAnchor',island:'newHaven',slot:-3}]}
+  s=gameReducer(s,{type:'BUILD_BRIDGE',routeId:'verdant-haven',bridgeType:'rope'})
+  assert.equal(s.bridges.length,1);assert.equal(s.backpack.wood,0)
+  const full=bridgeCost(ROUTES.find(r=>r.id==='verdant-haven'),'reinforced')
+  s={...s,backpack:{wood:Math.ceil(full.wood/2),stone:full.stone}}
+  s=gameReducer(s,{type:'UPGRADE_BRIDGE',routeId:'verdant-haven'})
+  assert.equal(s.bridges[0].type,'reinforced');assert.equal(s.backpack.wood,0);assert.equal(s.backpack.stone,0)
+  s={...s,backpack:{wood:6},bridges:s.bridges.map(b=>({...b,condition:40}))}
+  s=gameReducer(s,{type:'REPAIR_BRIDGE',routeId:'verdant-haven'})
+  assert.equal(s.backpack.wood,0);assert.equal(s.bridges[0].condition,100)
+  s={...initial,resources:{...initial.resources,wood:0,stone:0},backpack:{wood:6,stone:3},buildings:[...initial.buildings,{id:'house',type:'shelter',island:'newHaven',slot:0}]}
+  s=gameReducer(s,{type:'UPGRADE_SHELTER',buildingId:'house'})
+  assert.equal(s.buildings.at(-1).shelterLevel,2);assert.equal(backpackUsed(s),0)
+  s={...s,backpack:{wood:4,stone:2},buildings:s.buildings.map(b=>b.id==='house'?{...b,condition:20}:b)}
+  s=gameReducer(s,{type:'REPAIR_SHELTER',buildingId:'house'})
+  assert.equal(s.buildings.at(-1).condition,100);assert.equal(backpackUsed(s),0)
+  s={...initial,backpack:{wood:20},resources:{...initial.resources,wood:0}}
+  s=gameReducer(s,{type:'RESTORE_BEACON'})
+  assert.equal(s.beaconRestored,true);assert.equal(s.backpack.wood,0)
 })
 
 test('save migration preserves town stock and backpack contents without inventing carried supplies', () => {

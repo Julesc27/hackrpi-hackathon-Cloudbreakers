@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { BUILDINGS, BUILD_ORDER, MISSIONS } from '../../game/data.js'
-import { activeMissions, canAfford, countType, isUnlocked, unlockLevel } from '../../game/engine.js'
+import { activeMissions, canAffordConstruction, constructionResources, countType, isUnlocked, unlockLevel } from '../../game/engine.js'
 import { getAdvice } from '../../game/advisor.js'
 import { eventShouldDismissOverlay } from '../../game/travelInput.js'
 import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
@@ -144,13 +144,13 @@ export function BuildPanel() {
         <header className="ws-head">
           <h2><ArtIcon name="hammer-gold" size={38} /> Town Workshop</h2>
           <div className="ws-sub"><span className="spark">✦</span>Build something bright<span className="spark">✦</span></div>
-          <p>Every new building changes the skyline of New Haven. Earn XP as you build and complete quests to unlock more.</p>
+          <p>Build using your backpack first, then Town Storage. Earn XP as you build and complete quests to unlock more.</p>
         </header>
         <div className="ws-cards" ref={cards.ref} role="region" aria-label="Buildings" tabIndex={0} onKeyDown={cards.onKeyDown}>
           {BUILD_ORDER.map((key) => {
             const def = BUILDINGS[key]
             const unlocked = isUnlocked(state, key)
-            const affordable = canAfford(state.resources, def.cost)
+            const affordable = canAffordConstruction(state, def.cost)
             const built = def.unique && countType(state, key) > 0
             const managing = def.infrastructure && built
             const disabled = !managing && (!unlocked || !affordable || built)
@@ -172,7 +172,7 @@ export function BuildPanel() {
                   {fx.length > 0 && <span className="ws-fx">{fx.join(' · ')}</span>}
                 </div>
                 <div className="ws-cost">
-                  {managing ? <span className="small">Unlocked · no building plot needed</span> : unlocked ? <CostChips cost={def.cost} resources={state.resources} /> : <span className="locked-note"><Lock size={14} /> Level {unlockLevel(key)}</span>}
+                  {managing ? <span className="small">Unlocked · no building plot needed</span> : unlocked ? <CostChips cost={def.cost} resources={constructionResources(state)} /> : <span className="locked-note"><Lock size={14} /> Level {unlockLevel(key)}</span>}
                 </div>
                 <button
                   className={def.infrastructure ? 'btn-gold full' : 'gold-plus'}

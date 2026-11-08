@@ -26,6 +26,48 @@ async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page)), { timeout: 20_000 }).toBeTruthy()
 }
 
+test('building combines carried and stored materials and spends them only after the captain finishes', async ({ page }) => {
+  const initial=checkpoint('new-town')
+  await startAt(page,'new-town',{resources:{...initial.resources,wood:4,stone:0},backpack:{wood:6,stone:2,fish:2}})
+  const startBuild=async()=>{
+    await page.locator('[data-tutorial="rail-build"]').click()
+    const build=page.locator('[data-tutorial="build-btn-shelter"]')
+    await expect(build).toBeEnabled()
+    await expect(page.locator('[data-tutorial="build-card-shelter"] .is-short')).toHaveCount(0)
+    await build.click();await page.locator('[data-tutorial="plot-newHaven"]').click()
+  }
+  await startBuild()
+  const captain=page.getByRole('button',{name:'Center me',exact:true})
+  await expect(captain).toHaveAttribute('data-player-task','build')
+  expect((await savedTown(page)).backpack.wood).toBe(6)
+  expect((await savedTown(page)).resources.wood).toBe(4)
+  await page.keyboard.press('Escape')
+  expect((await savedTown(page)).buildings.some(b=>b.type==='shelter')).toBe(false)
+  await startBuild()
+  await expectSave(page,s=>s.buildings.some(b=>b.type==='shelter'))
+  const built=await savedTown(page)
+  expect(built.resources.wood).toBe(0);expect(built.resources.stone).toBe(0)
+  expect(built.backpack.wood).toBe(0);expect(built.backpack.stone).toBe(0);expect(built.backpack.fish).toBe(2)
+  expect(built.buildings.find(b=>b.type==='shelter').paidCost).toEqual({wood:10,stone:2})
+  await expect(page.locator('[data-tutorial="rail-backpack"]')).toContainText('2/20')
+  const restored=await page.context().newPage();await restored.goto('/')
+  await expect(restored.locator('[data-tutorial="rail-backpack"]')).toContainText('2/20')
+})
+
+test('a bridge can be planned and built with wood split between the backpack and town', async ({ page }) => {
+  const initial=checkpoint('anchor-ready')
+  await startAt(page,'anchor-ready',{resources:{...initial.resources,wood:4},backpack:{wood:10}})
+  await page.getByRole('button',{name:'Explore Verdant Reach',exact:true}).focus();await page.keyboard.press('Enter')
+  await page.getByRole('button',{name:'Plan a bridge',exact:true}).click()
+  const option=page.getByRole('dialog',{name:'Bridge to Verdant Reach'}).locator('.bridge-option').filter({hasText:'Rope & Plank'})
+  await expect(option.locator('.is-short')).toHaveCount(0)
+  const build=option.getByRole('button',{name:'Build bridge',exact:true})
+  await expect(build).toBeEnabled();await build.click()
+  await expectSave(page,s=>s.bridges.some(b=>b.route==='verdant-haven'))
+  const built=await savedTown(page)
+  expect(built.resources.wood).toBe(0);expect(built.backpack.wood).toBe(0)
+})
+
 test('a forecast can be prepared for by upgrading a shelter, with cancellable captain work', async ({ page }, testInfo) => {
   const initial = checkpoint('shelter-built')
   const town = await startAt(page,'shelter-built',{ version:7, weather:'clear', forecast:'heavyRain', weatherCycle:{...initial.weatherCycle,phase:'warning',remaining:1} })
@@ -290,7 +332,7 @@ test('the backpack side action and capacity fit on a phone', async ({ page }, te
 })
 
 test('a built storage house shows its capacity and accepts supplies directly', async ({ page }, testInfo) => {
-  await startAt(page, 'new-town', { xp: 100, backpack: { wood: 8 } })
+  await startAt(page, 'new-town', { xp: 100, backpack: { wood: 20 } })
   await page.locator('[data-tutorial="rail-build"]').click()
   await page.locator('[data-tutorial="build-btn-storageHouse"]').click()
   await page.locator('[data-tutorial="plot-newHaven"]').click()

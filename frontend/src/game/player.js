@@ -2,7 +2,7 @@ import { Crowd, bridgeAt } from '../components/world/people.js'
 import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots, removalInfo, shelterWork } from './engine.js'
+import { islandAccess, gatherAvailability, canAffordConstruction, backpackUsed, storageDepots, removalInfo, shelterWork } from './engine.js'
 import { avatarLook } from './avatar.js'
 import { taskAnimation } from './taskAnimations.js'
 
@@ -209,7 +209,7 @@ export class Player extends Crowd {
     if (a.isl === 'newHaven') {
       choices.push({ id: 'workshop', point: WORKSHOP, label: 'Open workshop', menu: 'build' })
       if (!this.state.beaconRestored) choices.push({ id: 'beacon', point: BEACON, label: 'Restore the beacon', action: { type: 'RESTORE_BEACON' },
-        reason: canAfford(this.state.resources, BEACON_COST) ? null : 'Needs 20 wood and 10 energy' })
+        reason: canAffordConstruction(this.state, BEACON_COST) ? null : 'Needs 20 wood and 10 energy' })
       for (const route of ROUTES) choices.push({ id: route.id, point: bridgePoints(route.id).b,
         label: `${this.bridgeTypes[route.id] ? 'Manage' : 'Plan'} ${ISLANDS[route.b].name} bridge`, menu: 'bridge', route: route.id })
     }

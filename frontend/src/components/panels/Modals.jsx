@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, constructionResources, backpackUsed, storageDepots } from '../../game/engine.js'
 import { consultGods } from '../../api/client.js'
 import { ISLAND_BADGE } from '../artPaths.js'
 import IslandArt from '../IslandArt.jsx'
@@ -343,7 +343,7 @@ export function MapModal() {
                     {status === 'connected'
                       ? <YieldChips yields={d.yields} suffix="" />
                       : route
-                        ? <CostChips cost={bridgeCost(route, 'rope')} resources={state.resources} />
+                        ? <CostChips cost={bridgeCost(route, 'rope')} resources={constructionResources(state)} />
                         : <span className="muted small">No route yet</span>}
                   </div>
                 </>

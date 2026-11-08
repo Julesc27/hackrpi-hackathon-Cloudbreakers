@@ -1,5 +1,5 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { shelterLevel, shelterCondition, shelterWork, weatherReadiness } from '../../game/engine.js'
+import { shelterLevel, shelterCondition, shelterWork, weatherReadiness, constructionResources } from '../../game/engine.js'
 import { SHELTER_LEVELS, WEATHER, ISLANDS } from '../../game/data.js'
 import { Modal, CostChips, Progress } from './Panel.jsx'
 import { WeatherIcon } from '../icons.jsx'
@@ -15,9 +15,9 @@ export function ShelterCare({ building }) {
     <p>{level === 1 ? 'Upgrade to level 2 for rain, heat, crosswinds and drought.' : level === 2 ? 'Protected from ordinary weather. Level 3 protects against solar storms.' : 'Protected against every known weather event.'}</p>
     <label>Condition: {condition}%{condition === 0 && ' · Uninhabitable: 4 beds unavailable'}<Progress value={condition} color={condition ? 'linear-gradient(90deg,#5d9d81,#a8d6ba)' : '#a35440'} /></label>
     <div className="action-stack">
-      {upgrade?.next && <button className="btn-gold" disabled={Boolean(upgrade.reason)} title={upgrade.reason || 'Also restores the shelter to full condition'} onClick={() => dispatch({ type:'UPGRADE_SHELTER', buildingId:building.id })}>Upgrade to level {level+1} · {upgrade.next.name} <CostChips cost={upgrade.cost} resources={state.resources} /></button>}
+      {upgrade?.next && <button className="btn-gold" disabled={Boolean(upgrade.reason)} title={upgrade.reason || 'Also restores the shelter to full condition'} onClick={() => dispatch({ type:'UPGRADE_SHELTER', buildingId:building.id })}>Upgrade to level {level+1} · {upgrade.next.name} <CostChips cost={upgrade.cost} resources={constructionResources(state)} /></button>}
       {upgrade?.next && upgrade.reason && <small className="muted">{upgrade.reason}</small>}
-      {condition < 100 && <><button className="btn-ghost" disabled={Boolean(repair?.reason)} onClick={() => dispatch({ type:'REPAIR_SHELTER', buildingId:building.id })}>Repair shelter <CostChips cost={repair.cost} resources={state.resources} /></button>{repair?.reason && <small className="muted">{repair.reason}</small>}</>}
+      {condition < 100 && <><button className="btn-ghost" disabled={Boolean(repair?.reason)} onClick={() => dispatch({ type:'REPAIR_SHELTER', buildingId:building.id })}>Repair shelter <CostChips cost={repair.cost} resources={constructionResources(state)} /></button>{repair?.reason && <small className="muted">{repair.reason}</small>}</>}
     </div>
   </div>
 }

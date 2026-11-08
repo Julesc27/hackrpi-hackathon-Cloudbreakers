@@ -32,7 +32,7 @@ export function SiteActions({ island }) {
     return <button key={id} data-tutorial={id === 'grove' ? 'gather-wood-btn' : undefined} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
       <span>{site.label}</span>
       <small>Your captain will walk here and work on arrival.</small>
-      {Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && <small>Materials go into your backpack. Deposit them at the workshop or a connected storage house.</small>}
+      {Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && <small>Materials go into your backpack. Use them directly for construction or deposit them at a connected storage house.</small>}
       <small>{Object.entries(site.reward).map(([key, value]) => `+${value} ${RESOURCES[key].label.toLowerCase()}`).join(' · ')} · {label}{site.cost ? ' · uses 1 seed' : ''}</small>
       {reason && <small>{reason}</small>}
       {view.regrowing && <small>Regrows on its own. Waiting does not spend what you are carrying.</small>}

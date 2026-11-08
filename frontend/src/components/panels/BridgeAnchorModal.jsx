@@ -1,6 +1,6 @@
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { BRIDGE_TYPES, ISLANDS } from '../../game/data.js'
-import { bridgeCost, bridgeLabel, canAfford, hasAnchor, openRoutes, otherEnd } from '../../game/engine.js'
+import { bridgeCost, bridgeLabel, canAffordConstruction, constructionResources, hasAnchor, openRoutes, otherEnd } from '../../game/engine.js'
 import { Modal, CostChips } from './Panel.jsx'
 import IslandArt from '../IslandArt.jsx'
 
@@ -29,8 +29,8 @@ export default function BridgeAnchorModal() {
                   <h3>{destination.name}</h3>
                   <div className="muted small">{destination.kind}</div>
                   <p>{route.note}</p>
-                  <div className="anchor-route-cost"><span>Rope bridge</span><CostChips cost={cost} resources={state.resources} /></div>
-                  {!canAfford(state.resources, cost) && <p className="small warn-text">Gather more supplies to afford this crossing.</p>}
+                  <div className="anchor-route-cost"><span>Rope bridge</span><CostChips cost={cost} resources={constructionResources(state)} /></div>
+                  {!canAffordConstruction(state, cost) && <p className="small warn-text">Gather more supplies to afford this crossing.</p>}
                   <button className="btn-gold full" onClick={() => select(route.id)}>Plan bridge to {destination.name}</button>
                 </article>
               )

@@ -11,8 +11,8 @@ export default function Backpack() {
   return <>
     <div className="backpack-summary"><strong>{used} / {capacity} items carried</strong><span className="muted">Shared carrying space</span></div>
     <progress className="backpack-capacity" aria-label="Backpack space" max={capacity} value={used} />
-    <p className="muted small">Gathered materials travel with your captain. Deposit them at the New Haven workshop or any connected storage house before building.</p>
-    {used >= capacity && <p className="backpack-full" role="status">Backpack full. Visit a storage point to make room for more supplies.</p>}
+    <p className="muted small">Build, upgrade and repair using carried materials first, then Town Storage. Deposit spare supplies at the workshop or a connected storage house to free backpack space.</p>
+    {used >= capacity && <p className="backpack-full" role="status">Backpack full. Build with carried materials or deposit supplies to make room.</p>}
     <table className="table backpack-table"><thead><tr><th>Carried supplies</th><th>Amount</th></tr></thead><tbody>
       {BACKPACK_RESOURCES.map(key => { const Icon = RES_ICON[key]; return <tr key={key}><td><Icon size={18} /> {RESOURCES[key].label}</td><td>{state.backpack?.[key] || 0}</td></tr> })}
     </tbody></table>
