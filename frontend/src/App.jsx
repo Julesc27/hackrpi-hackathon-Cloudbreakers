@@ -99,7 +99,7 @@ function GameScreen() {
         <IntroModal />
       )}
 
-      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && ui.panel !== 'captain' && (
+      {!auth.loginOpen && auth.status !== 'loading' && state.seenIntro && (ui.panel !== 'captain' || ui.tutorialActive) && (
         <Tutorial />
       )}
 

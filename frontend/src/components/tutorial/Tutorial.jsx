@@ -1,39 +1,116 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ArtIcon, CloudIcon } from '../icons.jsx'
+import { WORLD } from '../map/Camera.jsx'
 import './Tutorial.css'
 
 // Info-only steps: spotlight an element, explain it, press Next.
 const INFO_STEPS = {
-  9: {
+  12: {
+    target: 'hud-resources',
+    title: 'Resource Management',
+    text: 'These boxes show your wood, water, food, energy, stone, and Cloud Coins. Keep food and water stocked so your villagers can survive!',
+    label: 'Continue ›',
+    next: 13,
+  },
+  13: {
+    target: 'hud-resources',
+    title: 'Resource Flow & Actions',
+    text: 'Notice the small numbers next to the resources and happiness (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount on the next action! Green (+) means production or a happiness gain, red (−) means upkeep or a penalty.',
+    hint: 'Watch these numbers as you build to keep your town balanced',
+    label: 'Next ›',
+    next: 14,
+  },
+  17: {
     target: 'hud-level',
     title: 'Level & XP',
-    text: 'Complete tasks to earn XP. Level up to unlock new buildings and stronger bridges!',
-    label: 'Next \u203a',
-    next: 10,
+    text: 'Complete tasks to earn XP. Level up to unlock new buildings and stronger bridges — you can now level up all the way to Level 20!',
+    label: 'Next ›',
+    next: 18,
   },
-  10: {
+  18: {
     target: 'hud-town',
     title: 'Population & Sustainability',
-    text: 'Population shows villagers versus available housing \u2014 build Shelters to house more. Sustainability drops when you harvest forests, so keep it healthy!',
-    label: 'Next \u203a',
-    next: 11,
+    text: 'Population shows villagers versus available housing — build Shelters to house more. Sustainability drops when you harvest forests, so keep it healthy!',
+    label: 'Next ›',
+    next: 19,
   },
-  15: {
+  22: {
     target: 'settings-btn',
     title: 'Settings',
-    text: 'Log in to save your town to your account, or replay this tutorial any time from Settings \u2192 How to Play.',
-    label: 'Finish \u203a',
-    next: 16,
+    text: 'Log in to save your town to your account, or replay this tutorial any time from Settings → How to Play.',
+    label: 'Finish ›',
+    next: 23,
   },
 }
 
 // Steps that teach an icon + the panel it opens. Each one:
 //   1) points at the icon until the player opens the panel
-//   2) highlights something inside the panel with a "Got it" button
+//   2) highlights something inside the panel with a "Got it" / "Next" button
 // Closing the panel with X / Esc also advances (see auto-advance effect below).
 const PANEL_STEPS = {
+  4: {
+    panel: 'backpack',
+    rail: 'rail-backpack',
+    inner: 'backpack-summary',
+    railTitle: 'Your Backpack',
+    railText: 'The timber you gathered went into your backpack! Click Backpack on the left rail to view your carried supplies.',
+    railHint: 'Click the Backpack button in the left rail',
+    title: 'Backpack & Carrying Capacity',
+    text: 'Your backpack holds gathered building materials like wood and stone. When you build or repair structures, supplies are used from your backpack first, then Town Storage.',
+    nextLabel: 'Next ›',
+    next: 5,
+    keepOpenOnNext: true,
+  },
   11: {
+    panel: 'quests',
+    rail: 'rail-quests',
+    inner: 'quest-featured',
+    railTitle: 'Explore Missions',
+    railText: 'Quests give you goals to work toward and rewards for completing them. Click Quest Book to see your missions!',
+    railHint: 'Click the Quest Book button in the left rail',
+    title: "Captain's Log",
+    text: 'Here in the Captain’s Log, you can see your active objectives, track your progress, and earn rewards like XP and Cloud Coins!',
+    nextLabel: 'Got it ›',
+    next: 12,
+  },
+  14: {
+    panel: 'weather',
+    rail: 'weather-watch',
+    inner: 'weather-summary',
+    railTitle: 'Weather Watch',
+    railText: 'Weather in the skyway shifts over time and can threaten unprotected homes! Click the Weather icon at the top to check the forecast.',
+    railHint: 'Click the Weather icon at the top of the screen',
+    title: 'Weather Readiness',
+    text: 'This screen shows incoming weather events and your shelter readiness. Upgrade shelters to withstand harsh rain, droughts, and solar storms! Weather advances as you complete jobs.',
+    nextLabel: 'Got it ›',
+    next: 15,
+  },
+  15: {
+    panel: 'captain',
+    rail: 'rail-captain',
+    inner: 'captain-preview',
+    railTitle: 'Your Captain',
+    railText: "Customize your Captain's appearance anytime! Click the Captain portrait on the left rail to open the Captain's wardrobe.",
+    railHint: 'Click the Captain portrait on the left rail',
+    title: "Captain's Wardrobe",
+    text: 'Pick your hairstyle, facial hair, skin tone, eye colour, hats, and outfits. Your custom Captain appears across all islands and is saved to your account.',
+    nextLabel: 'Got it ›',
+    next: 16,
+  },
+  16: {
+    panel: 'store',
+    rail: 'rail-store',
+    inner: 'store-items',
+    railTitle: 'The Skyway Store',
+    railText: 'Looking for insight or blessings? Click the Store button on the left rail to consult the sky gods!',
+    railHint: 'Click the Store button on the left rail',
+    title: 'Consult the Gods',
+    text: 'Exchange Cloud Coins and energy here to consult the sky gods for prophecies, poems, and hints about your next journey.',
+    nextLabel: 'Got it ›',
+    next: 17,
+  },
+  19: {
     panel: 'advisor',
     rail: 'rail-advisor',
     inner: 'advisor-card',
@@ -42,10 +119,10 @@ const PANEL_STEPS = {
     railHint: 'Click the Cloud button in the left rail',
     title: 'Advisor Suggestions',
     text: 'Cloud recommends your next move, explains why, and warns you about trade-offs. Tap Ask again for a different idea.',
-    nextLabel: 'Got it \u203a',
-    next: 12,
+    nextLabel: 'Got it ›',
+    next: 20,
   },
-  12: {
+  20: {
     panel: 'map',
     rail: 'nav-map',
     inner: 'chart-first-card',
@@ -53,11 +130,11 @@ const PANEL_STEPS = {
     railText: 'New islands are waiting beyond the clouds. Click Map to open the Skyway Chart!',
     railHint: 'Click the Map button in the bottom bar',
     title: 'Discover Islands',
-    text: 'Each island produces different resources. Connect them with bridges to grow your economy \u2014 costs and yields are shown here.',
-    nextLabel: 'Got it \u203a',
-    next: 13,
+    text: 'Each island produces different resources. Connect them with bridges to grow your economy — costs and yields are shown here.',
+    nextLabel: 'Got it ›',
+    next: 21,
   },
-  13: {
+  21: {
     panel: 'journal',
     rail: 'nav-journal',
     inner: 'journal-first',
@@ -65,28 +142,16 @@ const PANEL_STEPS = {
     railText: 'Your story is recorded as you play. Click Journal to read it!',
     railHint: 'Click the Journal button in the bottom bar',
     title: 'Your Journal',
-    text: 'Discoveries, completed missions, and events are logged here so you can look back on your village\u2019s journey.',
-    nextLabel: 'Got it \u203a',
-    next: 14,
-  },
-  14: {
-    panel: 'storage',
-    rail: 'nav-storage',
-    inner: 'storage-table',
-    railTitle: 'The Storehouse',
-    railText: 'Want the full picture of your supplies? Click Storage to open the Storehouse!',
-    railHint: 'Click the Storage button in the bottom bar',
-    title: 'Backpack and Town Storage',
-    text: 'Open Backpack in the side bar to see carried materials. Building uses these first, then Town Storage. Deposit All unloads spare materials to free space. Storage shows town supplies and their production.',
-    nextLabel: 'Got it \u203a',
-    next: 15,
+    text: 'Discoveries, completed missions, and events are logged here so you can look back on your village’s journey.',
+    nextLabel: 'Got it ›',
+    next: 22,
   },
 }
-const FINAL_STEP = 16
-const TOTAL_STEPS = FINAL_STEP - 2 // steps 2..15 are numbered (welcome + finish are modals)
+const FINAL_STEP = 23
+const TOTAL_STEPS = FINAL_STEP - 2 // steps 2..22 are numbered 1..21 of 21 (welcome + finish are modals)
 
 export default function Tutorial() {
-  const { state } = useGame()
+  const { state, player } = useGame()
   const ui = useUI()
   const {
     tutorialActive,
@@ -110,13 +175,19 @@ export default function Tutorial() {
     stepSnapshot.current = {
       wood: state.resources.wood + (state.backpack?.wood || 0),
       shelters: state.buildings.filter((b) => b.type === 'shelter').length,
-      wasInQuests: false,
       wasOpen: false,
     }
     if (tutorialStep === 2) {
       ui.camera.current?.home(400)
+    } else if (tutorialStep === 3 || tutorialStep === 6 || tutorialStep === 10) {
+      const a = player.current?.avatar
+      const cam = ui.camera.current
+      if (a && cam) {
+        const s = Math.max(1.15, cam.view()?.s || 1)
+        cam.flyTo(a.x, a.y, s, { duration: 350 })
+      }
     }
-  }, [tutorialStep])
+  }, [tutorialStep]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Determine current active target selector and copy based on tutorialStep & current UI state
   let targetSelector = null
@@ -144,14 +215,49 @@ export default function Tutorial() {
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
-      text = 'Choose Gather wood. Your captain will walk to the grove and put the timber in their backpack. Open Backpack in the side bar to deposit materials before building.'
+      text = 'Choose Gather wood. Your captain will walk to the grove and harvest timber for your town.'
       hint = 'Choose Gather wood, then watch your captain walk there'
       showNextBtn = false
     }
   }
 
-  // --- Step 3: Open the Build Menu ---
+  // --- Step 3: Walking to trees and cutting wood ---
   else if (tutorialStep === 3) {
+    targetSelector = 'captain'
+    title = 'Gathering Wood'
+    text = 'Watch your captain walk to the grove and chop the timber. Tasks take a few moments to complete as your captain works on site.'
+    hint = 'Your captain is harvesting the grove...'
+    // No Next button — auto-advances when task finishes
+  }
+
+  // --- Step 5: Deposit backpack supplies into storage ---
+  else if (tutorialStep === 5) {
+    if (ui.panel === 'backpack') {
+      targetSelector = '[data-tutorial="backpack-deposit-btn"]'
+      title = 'Store Supplies'
+      text = 'Your backpack has limited carrying capacity. Unload carried materials into Town Storage at any storage depot to free up space. Click Deposit All!'
+      hint = 'Click Deposit All to store your supplies'
+      showNextBtn = false
+    } else {
+      targetSelector = '[data-tutorial="rail-backpack"]'
+      title = 'Open Backpack'
+      text = 'Click Backpack on the left rail to view your carried materials and deposit them.'
+      hint = 'Click the Backpack button in the left rail'
+      showNextBtn = false
+    }
+  }
+
+  // --- Step 6: Captain walking to storage depot and depositing ---
+  else if (tutorialStep === 6) {
+    targetSelector = 'captain'
+    title = 'Depositing Supplies'
+    text = 'Watch your captain walk to the storage depot to unload the backpack. Stored materials are safe in Town Storage and can still be used for building!'
+    hint = 'Your captain is walking to the depot to store supplies...'
+    // No Next button — auto-advances when task finishes
+  }
+
+  // --- Step 7: Open the Build Menu ---
+  else if (tutorialStep === 7) {
     targetSelector = '[data-tutorial="rail-build"]'
     title = 'Town Workshop'
     text = 'Buildings help your village grow and survive. Click Build to open the Town Workshop!'
@@ -159,8 +265,8 @@ export default function Tutorial() {
     // No Next button — player must click Build; auto-advances when panel opens
   }
 
-  // --- Step 4: Select a Shelter ---
-  else if (tutorialStep === 4) {
+  // --- Step 8: Select a Shelter ---
+  else if (tutorialStep === 8) {
     targetSelector = '[data-tutorial="build-btn-shelter"]'
     title = 'Choose a Building'
     text = 'A Shelter gives your villagers a place to live. Click the + button to select it!'
@@ -168,8 +274,8 @@ export default function Tutorial() {
     // No Next button — player must click the Shelter +; auto-advances when placing starts
   }
 
-  // --- Step 5: Place the Shelter ---
-  else if (tutorialStep === 5) {
+  // --- Step 9: Place the Shelter ---
+  else if (tutorialStep === 9) {
     if (ui.placing === 'shelter') {
       targetSelector = '[data-tutorial="plot-newHaven"]'
       title = 'Place the Shelter'
@@ -184,55 +290,16 @@ export default function Tutorial() {
     // No Next button — placement or re-select auto-advances
   }
 
-  // --- Step 6: Explore the Quest Book ---
-  else if (tutorialStep === 6) {
-    if (ui.panel !== 'quests') {
-      targetSelector = '[data-tutorial="rail-quests"]'
-      title = 'Explore Missions'
-      text = 'Quests give you goals to work toward and rewards for completing them. Click Quest Book to see your missions!'
-      hint = 'Click the Quest Book button in the left rail'
-      // No Next button — player must click Quest Book
-    } else {
-      targetSelector = '[data-tutorial="quest-featured"]'
-      title = "Captain's Log"
-      text = 'Here in the Captain’s Log, you can see your active objectives, track your progress, and earn rewards like XP and Cloud Coins!'
-      showNextBtn = true
-      nextBtnLabel = 'Got it ›'
-      onNext = () => {
-        ui.setPanel(null)
-        setTutorialStep(7)
-      }
-    }
+  // --- Step 10: Constructing the Shelter ---
+  else if (tutorialStep === 10) {
+    targetSelector = 'captain'
+    title = 'Constructing Shelter'
+    text = 'Watch your captain walk to the plot and construct the Shelter. As your town expands, your captain builds and repairs the structures your villagers need!'
+    hint = 'Your captain is constructing the shelter...'
+    // No Next button — auto-advances when task finishes
   }
 
-  // --- Step 7: Understand Resources ---
-  else if (tutorialStep === 7) {
-    targetSelector = '[data-tutorial="hud-resources"]'
-    title = 'Resource Management'
-    text = 'These boxes show your wood, water, food, energy, stone, and Cloud Coins. Keep food and water stocked so your villagers can survive!'
-    showNextBtn = true
-    nextBtnLabel = 'Continue ›'
-    onNext = () => {
-      ui.setPanel(null)
-      setTutorialStep(8)
-    }
-  }
-
-  // --- Step 8: Resource Flow & Next Action Changes ---
-  else if (tutorialStep === 8) {
-    targetSelector = '[data-tutorial="hud-resources"]'
-    title = 'Resource Flow & Actions'
-    text = 'Notice the small numbers next to the resources and happiness (like +1, -1, or ±0). Every time you complete an action, you may gain or lose this amount on the next action! Green (+) means production or a happiness gain, red (−) means upkeep or a penalty.'
-    hint = 'Watch these numbers as you build to keep your town balanced'
-    showNextBtn = true
-    nextBtnLabel = 'Next ›'
-    onNext = () => {
-      ui.setPanel(null)
-      setTutorialStep(9)
-    }
-  }
-
-  // --- Steps 11-14: Advisor, Map, Journal, Storehouse ---
+  // --- Steps with panel open + inner highlight (4, 11, 14, 15, 16, 19, 20, 21) ---
   else if (PANEL_STEPS[tutorialStep]) {
     const cfg = PANEL_STEPS[tutorialStep]
     if (ui.panel !== cfg.panel) {
@@ -248,18 +315,19 @@ export default function Tutorial() {
       showNextBtn = true
       nextBtnLabel = cfg.nextLabel
       onNext = () => {
-        ui.setPanel(null)
+        if (!cfg.keepOpenOnNext) ui.setPanel(null)
         setTutorialStep(cfg.next)
       }
     }
   }
 
-  // --- Info-only steps: Level, Town stats, Settings ---
+  // --- Info-only steps: Resources, Resource flow, Level, Town stats, Settings ---
   else if (INFO_STEPS[tutorialStep]) {
     const cfg = INFO_STEPS[tutorialStep]
     targetSelector = `[data-tutorial="${cfg.target}"]`
     title = cfg.title
     text = cfg.text
+    hint = cfg.hint || ''
     showNextBtn = true
     nextBtnLabel = cfg.label
     onNext = () => setTutorialStep(cfg.next)
@@ -274,51 +342,110 @@ export default function Tutorial() {
   useEffect(() => {
     if (!tutorialActive) return
 
-    // Step 2: Auto-advance when wood is gathered from the popup
+    // Step 2: Auto-advance to Step 3 when gathering starts
     if (tutorialStep === 2) {
       const snap = stepSnapshot.current
-      if (state.resources.wood + (state.backpack?.wood || 0) > snap.wood) {
-        const timer = setTimeout(() => {
-          if (ui.panel === 'island') ui.setPanel(null)
-          setTutorialStep(3)
-        }, 350)
-        return () => clearTimeout(timer)
+      const woodGained = state.resources.wood + (state.backpack?.wood || 0) > snap.wood
+      const hasTask = Boolean(player.current?.pending || player.current?.avatar?.task)
+      if (hasTask || woodGained) {
+        if (ui.panel === 'island') ui.setPanel(null)
+        setTutorialStep(3)
       }
     }
 
-    // Step 3: Auto-advance when build menu opens
+    // Step 3: Auto-advance to Step 4 (Backpack) when wood has been gathered
     if (tutorialStep === 3) {
-      if (ui.panel === 'build') {
+      const snap = stepSnapshot.current
+      const woodGained = state.resources.wood + (state.backpack?.wood || 0) > snap.wood
+      const busy = Boolean(player.current?.pending || player.current?.avatar?.task)
+      if (woodGained && !busy) {
         const timer = setTimeout(() => {
           setTutorialStep(4)
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    }
+
+    // Step 4 or 5: If the player clicked deposit (or deposit task started), close backpack & advance to Step 6
+    if (tutorialStep === 4 || tutorialStep === 5) {
+      const hasDepositTask = Boolean(
+        (player.current?.avatar?.task && player.current.avatar.task.kind === 'deposit') ||
+        (player.current?.pending?.action?.type === 'DEPOSIT_BACKPACK')
+      )
+      const woodDeposited = (state.backpack?.wood || 0) === 0 && state.resources.wood > 0
+      if (hasDepositTask || woodDeposited) {
+        if (ui.panel === 'backpack') ui.setPanel(null)
+        setTutorialStep(6)
+      }
+    }
+
+    // Step 6: Auto-advance to Step 7 (Build Menu) when deposit completes
+    if (tutorialStep === 6) {
+      const woodInBackpack = state.backpack?.wood || 0
+      const busy = Boolean(
+        (player.current?.avatar?.task && player.current.avatar.task.kind === 'deposit') ||
+        (player.current?.pending?.action?.type === 'DEPOSIT_BACKPACK')
+      )
+      if (woodInBackpack === 0 && !busy) {
+        const timer = setTimeout(() => {
+          setTutorialStep(7)
+        }, 500)
+        return () => clearTimeout(timer)
+      }
+    }
+
+    // Step 7: Auto-advance when build menu opens (was step 5)
+    if (tutorialStep === 7) {
+      if (ui.panel === 'build') {
+        const timer = setTimeout(() => {
+          setTutorialStep(8)
         }, 150)
         return () => clearTimeout(timer)
       }
     }
 
-    // Step 4: Auto-advance when shelter is selected for placing
-    if (tutorialStep === 4) {
+    // Step 8: Auto-advance when shelter is selected for placing (was step 6)
+    if (tutorialStep === 8) {
       if (ui.placing === 'shelter') {
         const timer = setTimeout(() => {
-          setTutorialStep(5)
+          setTutorialStep(9)
         }, 150)
         return () => clearTimeout(timer)
       }
     }
 
-    // Step 5: Auto-advance when shelter building is placed
-    if (tutorialStep === 5) {
+    // Step 9: Auto-advance to Step 10 when shelter plot is clicked (was step 7)
+    if (tutorialStep === 9) {
       const snap = stepSnapshot.current
       const currentShelters = state.buildings.filter((b) => b.type === 'shelter').length
-      if (currentShelters > (snap.shelters || 0) || (!ui.placing && currentShelters > 0 && snap.shelters === 0)) {
+      const shelterPlaced = currentShelters > (snap.shelters || 0)
+      const hasBuildTask = Boolean(
+        (player.current?.avatar?.task && player.current.avatar.task.kind === 'build') ||
+        (player.current?.pending?.action?.type === 'BUILD')
+      )
+      if (hasBuildTask || shelterPlaced) {
+        setTutorialStep(10)
+      }
+    }
+
+    // Step 10: Auto-advance to Step 11 when shelter is finished (was step 8)
+    if (tutorialStep === 10) {
+      const snap = stepSnapshot.current
+      const currentShelters = state.buildings.filter((b) => b.type === 'shelter').length
+      const shelterBuilt = currentShelters > (snap.shelters || 0)
+      const busy = Boolean(
+        (player.current?.avatar?.task && player.current.avatar.task.kind === 'build') ||
+        (player.current?.pending?.action?.type === 'BUILD')
+      )
+      if (shelterBuilt && !busy) {
         const timer = setTimeout(() => {
-          setTutorialStep(6)
-        }, 350)
+          setTutorialStep(11)
+        }, 500)
         return () => clearTimeout(timer)
       }
     }
 
-    // Steps 12-15: if the player opened the panel and then closed it (X / Esc), move on
+    // Panel steps (4, 11, 14, 15, 16, 19, 20, 21): if opened and then closed (X / Esc), advance
     const panelCfg = PANEL_STEPS[tutorialStep]
     if (panelCfg) {
       if (ui.panel === panelCfg.panel) {
@@ -327,23 +454,6 @@ export default function Tutorial() {
         const timer = setTimeout(() => setTutorialStep(panelCfg.next), 150)
         return () => clearTimeout(timer)
       }
-    }
-
-    // Step 6b: If the quest panel was open (we were on 6b) and the user closes it via X
-    // or any other means, advance to step 7. This catches the case where "Continue Quest"
-    // navigates away from quests, or the user clicks the close button.
-    if (tutorialStep === 6 && ui.panel !== 'quests') {
-      if (stepSnapshot.current.wasInQuests) {
-        const timer = setTimeout(() => {
-          ui.setPanel(null)
-          setTutorialStep(7)
-        }, 150)
-        return () => clearTimeout(timer)
-      }
-    }
-    // Track that quests panel opened during step 6 (marks we entered 6b)
-    if (tutorialStep === 6 && ui.panel === 'quests') {
-      stepSnapshot.current.wasInQuests = true
     }
 
   }, [
@@ -355,12 +465,13 @@ export default function Tutorial() {
     state.resources.wood,
     state.backpack?.wood,
     state.buildings,
+    player,
     setTutorialStep,
   ])
 
   // --- Mark active target element with data-tutorial-active="true" ---
   useEffect(() => {
-    if (!targetSelector) return
+    if (!targetSelector || targetSelector === 'captain') return
     let currentEl = null
     const syncActiveAttr = () => {
       const el = document.querySelector(targetSelector)
@@ -392,24 +503,59 @@ export default function Tutorial() {
 
     let rafId = null
     const updateTarget = () => {
-      const el = document.querySelector(targetSelector)
-      if (el) {
-        const rect = el.getBoundingClientRect()
-        setTargetRect((prev) => {
-          if (!prev) return rect
-          // Avoid triggering re-renders if position hasn't meaningfully changed
-          if (
-            Math.abs(prev.left - rect.left) < 0.5 &&
-            Math.abs(prev.top - rect.top) < 0.5 &&
-            Math.abs(prev.width - rect.width) < 0.5 &&
-            Math.abs(prev.height - rect.height) < 0.5
-          ) {
-            return prev
+      if (targetSelector === 'captain') {
+        const a = player.current?.avatar
+        const cam = ui.camera.current
+        if (a && cam?.view) {
+          const camEl = document.querySelector('.camera')
+          const cr = camEl ? camEl.getBoundingClientRect() : { left: 0, top: 0 }
+          const { x: camX, y: camY, s } = cam.view()
+          const sx = cr.left + (a.x - WORLD.x) * s + camX
+          const sy = cr.top + (a.y - WORLD.y) * s + camY
+          const radius = Math.max(30, 36 * s)
+          const rect = {
+            left: sx - radius,
+            top: sy - radius * 1.5,
+            width: radius * 2,
+            height: radius * 2.2,
+            right: sx + radius,
+            bottom: sy + radius * 0.7,
           }
-          return rect
-        })
+          setTargetRect((prev) => {
+            if (!prev) return rect
+            if (
+              Math.abs(prev.left - rect.left) < 0.5 &&
+              Math.abs(prev.top - rect.top) < 0.5 &&
+              Math.abs(prev.width - rect.width) < 0.5 &&
+              Math.abs(prev.height - rect.height) < 0.5
+            ) {
+              return prev
+            }
+            return rect
+          })
+        } else {
+          setTargetRect(null)
+        }
       } else {
-        setTargetRect(null)
+        const el = document.querySelector(targetSelector)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          setTargetRect((prev) => {
+            if (!prev) return rect
+            // Avoid triggering re-renders if position hasn't meaningfully changed
+            if (
+              Math.abs(prev.left - rect.left) < 0.5 &&
+              Math.abs(prev.top - rect.top) < 0.5 &&
+              Math.abs(prev.width - rect.width) < 0.5 &&
+              Math.abs(prev.height - rect.height) < 0.5
+            ) {
+              return prev
+            }
+            return rect
+          })
+        } else {
+          setTargetRect(null)
+        }
       }
       rafId = requestAnimationFrame(updateTarget)
     }
@@ -418,7 +564,7 @@ export default function Tutorial() {
     return () => {
       if (rafId) cancelAnimationFrame(rafId)
     }
-  }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing])
+  }, [tutorialActive, targetSelector, tutorialStep, ui.panel, ui.selected, ui.placing, player, ui.camera])
 
   // --- Track viewport size on resize ---
   useEffect(() => {
@@ -522,6 +668,15 @@ export default function Tutorial() {
     )
   }
 
+  // When a PANEL_STEP or modal is in its inner phase (panel already open), skip backdrop
+  // so the game modal is not covered by the tutorial backdrop
+  const insideModal = Boolean(
+    ui.panel && (
+      PANEL_STEPS[tutorialStep]?.panel === ui.panel ||
+      (tutorialStep === 5 && ui.panel === 'backpack')
+    )
+  )
+
   const pad = 6
   let hole = null
   if (targetRect) {
@@ -558,8 +713,10 @@ export default function Tutorial() {
     }
     // On phones there is no room beside things, so only go above or below.
     let order = viewWidth < 640 ? ['bottom', 'top'] : ['bottom', 'top', 'right', 'left']
-    if (tutorialStep === 7 || tutorialStep === 8) order = ['bottom']
+    if (tutorialStep === 12 || tutorialStep === 13) order = ['bottom']
+    else if (tutorialStep === 14 && ui.panel !== 'weather') order = ['bottom', 'left', 'right']
     else if (tutorialStep === 2 && ui.panel === 'island') order = ['left', 'top', 'bottom']
+    else if (targetSelector === 'captain') order = ['bottom', 'top', 'right', 'left']
     else if (viewWidth >= 640 && targetRect.left > viewWidth * 0.6) order = ['left', 'bottom', 'top', 'right']
     else if (viewWidth >= 640 && targetRect.right < viewWidth * 0.25) order = ['right', 'bottom', 'top', 'left']
     placement = order.find(fits)
@@ -588,12 +745,32 @@ export default function Tutorial() {
 
   return (
     <div className="tutorial-root" role="dialog" aria-label={`Tutorial Step ${stepDisplayNumber}`} aria-live="polite">
-      {hole ? (
+      {insideModal ? (
+        // Panel is open: no backdrop so the game modal is visible and interactive
+        hole && <div className="tutorial-spotlight-box" style={{ top: `${hole.top}px`, left: `${hole.left}px`, width: `${hole.width}px`, height: `${hole.height}px` }} />
+      ) : hole ? (
         <>
           <div className="tutorial-backdrop-panel" style={{ top: 0, left: 0, width: '100vw', height: `${hole.top}px` }} onClick={handleBackdropClick} />
           <div className="tutorial-backdrop-panel" style={{ top: `${hole.bottom}px`, left: 0, width: '100vw', bottom: 0 }} onClick={handleBackdropClick} />
           <div className="tutorial-backdrop-panel" style={{ top: `${hole.top}px`, left: 0, width: `${hole.left}px`, height: `${hole.height}px` }} onClick={handleBackdropClick} />
           <div className="tutorial-backdrop-panel" style={{ top: `${hole.top}px`, left: `${hole.right}px`, right: 0, height: `${hole.height}px` }} onClick={handleBackdropClick} />
+          {targetSelector === 'captain' && (
+            <div
+              style={{
+                position: 'fixed',
+                top: `${hole.top}px`,
+                left: `${hole.left}px`,
+                width: `${hole.width}px`,
+                height: `${hole.height}px`,
+                pointerEvents: 'auto',
+                zIndex: 902,
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            />
+          )}
           <div className="tutorial-spotlight-box" style={{ top: `${hole.top}px`, left: `${hole.left}px`, width: `${hole.width}px`, height: `${hole.height}px` }} />
         </>
       ) : (

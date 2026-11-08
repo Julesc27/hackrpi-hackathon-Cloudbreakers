@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS, WEATHER, INTRO, RESOURCES, MISSIONS, CONSULT_COST } from '../../game/data.js'
-import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots, storageUsed } from '../../game/engine.js'
+import { caps, projectProduction, housing, islandAccess, bridgeLabel, openRoutes, otherEnd, bridgeCost, canAfford, backpackUsed, storageDepots, storageUsed, constructionResources } from '../../game/engine.js'
 import { STORAGE_CAP } from '../../game/data.js'
 import '../../styles/storage.css'
 import { consultGods } from '../../api/client.js'
@@ -476,7 +476,7 @@ export function StoreModal() {
   const ui = useUI()
   return (
     <Modal title="Store" kicker="Trade with passing sky merchants" onClose={() => ui.setPanel(null)}>
-      <div className="store-items">
+      <div className="store-items" data-tutorial="store-items">
         {STORE_ITEMS.map((item) => <ConsultGodsCard key={item.id} item={item} />)}
       </div>
     </Modal>
