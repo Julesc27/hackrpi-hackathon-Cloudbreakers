@@ -296,7 +296,7 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 })
 
 
-test('starter timber and stone deplete; rejected harvesting grants neither XP nor effects', () => {
+test('starter timber, stone and water deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(state.deposits.wood, 0)
@@ -307,6 +307,9 @@ test('starter timber and stone deplete; rejected harvesting grants neither XP no
   for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
   assert.equal(state.deposits.stone, 0)
   assert.match(gatherAvailability(state, 'stone'), /depleted/)
+  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'collector' })
+  assert.equal(state.deposits.water, 0)
+  assert.match(gatherAvailability(state, 'collector'), /depleted/)
 })
 
 test('outer resource sites require a working bridge and provide their distinct resources', () => {
