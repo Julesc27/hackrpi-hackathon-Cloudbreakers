@@ -24,8 +24,10 @@ async def consult_gods(town: TownSave, request: Request, player: CurrentPlayer):
     key = str(player.id)
     ratelimit.check("oracle_player", key)
     ratelimit.hit("oracle_player", key)  # counts failed calls too: each one still costs money
+    data = town.model_dump(exclude={"journal"})
+    allowed = oracle.allowed_focuses(data.pop("possibleMoves", None))  # what the player can do right now
     try:
-        reply = await oracle.consult(town.model_dump(exclude={"journal"}))
+        reply = await oracle.consult(data, allowed)
     except oracle.OracleUnavailable as e:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(e))
     return OracleResponse(poem=reply["poem"], focus=reply["focus"])

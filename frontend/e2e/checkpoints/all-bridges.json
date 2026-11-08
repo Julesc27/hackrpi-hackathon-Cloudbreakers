@@ -125,14 +125,22 @@
       "type": "shelter",
       "island": "newHaven",
       "slot": 0,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 10,
+        "stone": 2
+      }
     },
     {
       "id": "b7",
       "type": "bridgeAnchor",
       "island": "newHaven",
       "slot": -3,
-      "builtLevel": 1
+      "builtLevel": 1,
+      "paidCost": {
+        "wood": 8,
+        "stone": 4
+      }
     }
   ],
   "beaconRestored": false,
@@ -156,32 +164,47 @@
     {
       "route": "verdant-haven",
       "type": "rope",
-      "condition": 98,
-      "builtLevel": 4
+      "condition": 90,
+      "builtLevel": 2,
+      "paidCost": {
+        "wood": 14
+      }
     },
     {
       "route": "rain-haven",
       "type": "rope",
-      "condition": 100,
-      "builtLevel": 5
+      "condition": 94,
+      "builtLevel": 4,
+      "paidCost": {
+        "wood": 20
+      }
     },
     {
       "route": "prism-haven",
       "type": "rope",
-      "condition": 100,
-      "builtLevel": 5
+      "condition": 98,
+      "builtLevel": 4,
+      "paidCost": {
+        "wood": 18
+      }
     },
     {
       "route": "mercy-haven",
       "type": "rope",
       "condition": 100,
-      "builtLevel": 6
+      "builtLevel": 5,
+      "paidCost": {
+        "wood": 22
+      }
     },
     {
       "route": "hearth-haven",
       "type": "rope",
       "condition": 100,
-      "builtLevel": 6
+      "builtLevel": 5,
+      "paidCost": {
+        "wood": 22
+      }
     }
   ],
   "weather": "cloudDrought",

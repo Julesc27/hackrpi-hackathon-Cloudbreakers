@@ -3,13 +3,110 @@ import assert from 'node:assert/strict'
 import { GATHER_SITES, ISLANDS, ROUTES, LEVELS, BUILD_ORDER, BUILDINGS } from './data.js'
 import { buildingLayout } from '../components/world/buildingLayout.js'
 import { Crowd } from '../components/world/people.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts } from './engine.js'
-import { STORAGE_CAP, STORED_MATERIALS } from './data.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, removalInfo, bridgeCost, openRoutes } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
 
 const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
+
+test('every player build refunds half of its own paid resources and can only be removed once', () => {
+  for (const type of BUILD_ORDER) {
+    const initial = createInitialState(), state = { ...initial, xp: 1000, resources: Object.fromEntries(Object.keys(initial.resources).map(key => [key,1000])) }
+    const built = gameReducer(state,{ type:'BUILD', buildingType:type, island:'newHaven', slot:0 })
+    const building = built.buildings.find(b => b.type === type)
+    assert.ok(building, type)
+    assert.deepEqual(building.paidCost,BUILDINGS[type].cost)
+    const info = removalInfo(built,{ buildingId:building.id })
+    const expected = Object.fromEntries(Object.entries(BUILDINGS[type].cost).map(([key,value]) => [key,Math.floor(value/2)]).filter(([,value]) => value))
+    assert.deepEqual(info.refund,expected,type)
+    const removed = gameReducer(built,{ type:'REMOVE_BUILDING', buildingId:building.id })
+    assert.equal(removed.buildings.some(b => b.id === building.id),false)
+    for (const [key,value] of Object.entries(expected)) assert.equal(removed.resources[key],built.resources[key]+value,type)
+    assert.equal(removed.xp,built.xp)
+    assert.equal(removed.population,built.population)
+    assert.deepEqual(removed.deposits,built.deposits)
+    assert.equal(gameReducer(removed,{ type:'REMOVE_BUILDING', buildingId:building.id }),removed)
+    const rebuilt = gameReducer(removed,{ type:'BUILD', buildingType:type, island:'newHaven', slot:0 })
+    assert.ok(rebuilt.buildings.some(b => b.type === type), `${type} plot was not released`)
+  }
+})
+
+test('refunds use recorded costs, survive saves, and protect starter scenery', () => {
+  const initial = createInitialState()
+  const state = { ...initial, buildings:[...initial.buildings,{ id:'old-cost',type:'shelter',island:'newHaven',slot:0,paidCost:{ wood:14,stone:6 } }] }
+  const restored = migrateSave(state)
+  assert.deepEqual(removalInfo(restored,{ buildingId:'old-cost' }).refund,{ wood:7,stone:3 })
+  assert.equal(gameReducer(initial,{ type:'REMOVE_BUILDING', buildingId:'missing' }),initial)
+  for (const building of initial.buildings) {
+    const rejected = gameReducer(initial,{ type:'REMOVE_BUILDING',buildingId:building.id })
+    assert.deepEqual(rejected.buildings,initial.buildings)
+    assert.deepEqual(rejected.resources,initial.resources)
+  }
+  const legacy = { ...initial, buildings:[...initial.buildings,{ id:'legacy',type:'shelter',island:'newHaven',slot:0 }] }
+  assert.deepEqual(removalInfo(legacy,{ buildingId:'legacy' }).refund,{ wood:5,stone:1 })
+})
+
+test('removing capacity previews the exact overflow and returns only construction resources', () => {
+  const initial = createInitialState()
+  const state = { ...initial, resources:{ ...initial.resources,water:125,food:110,energy:120 }, buildings:[...initial.buildings,{ id:'store',type:'storageHouse',island:'newHaven',slot:0,paidCost:{ wood:12,stone:4 } }] }
+  assert.deepEqual(removalInfo(state,{ buildingId:'store' }).overflow,{ energy:20,water:25,food:10 })
+  const removed = gameReducer(state,{ type:'REMOVE_BUILDING', buildingId:'store' })
+  for (const key of ['water','food','energy']) assert.equal(removed.resources[key],100)
+  assert.equal(removed.resources.wood,state.resources.wood+6)
+  assert.equal(removed.resources.stone,state.resources.stone+2)
+})
+
+test('bridge refunds track actual build and upgrade spending, exclude repairs, and allow rebuilding', () => {
+  const initial = createInitialState()
+  let state = { ...initial,xp:1000,resources:{ ...initial.resources,wood:200,stone:100,coins:200 },buildings:[...initial.buildings,{ id:'anchor',type:'bridgeAnchor',island:'newHaven',slot:-3 }] }
+  state = gameReducer(state,{ type:'BUILD_BRIDGE',routeId:'verdant-haven',bridgeType:'rope' })
+  const paid = bridgeCost(ROUTES.find(r => r.id === 'verdant-haven'),'rope')
+  assert.deepEqual(state.bridges[0].paidCost,paid)
+  state = gameReducer(state,{ type:'UPGRADE_BRIDGE',routeId:'verdant-haven' })
+  const full = bridgeCost(ROUTES.find(r => r.id === 'verdant-haven'),'reinforced')
+  const construction = { wood:paid.wood+Math.ceil(full.wood/2),coins:full.coins,stone:full.stone }
+  assert.deepEqual(state.bridges[0].paidCost,construction)
+  state = gameReducer({ ...state,bridges:state.bridges.map(b => ({ ...b,condition:50 })) },{ type:'REPAIR_BRIDGE',routeId:'verdant-haven' })
+  assert.deepEqual(state.bridges[0].paidCost,construction)
+  const info = removalInfo(state,{ routeId:'verdant-haven' })
+  const removed = gameReducer(state,{ type:'REMOVE_BRIDGE',routeId:'verdant-haven' })
+  for (const [key,value] of Object.entries(info.refund)) assert.equal(removed.resources[key],state.resources[key]+value)
+  assert.deepEqual(removed.connected,['newHaven'])
+  assert.ok(openRoutes(removed).some(r => r.id === 'verdant-haven'))
+  assert.equal(gameReducer(removed,{ type:'REMOVE_BRIDGE',routeId:'verdant-haven' }),removed)
+  assert.equal(gameReducer(removed,{ type:'BUILD_BRIDGE',routeId:'verdant-haven',bridgeType:'rope' }).bridges.length,1)
+})
+
+test('the captain returns home before bridge demolition and cannot be stranded by a direct removal', () => {
+  const initial = createInitialState()
+  let state = { ...initial,connected:['newHaven','verdant'],bridges:[{ route:'verdant-haven',type:'rope',condition:100,paidCost:{ wood:14 } }],player:{ island:'verdant',x:350,y:180 } }
+  assert.equal(gameReducer(state,{ type:'REMOVE_BRIDGE',routeId:'verdant-haven' }).bridges.length,1)
+  const player = new Player(state)
+  player.onSave = position => { state = gameReducer(state,{ type:'PLAYER_POSITION',position }) }
+  assert.equal(player.request({ type:'REMOVE_BRIDGE',routeId:'verdant-haven' },action => { state = gameReducer(state,action); player.sync(state) }),true)
+  assert.equal(state.bridges.length,1)
+  for (let i=0;player.pending && i<2000;i++) player.update(.1)
+  assert.equal(player.pending,null)
+  assert.equal(state.bridges.length,0)
+  assert.equal(player.avatar.isl,'newHaven')
+  assert.equal(state.resources.wood,initial.resources.wood+7)
+  assert.equal(state.xp,initial.xp)
+})
+
+test('cancelling dismantling leaves the item and supplies intact', () => {
+  const initial = createInitialState(), state = { ...initial,buildings:[...initial.buildings,{ id:'house',type:'shelter',island:'newHaven',slot:0 }] }
+  const player = new Player(state)
+  let removed = false
+  player.request({ type:'REMOVE_BUILDING',buildingId:'house' },() => { removed = true })
+  for (let i=0;!player.avatar.task && i<1000;i++) player.update(.05)
+  assert.ok(player.avatar.task)
+  player.cancel()
+  for (let i=0;i<100;i++) player.update(.1)
+  assert.equal(removed,false)
+  assert.equal(player.pending,null)
+  assert.deepEqual(player.state.resources,initial.resources)
+})
 
 test('every physical build blocks its whole base and the captain routes around it', () => {
   const plot = ISLANDS.newHaven.plots[0]

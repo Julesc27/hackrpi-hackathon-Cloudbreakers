@@ -2,13 +2,13 @@ import { Crowd, bridgeAt } from '../components/world/people.js'
 import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots } from './engine.js'
+import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageDepots, removalInfo } from './engine.js'
 import { avatarLook } from './avatar.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
 const BEACON = [795, 407]
-const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON', 'DEPOSIT_BACKPACK'])
+const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON', 'DEPOSIT_BACKPACK', 'REMOVE_BUILDING', 'REMOVE_BRIDGE'])
 export const isPlayerTask = action => TASKS.has(action.type)
 
 /** Move the camera onto the captain. Their place in the world, and the current zoom, stay put. */
@@ -55,7 +55,7 @@ export class Player extends Crowd {
     const pending = this.pending
     super.reroute(a)
     if (pending) {
-      const point = pending.action?.type === 'BUILD' ? this.task(pending.action)?.point : pending.point
+      const point = ['BUILD','REMOVE_BUILDING','REMOVE_BRIDGE','DEPOSIT_BACKPACK'].includes(pending.action?.type) ? this.task(pending.action)?.point : pending.point
       if (!point || !this.go(pending.island, point, pending.action, pending.label)) { this.pending = null; a.task = null }
     }
     this.remember()
@@ -75,12 +75,22 @@ export class Player extends Crowd {
     if (before && (before[0] !== this.avatar.isl || before[1] !== this.avatar.x || before[2] !== this.avatar.y)) this.remember()
     if (pending && this.avatar.isl) {
       // A second building may change the clear working spot while travelling.
-      const point = pending.action?.type === 'BUILD' ? this.task(pending.action)?.point : pending.point
-      if (!point || !this.go(pending.island, point, pending.action, pending.label)) this.pending = null
+      const point = ['BUILD','REMOVE_BUILDING','REMOVE_BRIDGE','DEPOSIT_BACKPACK'].includes(pending.action?.type) ? this.task(pending.action)?.point : pending.point
+      if (!point || !this.go(pending.island, point, pending.action, pending.label)) { this.pending = null; this.avatar.task = null; this.avatar.act = 'idle' }
     }
   }
 
   task(action) {
+    if (action.type === 'REMOVE_BUILDING') {
+      const building = this.state.buildings.find(b => b.id === action.buildingId)
+      if (!building) return null
+      const focus = BUILDINGS[building.type]?.infrastructure ? WORKSHOP : ISLANDS[building.island]?.plots[building.slot]
+      return focus ? { island: building.island, point: this.recoveryPoint(building.island,...focus), focus, label: `Remove ${BUILDINGS[building.type].name}` } : null
+    }
+    if (action.type === 'REMOVE_BRIDGE') {
+      if (!this.state.bridges.some(b => b.route === action.routeId)) return null
+      return { island: 'newHaven', point: bridgePoints(action.routeId).b, label: 'Dismantle bridge' }
+    }
     if (action.type === 'DEPOSIT_BACKPACK') {
       const a = this.avatar
       const depots = storageDepots(this.state)
@@ -107,6 +117,10 @@ export class Player extends Crowd {
   }
 
   request(action, dispatch) {
+    if (action.type === 'REMOVE_BUILDING' || action.type === 'REMOVE_BRIDGE') {
+      const info = removalInfo(this.state,action)
+      if (!info || info.reason) { this.status = info?.reason || 'This item has already been removed'; return false }
+    }
     if (action.type === 'DEPOSIT_BACKPACK' && !backpackUsed(this.state)) { this.status = 'Your backpack is empty'; return false }
     const task = this.task(action)
     if (!task?.point) return false

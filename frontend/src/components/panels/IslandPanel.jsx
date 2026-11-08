@@ -4,6 +4,7 @@ import { islandAccess, openRoutes, otherEnd, canAfford, hasAnchor } from '../../
 import { Drawer, CostChips, YieldChips } from './Panel.jsx'
 import { SiteActions } from '../map/InteractionSites.jsx'
 import IslandArt from '../IslandArt.jsx'
+import { RemoveButton } from './Removal.jsx'
 
 export default function IslandPanel() {
   const { state, dispatch } = useGame()
@@ -85,6 +86,7 @@ export default function IslandPanel() {
               <li key={b.id}>
                 {b.type === 'bridgeAnchor' ? <button className="link" onClick={() => ui.setPanel('bridges')}>Bridge Anchor · manage crossings</button> : b.type === 'storageHouse' ? <button className="link" onClick={() => { ui.setSelected(b.id); ui.setPanel('storageHouse') }}>Storage House · capacity and unloading</button> : <span>{BUILDINGS[b.type].name}</span>}
                 {BUILDINGS[b.type].prod && <YieldChips yields={BUILDINGS[b.type].prod} />}
+                <RemoveButton buildingId={b.id} />
               </li>
             ))}
           </ul>

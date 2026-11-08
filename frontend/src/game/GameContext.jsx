@@ -68,6 +68,7 @@ export function UIProvider({ children }) {
   const [placing, setPlacing] = useState(null) // building type
   const [placeFocus, setPlaceFocus] = useState(null) // island the player asked to build on
   const [bridgeRoute, setBridgeRoute] = useState(null) // route id for the bridge modal
+  const [removing, setRemoving] = useState(null)
   const [seenQuests, setSeenQuests] = useState([]) // mission ids the player has looked at
   // Short-lived world effects (floating numbers, sparkle bursts, collect bubbles), in map coordinates
   const [fx, setFx] = useState([])
@@ -122,7 +123,7 @@ export function UIProvider({ children }) {
   return (
     <UICtx.Provider value={{
       panel, setPanel, toggle, selected, setSelected, openIsland,
-      placing, setPlacing, placeFocus, setPlaceFocus, bridgeRoute, setBridgeRoute,
+      placing, setPlacing, placeFocus, setPlaceFocus, bridgeRoute, setBridgeRoute, removing, setRemoving,
       seenQuests, setSeenQuests, closeAll, fx, emitFx, clearFx, camera,
       tutorialActive, setTutorialActive, tutorialStep, setTutorialStep, startTutorial, endTutorial,
     }}>
