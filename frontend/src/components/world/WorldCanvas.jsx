@@ -12,6 +12,7 @@ import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './islan
 import { Crowd, drawPerson, personLight } from './people.js'
 import { drawBridge, drawPrismGateway } from './bridge.js'
 import { buildingLayout } from './buildingLayout.js'
+import { drawTaskProgress } from './taskAnimation.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
 /* ---------------- player buildings → prop specs ---------------- */
@@ -413,11 +414,12 @@ export default function WorldCanvas({ hoverRef }) {
           ctx.save(); ctx.translate(0, it.bob)
           if (it.captain) {
             ellipse(ctx, a.x, a.y+1, 9, 4, 'rgba(255,213,115,.2)', '#ffe3a1', 1.1)
+            drawTaskProgress(ctx, a)
             poly(ctx, [[a.x-3,a.y-42],[a.x+3,a.y-42],[a.x,a.y-38]], '#ffe3a1')
           }
           if (it.captain) {
             ctx.save(); ctx.translate(a.x, a.y); ctx.scale(1.3, 1.3)
-            drawPerson(ctx, { ...a, x: 0, y: 0 }, t, true); ctx.restore()
+            drawPerson(ctx, { ...a, x: 0, y: 0 }, t, true, !reducedMotion.matches); ctx.restore()
           } else drawPerson(ctx, a, t, personDetail)
           if (it.captain) {
             ctx.font = 'bold 6px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff1cf'

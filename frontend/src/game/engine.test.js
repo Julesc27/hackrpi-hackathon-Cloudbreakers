@@ -74,6 +74,52 @@ test('the captain walks to a task before gathering, and movement itself grants n
   assert.ok(Math.hypot(player.avatar.x-start[0], player.avatar.y-start[1]) > 30)
 })
 
+test('task tools animate only after arrival and dispatch once after visible work completes', () => {
+  const actions = [
+    ...['grove', 'stone', 'garden', 'collector', 'forest', 'forage', 'lumber', 'falls', 'fishing', 'crystals', 'salvage'].map(siteId => ({ type: 'GATHER_AT_SITE', siteId })),
+    { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 },
+    { type: 'RESTORE_BEACON' }, { type: 'BUILD_BRIDGE', routeId: 'verdant-haven' },
+    { type: 'REPAIR_BRIDGE', routeId: 'verdant-haven' }, { type: 'UPGRADE_BRIDGE', routeId: 'verdant-haven' },
+  ]
+  for (const action of actions) {
+    const state = { ...createInitialState(), connected: Object.keys(ISLANDS), bridges: ROUTES.map(route => ({ route: route.id, type: 'rope', condition: 100 })) }
+    const player = new Player(state), task = player.task(action), point = player.walkPoint(task.island, ...task.point)
+    Object.assign(player.avatar, { isl: task.island, x: point[0], y: point[1] })
+    let dispatched = 0
+    assert.equal(player.request(action, () => dispatched++), true)
+    assert.equal(player.avatar.task, null, 'No work animation while travelling')
+    for (let i=0; !player.avatar.task && i<100; i++) player.update(.05)
+    assert.ok(player.avatar.task, `Missing work animation for ${JSON.stringify(action)}`)
+    const work = player.avatar.task
+    assert.ok(work.duration >= 1.5, 'Give the work animation time to be seen')
+    const before = work.progress
+    player.update(.1)
+    assert.ok(work.progress > before && work.progress < 1)
+    assert.equal(dispatched, 0, 'No reward until the animation completes')
+    for (let i=0; player.pending && i<100; i++) player.update(.1)
+    assert.equal(dispatched, 1)
+    assert.equal(player.avatar.task, null)
+    for (let i=0; i<20; i++) player.update(.1)
+    assert.equal(dispatched, 1, 'Animation completion cannot repeat rewards')
+  }
+})
+
+test('cancelling or walking away during work removes tools and grants no reward', () => {
+  for (const interrupt of [p => p.cancel(), p => p.setInput(1, 0)]) {
+    const player = new Player(createInitialState()), point = player.walkPoint('newHaven', ...INTERACTION_POINTS.grove)
+    Object.assign(player.avatar, { x: point[0], y: point[1] })
+    let dispatched = 0
+    player.request({ type: 'GATHER_WOOD' }, () => dispatched++)
+    for (let i=0; !player.avatar.task && i<100; i++) player.update(.05)
+    assert.ok(player.avatar.task)
+    interrupt(player)
+    assert.equal(player.avatar.task, null)
+    for (let i=0; i<100; i++) player.update(.1)
+    assert.equal(dispatched, 0)
+    assert.equal(player.pending, null)
+  }
+})
+
 test('keyboard movement stops on release and cancels a queued task without spending resources', () => {
   const state = createInitialState(), player = new Player(state)
   let dispatched = false

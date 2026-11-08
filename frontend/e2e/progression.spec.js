@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { STAIRWAYS, stairProjection } from '../src/components/world/stairways.js'
-import { ISLANDS } from '../src/game/data.js'
+import { ISLANDS, GATHER_SITES } from '../src/game/data.js'
+import { INTERACTION_POINTS } from '../src/game/mapLayout.js'
 
 const saveKey = 'cloudbreakers-save-v1'
 const checkpoint = (name) => JSON.parse(readFileSync(new URL(`./checkpoints/${name}.json`, import.meta.url), 'utf8'))
@@ -53,11 +54,37 @@ test('the captain must arrive before harvesting and can interact again with E', 
   await expect(captain).toHaveAttribute('data-player-busy', 'false')
   expect((await savedTown(page)).resources.wood).toBe(town.resources.wood)
   await page.locator('[data-tutorial="gather-wood-site"]').click()
+  await expect(captain).toHaveAttribute('data-player-task', 'chop')
+  await expect(captain.getByRole('progressbar')).toBeVisible()
+  expect((await savedTown(page)).resources.wood).toBe(town.resources.wood)
+  await captain.getByRole('button', { name: 'Cancel task' }).click()
+  await expect(captain.getByRole('progressbar')).toHaveCount(0)
+  expect((await savedTown(page)).resources.wood).toBe(town.resources.wood)
+  await page.locator('[data-tutorial="gather-wood-site"]').click()
   await expectSave(page, s => s.resources.wood === town.resources.wood + 6)
   await expect(captain).toHaveAttribute('data-player-busy', 'false')
   await page.keyboard.press('e')
   await expectSave(page, s => s.resources.wood === town.resources.wood + 12)
 })
+
+for (const [siteId, kind] of [['stone', 'mine'], ['garden', 'garden'], ['collector', 'collect'], ['crystals', 'crystal'], ['fishing', 'fish']]) {
+  test(`the captain shows ${kind} work and progress at ${siteId}`, async ({ page }, testInfo) => {
+    const site = GATHER_SITES[siteId], point = INTERACTION_POINTS[siteId]
+    await startAt(page, 'all-bridges', { player: { island: site.island, x: point[0], y: point[1] } })
+    const captain = page.getByRole('region', { name: 'Captain controls' })
+    await page.getByRole('button', { name: 'Find my avatar' }).click()
+    const target = page.locator('.interaction-sites').getByRole('button', { name: new RegExp(`^${site.label}`) })
+    await target.focus(); await page.keyboard.press('Enter')
+    await expect(captain).toHaveAttribute('data-player-task', kind)
+    const progress = captain.getByRole('progressbar', { name: site.label })
+    await expect(progress).toBeVisible()
+    await expect.poll(async () => Number(await progress.getAttribute('value')), { intervals: [50] }).toBeGreaterThan(.1)
+    await page.screenshot({ path: testInfo.outputPath(`captain-${kind}.png`) })
+    await expect(captain).toHaveAttribute('data-player-busy', 'false')
+    await expect(progress).toHaveCount(0)
+    expect((await savedTown(page)).lastInteraction.siteId).toBe(siteId)
+  })
+}
 
 test('WASD moves the captain, saves their position, and does not advance the town', async ({ page }) => {
   const town = await startAt(page, 'new-town')
@@ -201,6 +228,9 @@ test('the tutorial advances through gathering, building and the quest book', asy
   await page.locator('[data-tutorial="build-btn-shelter"]').click()
   await expect(page.getByRole('dialog', { name: 'Tutorial Step 4' })).toBeVisible()
   await page.locator('[data-tutorial="plot-newHaven"]').click()
+  const workingCaptain = page.getByRole('region', { name: 'Captain controls' })
+  await expect(workingCaptain).toHaveAttribute('data-player-task', 'build', { timeout: 15_000 })
+  await expect(workingCaptain.getByRole('progressbar')).toBeVisible()
   await expectSave(page, (town) => town.completed.includes('firstSteps'))
   await expect(page.getByRole('dialog', { name: 'Tutorial Step 5' })).toBeVisible()
   await page.locator('[data-tutorial="rail-quests"]').click()
