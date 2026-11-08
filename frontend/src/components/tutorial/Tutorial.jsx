@@ -473,6 +473,16 @@ export default function Tutorial() {
               >
                 Let's Begin ➔
               </button>
+              <button
+                type="button"
+                className="btn-gold"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  endTutorial(true)
+                }}
+              >
+                Skip Tutorial
+              </button>
             </div>
           </div>
         </div>
