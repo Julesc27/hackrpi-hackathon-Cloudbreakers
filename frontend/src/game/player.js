@@ -21,8 +21,7 @@ export class Player extends Crowd {
     this.sync(state)
     const saved = state.player
     if (saved && this.islands.includes(saved.island) && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-      const savedPoint = [saved.x, saved.y]
-      const point = this.canStep(saved.island, savedPoint, savedPoint) ? savedPoint : this.walkPoint(saved.island, ...savedPoint)
+      const point = this.recoveryPoint(saved.island, saved.x, saved.y)
       if (point) Object.assign(this.avatar, { isl: saved.island, x: point[0], y: point[1] })
     } else {
       const point = this.walkPoint('newHaven', 775, 540)
@@ -39,12 +38,18 @@ export class Player extends Crowd {
     this.state = state
     if (this.lastBridges === state.bridges && this.lastBuildings === state.buildings && this.lastConnected === state.connected) return
     const pending = this.pending
+    const before = this.avatar && [this.avatar.isl, this.avatar.x, this.avatar.y]
     super.setState(state, islandAccess(state), 1)
     Object.assign(this.avatar, { kid: false, role: 'captain', shirt: '#265aa4', trim: '#f1cb75',
       pants: '#263550', hat: 'aviator', carry: 'toolbag', cloak: null, speed: 85 })
     this.lastBridges = state.bridges; this.lastBuildings = state.buildings; this.lastConnected = state.connected
     if (this.manualBridge && !this.bridgeTypes[this.manualBridge.route]) this.manualBridge = null
-    if (pending && this.avatar.isl && !this.go(pending.island, pending.point, pending.action, pending.label)) this.pending = null
+    if (before && (before[0] !== this.avatar.isl || before[1] !== this.avatar.x || before[2] !== this.avatar.y)) this.remember()
+    if (pending && this.avatar.isl) {
+      // A second building may change the clear working spot while travelling.
+      const point = pending.action?.type === 'BUILD' ? this.task(pending.action)?.point : pending.point
+      if (!point || !this.go(pending.island, point, pending.action, pending.label)) this.pending = null
+    }
   }
 
   task(action) {
@@ -53,7 +58,7 @@ export class Player extends Crowd {
     if (action.type === 'RESTORE_BEACON') return { island: 'newHaven', point: BEACON, label: 'Restore the beacon' }
     if (action.type === 'BUILD') {
       const def = BUILDINGS[action.buildingType]
-      return { island: action.island, point: def?.infrastructure ? WORKSHOP : ISLANDS[action.island]?.plots[action.slot], label: `Build ${def?.name || 'building'}` }
+      return { island: action.island, point: def?.infrastructure ? WORKSHOP : this.constructionPoint(action.buildingType, action.island, action.slot), label: `Build ${def?.name || 'building'}` }
     }
     const route = ROUTES.find(r => r.id === action.routeId)
     if (route) return { island: 'newHaven', point: bridgePoints(route.id).b,

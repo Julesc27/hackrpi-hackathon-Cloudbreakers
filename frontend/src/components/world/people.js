@@ -9,6 +9,7 @@ import { WALK, CELL } from './walkGrid.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { shiftIslandPoint } from '../../game/mapLayout.js'
 import { STAIRWAYS, stairProjection } from './stairways.js'
+import { buildingLayout } from './buildingLayout.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
 
 /* ---------------- bridges ---------------- */
@@ -72,7 +73,7 @@ const cellOf = (G, x, y) => {
   return c < 0 || r < 0 || c >= G.cols || r >= G.rows ? -1 : r * G.cols + c
 }
 const centre = (G, i) => [G.x + ((i % G.cols) + 0.5) * CELL, G.y + (Math.floor(i / G.cols) + 0.5) * CELL]
-function nearestOpen(G, x, y) {
+function nearestOpen(G, x, y, area = null) {
   const c0 = Math.floor((x - G.x) / CELL), r0 = Math.floor((y - G.y) / CELL)
   for (let rad = 0; rad < 24; rad++) {
     let best = -1, bd = Infinity
@@ -81,7 +82,7 @@ function nearestOpen(G, x, y) {
         if (Math.max(Math.abs(r - r0), Math.abs(c - c0)) !== rad) continue
         if (r < 0 || c < 0 || r >= G.rows || c >= G.cols) continue
         const i = r * G.cols + c
-        if (!G.cost[i]) continue
+        if (!G.cost[i] || (area && !area[i])) continue
         const d = (r - r0) ** 2 + (c - c0) ** 2
         if (d < bd) { bd = d; best = i }
       }
@@ -91,24 +92,50 @@ function nearestOpen(G, x, y) {
   return -1
 }
 
+function blockBuilding(G, b, clearance = 0) {
+  if (!G || b.slot < 0 || BUILDINGS[b.type]?.infrastructure) return
+  const plot = ISLANDS[b.island]?.plots?.[b.slot]
+  if (!plot) return
+  // Match the visible foundation, including smaller buildings on outer islands.
+  const footprint = buildingLayout(b.type, b.island, b.slot)
+  const rx = footprint.groundWidth + 3 + clearance, ry = footprint.groundDepth + 3 + clearance
+  for (let r = 0; r < G.rows; r++) {
+    for (let c = 0; c < G.cols; c++) {
+      const [cx, cy] = [G.x + (c + 0.5) * CELL, G.y + (r + 0.5) * CELL]
+      if (Math.abs(cx - plot[0]) / rx + Math.abs(cy - plot[1]) / ry < 1) G.cost[r * G.cols + c] = 0
+    }
+  }
+}
+
+// Keep construction and recovery on the island's connected walking network,
+// rather than choosing a nearby open cell stranded behind a foundation.
+function mainWalkableArea(G) {
+  const seen = new Uint8Array(G.cost.length), queue = new Int32Array(G.cost.length)
+  const route = Object.keys(BRIDGE_ENDS).find(id => BRIDGE_ENDS[id].a[0] === G.id)
+  const exit = route ? bridgePoints(route).a : [635, 610]
+  const start = nearestOpen(G, ...exit)
+  if (start < 0) return seen
+  let head = 0, tail = 1; queue[0] = start; seen[start] = 1
+  while (head < tail) {
+    const cur = queue[head++], c = cur % G.cols, r = Math.floor(cur / G.cols)
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const nc = c+dc, nr = r+dr
+      if ((!dc && !dr) || nc < 0 || nr < 0 || nc >= G.cols || nr >= G.rows) continue
+      const next = nr*G.cols+nc
+      if (seen[next] || !G.cost[next]) continue
+      if (dc && dr && (!G.cost[r*G.cols+nc] || !G.cost[nr*G.cols+c])) continue
+      seen[next] = 1; queue[tail++] = next
+    }
+  }
+  return seen
+}
+
 /** Mark the ground under player-built buildings as blocked. */
 function applyBuildings(state) {
   for (const G of Object.values(GRIDS)) G.cost.set(G.base)
-  for (const b of state.buildings) {
-    if (b.slot < 0 || BUILDINGS[b.type]?.infrastructure) continue
-    const G = GRIDS[b.island], plot = ISLANDS[b.island]?.plots?.[b.slot]
-    if (!G || !plot) continue
-    const w = b.type === 'communityHall' ? 82 : b.island === 'newHaven' ? 60 : 50
-    const rx = w * 0.5, ry = w * 0.27
-    for (let r = 0; r < G.rows; r++) {
-      for (let c = 0; c < G.cols; c++) {
-        const [cx, cy] = [G.x + (c + 0.5) * CELL, G.y + (r + 0.5) * CELL]
-        // a diamond footprint, like the stone foundations
-        if (Math.abs(cx - plot[0]) / rx + Math.abs(cy - plot[1]) / ry < 1) G.cost[r * G.cols + c] = 0
-      }
-    }
-  }
+  for (const b of state.buildings) blockBuilding(GRIDS[b.island], b)
   for (const G of Object.values(GRIDS)) {
+    G.egress = mainWalkableArea(G)
     G.paved = []
     for (let i = 0; i < G.cost.length; i++) if (G.cost[i] === 1) G.paved.push(i)
     G.pois = G.poi.map(([c, r, tag]) => ({ i: nearestOpen(G, ...centre(G, r * G.cols + c)), tag })).filter((p) => p.i >= 0)
@@ -262,7 +289,7 @@ export class Crowd {
     for (const a of this.agents) {
       if (!a.isl) continue
       const G = GRIDS[a.isl], i = cellOf(G, a.x, a.y)
-      if (i < 0 || !G.cost[i]) { const n = nearestOpen(G, a.x, a.y); if (n >= 0) [a.x, a.y] = centre(G, n) }
+      if (i < 0 || !G.egress[i]) { const n = nearestOpen(G, a.x, a.y, G.egress); if (n >= 0) [a.x, a.y] = centre(G, n) }
       a.legs = []; a.leg = null; if (a.act === 'walk') a.act = 'idle'
     }
     if (!this.islands.length) { this.agents = []; return }
@@ -337,6 +364,25 @@ export class Crowd {
     if (!grid) return null
     const cell = nearestOpen(grid, x, y)
     return cell < 0 ? null : centre(grid, cell)
+  }
+
+  constructionPoint(type, island, slot) {
+    const grid = GRIDS[island], plot = ISLANDS[island]?.plots?.[slot]
+    if (!grid || !plot) return null
+    const preview = { ...grid, cost: grid.cost.slice() }
+    // Stand beside the completed foundation, with room for the captain's feet.
+    blockBuilding(preview, { type, island, slot }, 6)
+    const cell = nearestOpen(preview, ...plot, mainWalkableArea(preview))
+    return cell < 0 ? null : centre(preview, cell)
+  }
+
+  recoveryPoint(island, x, y) {
+    const grid = GRIDS[island]
+    if (!grid) return null
+    const cell = cellOf(grid, x, y)
+    if (cell >= 0 && grid.egress[cell]) return [x, y]
+    const safe = nearestOpen(grid, x, y, grid.egress)
+    return safe < 0 ? null : centre(grid, safe)
   }
 
   canStep(island, from, to) {
