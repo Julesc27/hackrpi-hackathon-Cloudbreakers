@@ -4,6 +4,14 @@ export const ISLAND_OFFSETS = {
   verdant: [-70, -440], rain: [250, 5], prism: [940, 745], mercy: [-155, 35], hearth: [220, 0],
 }
 
+// Space the two steep crossings diagonally from the starter island's actual gates.
+export const BRIDGE_LAYOUT_SHIFTS = { verdant: [-130, 20], prism: [320, -130] }
+export function shiftIslandPoint(id, point) {
+  const [dx, dy] = BRIDGE_LAYOUT_SHIFTS[id] || [0, 0]
+  return [point[0] + dx, point[1] + dy, ...point.slice(2)]
+}
+for (const id of Object.keys(BRIDGE_LAYOUT_SHIFTS)) ISLAND_OFFSETS[id] = shiftIslandPoint(id, ISLAND_OFFSETS[id])
+
 // Stable slot indexes preserve buildings in existing saves. Each terrace holds two shelters.
 export const STARTER_PLOTS = [
   [738, 495], [795, 507], // central residential terrace
@@ -24,3 +32,5 @@ export const INTERACTION_POINTS = {
   falls: [1175, 200], fishing: [1260, 225],
   crystals: [1360, 890], salvage: [1450, 970],
 }
+for (const key of ['forest', 'forage', 'lumber']) INTERACTION_POINTS[key] = shiftIslandPoint('verdant', INTERACTION_POINTS[key])
+for (const key of ['crystals', 'salvage']) INTERACTION_POINTS[key] = shiftIslandPoint('prism', INTERACTION_POINTS[key])

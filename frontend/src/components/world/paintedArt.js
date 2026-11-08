@@ -1,5 +1,7 @@
 // Independent, transparent sprites: the reference painting is never used as a map backdrop.
+import { shiftIslandPoint } from '../../game/mapLayout.js'
 export const PAINTED_ATLASES = {
+  bridge: { src: '/art/bridge-materials.png', columns: 2, rows: 2, cells: [[76, 65, 483, 499], [654, 267, 570, 80], [248, 666, 134, 526], [794, 658, 281, 534]] },
   shelters: { src: '/art/shelters-grounded.png', columns: 2, rows: 1, cells: [[101, 100, 728, 715], [963, 163, 761, 654]] },
   airship: { src: '/art/airship-painted.png', columns: 1, rows: 1, cells: [[139, 76, 1264, 867]] },
   background: {
@@ -22,6 +24,7 @@ export const PAINTED_ISLANDS = {
   mercy: { sheet: 'civic', cell: 3, rect: [-25, 350, 380, 330] },
   hearth: { sheet: 'settlement', cell: 0, rect: [1220, 300, 435, 365] },
 }
+for (const id of ['verdant', 'prism']) PAINTED_ISLANDS[id].rect = shiftIslandPoint(id, PAINTED_ISLANDS[id].rect)
 
 export const BUILDING_CELLS = {
   shelter: 0, bridgeAnchor: 1, garden: 2, waterCollector: 3,

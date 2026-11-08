@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
-import { STARTER_BEACON } from '../../game/mapLayout.js'
+import { STARTER_BEACON, INTERACTION_POINTS } from '../../game/mapLayout.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { islandAccess, openRoutes } from '../../game/engine.js'
 import { WORLD } from '../map/Camera.jsx'
@@ -9,7 +9,7 @@ import { WORLD_ISLANDS, FAR_ISLETS, bridgeMid } from './layout.js'
 import { PAINTED_ISLANDS, buildingSprite, PAINTED_ATLASES, getPaintedAtlas } from './paintedArt.js'
 import { PROPS } from './props.js'
 import { drawIslandBase, animIslandBase, islandBounds, cloudBank } from './island.js'
-import { bridgeCurve } from './people.js'
+import { drawBridge, drawPrismGateway } from './bridge.js'
 import { buildingLayout } from './buildingLayout.js'
 import { setMode, col, PAL, glow, line, poly, circle, ellipse, rng, lit, TAU } from './iso.js'
 
@@ -120,81 +120,6 @@ function propBounds(p) {
   return { x: cx - hw - 3, y: cy - up - 3, w: hw * 2 + 6, h: up + down + 6 }
 }
 const propKey = (p) => `${p.type}:${Math.round(p.x)}:${Math.round(p.y)}:${p.pts ? p.pts.flat().join(',') : ''}`
-
-/* ---------------- bridges ---------------- */
-function drawBridge(ctx, b, t, lights = null, progress = 1) {
-  const pts = bridgeCurve(b.route, 20).reverse()
-  if (pts.length < 2) return
-  const reinforced = b.type === 'reinforced'
-  const strained = b.condition < 40
-  const W = 5.2
-  const norm = (i) => {
-    const [x1, y1] = pts[Math.max(0, i - 1)], [x2, y2] = pts[Math.min(pts.length - 1, i + 1)]
-    const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1
-    let nx = -dy / l, ny = dx / l
-    ny *= 0.55
-    const k = Math.hypot(nx, ny) || 1
-    return [nx / k, ny / k]
-  }
-  if (progress <= 0) return
-  // One clip reveals deck, posts and rails together from the home-island anchor.
-  // Endpoints follow the same bob offsets as the painted island layers.
-  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1]
-  const angle = Math.atan2(by - ay, bx - ax), length = Math.hypot(bx - ax, by - ay)
-  ctx.save()
-  if (progress < 1) {
-    ctx.translate(ax, ay); ctx.rotate(angle)
-    ctx.beginPath(); ctx.rect(-12, -80, (length + 24) * progress, 160); ctx.clip()
-    ctx.rotate(-angle); ctx.translate(-ax, -ay)
-  }
-  // shadow on the clouds/rock below
-  ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y + 16) : ctx.moveTo(x, y + 16)))
-  ctx.strokeStyle = 'rgba(10,14,50,.22)'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke()
-  // underside beam
-  ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y + 2.5) : ctx.moveTo(x, y + 2.5)))
-  ctx.strokeStyle = col(reinforced ? '#8f8678' : PAL.woodDark); ctx.lineWidth = W * 2 + 1; ctx.lineCap = 'butt'; ctx.stroke()
-  // planks
-  const n = pts.length - 1
-  const rr = rng(b.route.length * 31)
-  for (let i = 0; i < n; i++) {
-    for (let k = 0; k < 3; k++) {
-      const t0 = (i + k / 3) / n, t1 = (i + (k + 0.82) / 3) / n
-      if (strained && rr() < 0.18) continue
-      const P = (tt) => { const f = tt * n, j = Math.min(n - 1, Math.floor(f)), u = f - j; return [pts[j][0] + (pts[j + 1][0] - pts[j][0]) * u, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * u, j] }
-      const [x0, y0, j0] = P(t0), [x1, y1] = P(t1)
-      const [nx, ny] = norm(j0)
-      poly(ctx, [[x0 + nx * W, y0 + ny * W], [x1 + nx * W, y1 + ny * W], [x1 - nx * W, y1 - ny * W], [x0 - nx * W, y0 - ny * W]],
-        col(reinforced ? (k % 2 ? '#e3dbcd' : '#d4cbbb') : (k % 2 ? PAL.woodLight : '#b8834b')))
-    }
-  }
-  // posts, rope rails and a lantern every few spans
-  for (const side of [-1, 1]) {
-    const rail = []
-    pts.forEach(([x, y], i) => {
-      const [nx, ny] = norm(i)
-      const px = x + nx * W * side, py = y + ny * W * side
-      if (i % 2 === 0) {
-        line(ctx, px, py, px, py - 8, col(reinforced ? '#efe6d2' : PAL.woodDark), reinforced ? 1.8 : 1.5, 'butt')
-        circle(ctx, px, py - 8, 1.1, col(PAL.gold))
-      }
-      if (side === 1 && i % 4 === 2) {
-        poly(ctx, [[px - 1.5, py - 9], [px + 1.5, py - 9], [px + 1.1, py - 12], [px - 1.1, py - 12]], col('#fff1c2'), col(PAL.goldDark), 0.4)
-        if (lights && i / n <= progress) lights.push([px, py - 10, 16])
-      }
-      rail.push([px, py - 6.5])
-    })
-    ctx.beginPath(); rail.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
-    ctx.strokeStyle = col(reinforced ? PAL.gold : '#a86a32'); ctx.lineWidth = 1.15; ctx.stroke()
-    ctx.beginPath(); rail.forEach(([x, y], i) => (i ? ctx.lineTo(x, y + 2.4) : ctx.moveTo(x, y + 2.4)))
-    ctx.strokeStyle = col(reinforced ? '#d9c49a' : '#6b3e22'); ctx.lineWidth = 0.7; ctx.stroke()
-  }
-  ctx.restore()
-  if (progress < 1) {
-    const f = progress * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(f)), u = f - i
-    glow(ctx, pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u - 5, 13, '#ffe7ac', .7)
-  }
-
-}
 
 /* ---------------- the component ---------------- */
 export default function WorldCanvas({ hoverRef }) {
@@ -401,7 +326,7 @@ export default function WorldCanvas({ hoverRef }) {
               }
             }
             if (isl.id === 'prism') {
-              glow(ctx, 1360, 890, 28 + Math.sin(t * 1.7) * 5, '#80dfff', .16)
+              glow(ctx, ...INTERACTION_POINTS.crystals, 28 + Math.sin(t * 1.7) * 5, '#80dfff', .16)
             }
 
             ctx.restore()
@@ -416,13 +341,20 @@ export default function WorldCanvas({ hoverRef }) {
 
       // 3. Only player-built spans. Route buttons live in the interaction layer.
       const bridgeLights = []
-      for (const b of st.bridges) {
+      const spans = st.bridges.map(b => {
         if (!bridgeAppeared.has(b.route)) bridgeAppeared.set(b.route, now)
         const progress = reducedMotion.matches ? 1 : Math.min(1, (now - bridgeAppeared.get(b.route)) / 1300)
+        return { b, progress }
+      })
+      setMode('lit')
+      const crystalSpan = spans.find(({ b }) => b.route === 'prism-haven')
+      if (crystalSpan) drawPrismGateway(ctx, crystalSpan.progress)
+      for (const { b, progress } of spans) {
         setMode(b.condition <= 0 ? 'locked' : 'lit')
         drawBridge(ctx, b, t, bridgeLights, progress)
       }
       setMode('lit')
+      if (crystalSpan) drawPrismGateway(ctx, crystalSpan.progress, true)
 
       // Pulsing rings around the "build a bridge" buttons. Drawn here rather than as a CSS
       // animation in the SVG overlay, which made the browser repaint the whole overlay every frame.

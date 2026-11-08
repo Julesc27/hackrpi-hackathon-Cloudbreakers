@@ -6,7 +6,7 @@
 //   props   – things standing on the island (see props.js)
 //   nav     – walkway graph residents move along: nodes { id: [x, y, tag?] }, edges [a, b]
 // Building plots for the player live in game/data.js (ISLANDS[id].plots) and are kept clear here.
-import { ISLAND_OFFSETS } from '../../game/mapLayout.js'
+import { ISLAND_OFFSETS, shiftIslandPoint } from '../../game/mapLayout.js'
 import { ISLANDS } from '../../game/data.js'
 import { rng } from './iso.js'
 
@@ -232,8 +232,8 @@ for (const [id, [dx, dy]] of Object.entries(ISLAND_OFFSETS)) {
   for (const point of Object.values(island.nav.nodes)) { point[0] += dx; point[1] += dy }
 }
 Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
-  e_mistral: [580, 365], e_rain: [930, 360], e_mercy: [470, 520],
-  e_hearth: [1090, 535], e_verdant: [580, 365], e_prism: [1065, 650], e_gardens: [1005, 695],
+  e_mistral: [586, 380], e_rain: [907, 374], e_mercy: [478, 517],
+  e_hearth: [1075, 525], e_verdant: [586, 380], e_prism: [1050, 652], e_gardens: [1005, 695],
 })
 WORLD_ISLANDS.newHaven.ground = [[775, 495, 300, 165], [750, 635, 275, 100]]
 
@@ -245,9 +245,38 @@ export const BRIDGE_ENDS = {
   'mercy-haven': { a: ['mercy', 'e_newHaven'], b: ['newHaven', 'e_mercy'] },
   'hearth-haven': { a: ['hearth', 'e_newHaven'], b: ['newHaven', 'e_hearth'] },
 }
-WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = [550, 235]
-WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1080, 245]
-WORLD_ISLANDS.prism.nav.nodes.e_newHaven = [1170, 878]
+// Keep gateway masonry on the bridge shoulders, clear of painted shore foliage.
+// Distances are measured outward from the home and destination walking thresholds.
+export const BRIDGE_GATE_INSETS = {
+  'verdant-haven': { home: 22, away: 8 },
+  'rain-haven': { home: 12, away: 8 },
+  'mercy-haven': { home: 0, away: 10 },
+  'hearth-haven': { home: 10, away: 12 },
+  'prism-haven': { home: 8, away: 8 },
+}
+// The west landing has an oblique opening. Its two stone shoulders are not a
+// perpendicular slice through the span, so preserve their painted positions.
+export const BRIDGE_GATEWAYS = {
+  'mercy-haven': { home: { cross: [-5.5, -9.5], far: [470, 503], near: [486, 531] } },
+}
+// Land on the walking surface inside the dock posts, not on its outer corner.
+WORLD_ISLANDS.verdant.nav.nodes.e_newHaven = shiftIslandPoint('verdant', [535, 239])
+WORLD_ISLANDS.rain.nav.nodes.e_newHaven = [1200, 225]
+WORLD_ISLANDS.prism.nav.nodes.e_newHaven = shiftIslandPoint('prism', [1191, 882])
+WORLD_ISLANDS.mercy.nav.nodes.e_newHaven = [300, 525]
+WORLD_ISLANDS.hearth.nav.nodes.e_newHaven = [1321, 498]
+
+// Separate terrace entrances keep the village and crystal crossings clear.
+export const PRISM_GATE = WORLD_ISLANDS.newHaven.nav.nodes.e_prism
+Object.assign(WORLD_ISLANDS.newHaven.nav.nodes, {
+  eastPath: [1037, 533], eastThreshold: [1060, 520],
+  crystalPath: [1005, 653],
+})
+WORLD_ISLANDS.newHaven.nav.edges = WORLD_ISLANDS.newHaven.nav.edges.filter(([, b]) => b !== 'e_hearth')
+WORLD_ISLANDS.newHaven.nav.edges.push(
+  ['n8', 'eastPath'], ['eastPath', 'eastThreshold'], ['eastThreshold', 'e_hearth'],
+  ['n9', 'crystalPath'], ['crystalPath', 'e_prism'],
+)
 
 export function bridgePoints(routeId) {
   const e = BRIDGE_ENDS[routeId]

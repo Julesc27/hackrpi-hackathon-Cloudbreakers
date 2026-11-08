@@ -82,3 +82,13 @@ The existing flight path remains live. Slow bobbing and a small rocking motion a
 `shelters-grounded.png` is a two-column transparent atlas generated with the built-in image tool from the starter island and original construction atlas references. The brief replaces the shelter's bright tile pedestal with walls meeting the paving, a narrow worn doorstep, irregular ivy and tiny plant tufts. Two modest cream-stone, weathered-terracotta cottages share the island's camera angle and softer palette; their porch, chimney and ivy differ subtly. No square platform, raised plinth, surrounding ground, people or text.
 
 `buildingSprite(type, slot)` selects the same shelter variant in the canvas and placement preview. The workshop uses the first variant. Shelters use a smaller footprint, a tighter contact shadow and a ground anchor at 93% of the cropped image height. Stable saved plot indexes are preserved; the upper pair is staggered along the paving. Procedural window glows are omitted on painted structures so they no longer create a misplaced yellow halo at the foundations.
+
+
+## Reference-style bridge materials
+
+`bridge-materials.png` is a transparent 2x2 component atlas generated with the built-in image tool using `command-center-no-people.png` as its style reference. The prompt requests hand-painted honey-brown plank decking, a chunky carved timber handrail, a gold-capped wooden post and a cream-stone gateway pier with cobalt inset. No full map, sky, people or text. The deck is an eight-board top-down rectangle so the renderer can map individual boards to the crossing's live ground-plane projection.
+
+`bridge.js` projects the painted boards onto the animated span and keeps posts upright, with timber rails, diagonal underside braces and a shallow arch. Reinforced spans retain timber decking and use stone piers/bracing. Bridge ends use the starter island's northwestern, northeastern, western and eastern stone openings; the crystal and village routes share the eastern entrance. Existing painted gateway pillars are retained rather than drawing duplicate posts over them. Short on-island paving blends into the existing pathways. Bridges are still absent until built and reveal their components together during construction.
+
+
+The forest and crystal shelf are repositioned on this branch to give their crossings a diagonal run from the original gate openings, rather than a ladder-like drop. `BRIDGE_LAYOUT_SHIFTS` applies the same translation to painting bounds, plots, resource interactions, hit areas, fallback props, navigation anchors and approach paths. Existing buildings retain their island/slot identities. Both eastern routes share the eastern paved entrance, with the inner railing left open at their fork.
