@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { defaultModel, requestTimeoutMs, runAgent } from './agent.mjs'
+import { defaultModel, runAgent, stepBudgetMs } from './agent.mjs'
 import { scenarios } from './scenarios.mjs'
 
 const saveKey = 'cloudbreakers-save-v1'
 
 for (const scenario of scenarios) {
   test(`[${scenario.id}] a browser agent can: ${scenario.objective}`, async ({ page }, testInfo) => {
-    // Every step may wait the full Gemini timeout; leave two minutes for page setup and grading.
-    test.setTimeout(scenario.maxSteps * requestTimeoutMs + 120_000)
+    // Every step may use its full Gemini budget (timeout plus retries); leave two minutes for page setup and grading.
+    test.setTimeout(scenario.maxSteps * stepBudgetMs + 120_000)
     const start = JSON.parse(readFileSync(new URL(`../e2e/checkpoints/${scenario.checkpoint}.json`, import.meta.url), 'utf8'))
     const report = { scenario: scenario.id, objective: scenario.objective, checkpoint: scenario.checkpoint, model: process.env.GEMINI_MODEL || defaultModel, transcript: [], passed: false }
     try {

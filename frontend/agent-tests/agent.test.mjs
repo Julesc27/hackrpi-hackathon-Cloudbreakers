@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { defaultModel, parseAction, requestTimeoutMs } from './agent.mjs'
+import { defaultModel, parseAction, requestTimeoutMs, retryableStatus, stepBudgetMs } from './agent.mjs'
 import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
 
 const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
@@ -17,13 +17,18 @@ test('Gemini Flash gets more than the 60 seconds that aborted its first CI reque
   assert.ok(requestTimeoutMs > 60_000)
 })
 
+test('overload and rate-limit errors are retried, but bad keys and requests are not', () => {
+  for (const status of [429, 503]) assert.ok(retryableStatus.has(status), `${status} should retry`)
+  for (const status of [400, 401, 403, 404]) assert.ok(!retryableStatus.has(status), `${status} should fail fast`)
+})
+
 test('every scenario has a unique id, a committed checkpoint, and fits its CI job', () => {
-  const jobTimeoutMs = 45 * 60_000
+  const jobTimeoutMs = 60 * 60_000
   assert.equal(new Set(scenarios.map((s) => s.id)).size, scenarios.length)
   for (const scenario of scenarios) {
     readFileSync(new URL(`../e2e/checkpoints/${scenario.checkpoint}.json`, import.meta.url))
-    // Worst case: every step waits the full Gemini timeout, plus the 2-minute setup allowance in agent.spec.js.
-    assert.ok(scenario.maxSteps * requestTimeoutMs + 120_000 < jobTimeoutMs, `${scenario.id} could outlive its CI job`)
+    // Worst case: every step uses its full Gemini budget, plus the 2-minute setup allowance in agent.spec.js.
+    assert.ok(scenario.maxSteps * stepBudgetMs + 120_000 < jobTimeoutMs, `${scenario.id} could outlive its CI job`)
   }
 })
 

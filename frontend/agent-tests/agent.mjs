@@ -34,43 +34,67 @@ function toPixel(value, size) {
 
 async function nextAction(page, objective, previous, key) {
   const screenshot = await page.screenshot({ type: 'jpeg', quality: 65 })
-  const started = Date.now()
-  console.log(`Gemini request started (${model}; ${screenshot.length} screenshot bytes)`)
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. Give click coordinates as x and y normalized from 0 to 1000 across the screenshot's width and height (0,0 is top-left; 1000,1000 is bottom-right). If an action did not change the screen, try a different target instead of repeating it. Use done only when you believe the objective is met.` }] },
-      contents: [{ role: 'user', parts: [
-        { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3).map(({ step, action, message, modelX, modelY, deltaY }) => ({ step, action, message, x: modelX, y: modelY, deltaY })))}\nChoose the next action from the screenshot.` },
-        { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
-      ] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            action: { type: 'STRING', enum: ['click', 'scroll', 'done'] },
-            x: { type: 'INTEGER' },
-            y: { type: 'INTEGER' },
-            deltaY: { type: 'INTEGER' },
-            message: { type: 'STRING' },
-          },
-          required: ['action', 'x', 'y', 'deltaY', 'message'],
-        },
+  const body = JSON.stringify({
+  systemInstruction: { parts: [{ text: `${instructions}\n\nOnly use the screenshot and your available browser actions. Never guess coordinates without looking at the current screenshot. Respond with one action and a short visible explanation. Give click coordinates as x and y normalized from 0 to 1000 across the screenshot's width and height (0,0 is top-left; 1000,1000 is bottom-right). If an action did not change the screen, try a different target instead of repeating it. Use done only when you believe the objective is met.` }] },
+  contents: [{ role: 'user', parts: [
+    { text: `Objective: ${objective}\nRecent actions: ${JSON.stringify(previous.slice(-3).map(({ step, action, message, modelX, modelY, deltaY }) => ({ step, action, message, x: modelX, y: modelY, deltaY })))}\nChoose the next action from the screenshot.` },
+    { inlineData: { mimeType: 'image/jpeg', data: screenshot.toString('base64') } },
+  ] }],
+  generationConfig: {
+    temperature: 0.2,
+    responseMimeType: 'application/json',
+    responseSchema: {
+      type: 'OBJECT',
+      properties: {
+        action: { type: 'STRING', enum: ['click', 'scroll', 'done'] },
+        x: { type: 'INTEGER' },
+        y: { type: 'INTEGER' },
+        deltaY: { type: 'INTEGER' },
+        message: { type: 'STRING' },
       },
-    }),
-    signal: AbortSignal.timeout(requestTimeoutMs),
-  }).catch((error) => {
-    if (error.name === 'TimeoutError') {
-      throw new Error(`Gemini sent no response within ${requestTimeoutMs / 1000}s; request or model may be slow or unreachable`, { cause: error })
-    }
-    throw error
+      required: ['action', 'x', 'y', 'deltaY', 'message'],
+    },
+  },
   })
-  console.log(`Gemini responded HTTP ${response.status} in ${Date.now() - started}ms`)
-  if (!response.ok) throw new Error(`Gemini request failed (HTTP ${response.status}); check key, model access, and free-tier quota`)
-  return response.json()
+  for (let attempt = 0; ; attempt++) {
+    const started = Date.now()
+    console.log(`Gemini request started (${model}; ${screenshot.length} screenshot bytes${attempt ? `; retry ${attempt}/${retryDelaysMs.length}` : ''})`)
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body,
+      signal: AbortSignal.timeout(requestTimeoutMs),
+    }).catch((error) => {
+      if (error.name === 'TimeoutError') {
+        throw new Error(`Gemini sent no response within ${requestTimeoutMs / 1000}s; request or model may be slow or unreachable`, { cause: error })
+      }
+      throw error
+    })
+    console.log(`Gemini responded HTTP ${response.status} in ${Date.now() - started}ms`)
+    if (response.ok) return response.json()
+    const detail = await errorDetail(response)
+    if (!retryableStatus.has(response.status) || attempt >= retryDelaysMs.length) {
+      throw new Error(`Gemini request failed (HTTP ${response.status}${detail ? `: ${detail}` : ''}) after ${attempt + 1} attempt(s); check key, model access, and free-tier quota`)
+    }
+    const delay = retryDelaysMs[attempt]
+    console.log(`Gemini is temporarily unavailable${detail ? ` (${detail})` : ''}; retrying in ${delay / 1000}s`)
+    await new Promise((resolve) => setTimeout(resolve, delay))
+  }
+}
+
+// Overload (503), rate limit (429) and transient server errors are worth retrying; bad keys or requests are not.
+export const retryableStatus = new Set([429, 500, 502, 503, 504])
+export const retryDelaysMs = [5_000, 15_000, 30_000, 60_000]
+// Worst-case time one agent step can take: a full-timeout answer after every backoff.
+export const stepBudgetMs = requestTimeoutMs + retryDelaysMs.reduce((sum, ms) => sum + ms, 0)
+
+async function errorDetail(response) {
+  try {
+    const data = await response.json()
+    return [data.error?.status, data.error?.message].filter(Boolean).join(' - ').slice(0, 300)
+  } catch {
+    return ''
+  }
 }
 
 export async function runAgent(page, objective, key, onStep, { maxSteps = 8 } = {}) {
