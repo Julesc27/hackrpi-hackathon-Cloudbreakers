@@ -2,9 +2,12 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
-import { defaultModel, gradeGatherWood, parseAction, requestTimeoutMs } from './agent.mjs'
+import { defaultModel, parseAction, requestTimeoutMs } from './agent.mjs'
+import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
 
 const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
+const play = (...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(start))
+const buildShelter = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
 
 test('defaults to free-tier Flash, which can tell the wood and stone markers apart better than Flash Lite', () => {
   assert.equal(defaultModel, 'gemini-3.8-flash')
@@ -12,14 +15,31 @@ test('defaults to free-tier Flash, which can tell the wood and stone markers apa
 
 test('Gemini Flash gets more than the 60 seconds that aborted its first CI request', () => {
   assert.ok(requestTimeoutMs > 60_000)
-  // 8 slow steps must still fit inside the 30-minute Playwright test timeout.
-  assert.ok(requestTimeoutMs * 8 < 1_800_000)
+})
+
+test('every scenario has a unique id, a committed checkpoint, and fits its CI job', () => {
+  const jobTimeoutMs = 45 * 60_000
+  assert.equal(new Set(scenarios.map((s) => s.id)).size, scenarios.length)
+  for (const scenario of scenarios) {
+    readFileSync(new URL(`../e2e/checkpoints/${scenario.checkpoint}.json`, import.meta.url))
+    // Worst case: every step waits the full Gemini timeout, plus the 2-minute setup allowance in agent.spec.js.
+    assert.ok(scenario.maxSteps * requestTimeoutMs + 120_000 < jobTimeoutMs, `${scenario.id} could outlive its CI job`)
+  }
 })
 
 test('grader requires a real grove gathering action, not just extra XP or wood', () => {
   assert.equal(gradeGatherWood(start, start), false)
-  assert.equal(gradeGatherWood(start, gameReducer(migrateSave(start), { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })), false)
-  assert.equal(gradeGatherWood(start, gameReducer(migrateSave(start), { type: 'GATHER_WOOD' })), true)
+  assert.equal(gradeGatherWood(start, play(buildShelter)), false)
+  assert.equal(gradeGatherWood(start, play({ type: 'GATHER_WOOD' })), true)
+})
+
+test('First Steps grader requires a newly built shelter, not just gathering or a stale completion', () => {
+  assert.equal(gradeFirstSteps(start, start), false)
+  assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, { type: 'GATHER_WOOD' })), false)
+  assert.equal(gradeFirstSteps(start, play(buildShelter)), true)
+  assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, buildShelter)), true)
+  const alreadyDone = play(buildShelter)
+  assert.equal(gradeFirstSteps(alreadyDone, alreadyDone), false)
 })
 
 test('model action parser scales normalized 0-1000 points to the viewport and rejects unsafe clicks', () => {

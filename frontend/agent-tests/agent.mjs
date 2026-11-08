@@ -3,18 +3,8 @@ import { readFileSync } from 'node:fs'
 const instructions = readFileSync(new URL('./HOW_TO_PLAY.md', import.meta.url), 'utf8')
 export const defaultModel = 'gemini-3.8-flash'
 const model = process.env.GEMINI_MODEL || defaultModel
-const maxSteps = 8
 const maxTokens = 30_000
 export const requestTimeoutMs = 180_000
-
-export function gradeGatherWood(start, end) {
-  return Boolean(
-    end && end.resources?.wood > start.resources.wood &&
-    end.deposits?.wood < start.deposits.wood &&
-    end.xp > start.xp &&
-    end.lastInteraction?.siteId === 'grove',
-  )
-}
 
 export function parseAction(data, viewport) {
   const candidate = data.candidates?.[0]
@@ -83,7 +73,7 @@ async function nextAction(page, objective, previous, key) {
   return response.json()
 }
 
-export async function runAgent(page, objective, key, onStep) {
+export async function runAgent(page, objective, key, onStep, { maxSteps = 8 } = {}) {
   if (!key) throw new Error('GEMINI_API_KEY is required')
   const transcript = []
   let tokens = 0
