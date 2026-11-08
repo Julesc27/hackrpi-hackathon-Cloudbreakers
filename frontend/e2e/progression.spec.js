@@ -65,7 +65,10 @@ test('a bridge can be planned and built with wood split between the backpack and
   await expect(build).toBeEnabled();await build.click()
   await expectSave(page,s=>s.bridges.some(b=>b.route==='verdant-haven'))
   const built=await savedTown(page)
-  expect(built.resources.wood).toBe(0);expect(built.backpack.wood).toBe(0)
+  // Connecting the forest produces its normal yield after the bridge cost is paid.
+  expect(built.resources.wood).toBe(ISLANDS.verdant.yields.wood)
+  expect(built.backpack.wood).toBe(0)
+  expect(built.bridges.find(b=>b.route==='verdant-haven').paidCost).toEqual({wood:14})
 })
 
 test('a forecast can be prepared for by upgrading a shelter, with cancellable captain work', async ({ page }, testInfo) => {
