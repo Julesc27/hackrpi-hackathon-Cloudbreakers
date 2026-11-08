@@ -54,8 +54,8 @@ function getSiteScreenPos(siteId, worldX, worldY, cam) {
  *
  * Also returns `inTopBar` so callers can arc tokens in the right direction.
  */
-function getResourceTargetPos(res) {
-  if (TOP_BAR_RESOURCES.has(res)) {
+function getResourceTargetPos(res, backpack = false) {
+  if (!backpack && TOP_BAR_RESOURCES.has(res)) {
     const el = document.querySelector(`[data-resource="${res}"]`)
     if (el) {
       const r = el.getBoundingClientRect()
@@ -76,8 +76,8 @@ function getResourceTargetPos(res) {
 }
 
 /** Returns the DOM element that should receive the bump animation on token landing. */
-function getBumpTarget(res) {
-  if (TOP_BAR_RESOURCES.has(res)) {
+function getBumpTarget(res, backpack = false) {
+  if (!backpack && TOP_BAR_RESOURCES.has(res)) {
     const el = document.querySelector(`[data-resource="${res}"]`)
     if (el) return el
   }
@@ -108,7 +108,7 @@ export default function FlyingResources() {
     }, 450)
 
     // 2. Bounce the target element (top bar tile or storage button)
-    const targetEl = getBumpTarget(p.res)
+    const targetEl = getBumpTarget(p.res, p.backpack)
     if (targetEl) {
       targetEl.classList.remove('res-bump')
       void targetEl.offsetWidth // force reflow to restart animation
@@ -148,7 +148,7 @@ export default function FlyingResources() {
         startPos = getSiteScreenPos(detail.siteId, detail.worldX, detail.worldY, cam)
       }
 
-      const { x: targetX, y: targetY, inTopBar } = getResourceTargetPos(res)
+      const { x: targetX, y: targetY, inTopBar } = getResourceTargetPos(res, detail.backpack)
 
       // 2–5 tokens per resource, staggered
       const count = Math.min(5, Math.max(2, Math.round(totalAmount / 1.5)))
@@ -187,6 +187,7 @@ export default function FlyingResources() {
           amount: tokenAmount,
           totalAmount,
           fromBubble: detail.fromBubble,
+          backpack: Boolean(detail.backpack),
           isLast: i === count - 1,
           inTopBar,
           startX: startPos.x,

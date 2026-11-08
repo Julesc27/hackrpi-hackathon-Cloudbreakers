@@ -13,6 +13,14 @@
     "materials": 0,
     "fish": 0
   },
+  "backpack": {
+    "wood": 0,
+    "stone": 0,
+    "seeds": 0,
+    "crystals": 0,
+    "materials": 0,
+    "fish": 0
+  },
   "deposits": {
     "wood": 36,
     "stone": 18

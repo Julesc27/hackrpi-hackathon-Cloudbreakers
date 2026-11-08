@@ -1,10 +1,106 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
-import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability } from './engine.js'
+import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, backpackUsed, backpackCapacity } from './engine.js'
 import { Player } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
 import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+
+const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
+
+test('backpack capacity is shared and partial harvests never consume extra deposits', () => {
+  const initial = { ...createInitialState(), backpack: { wood: 19 } }
+  const gathered = gameReducer(initial, { type: 'GATHER_AT_SITE', siteId: 'stone' })
+  assert.equal(backpackUsed(gathered), backpackCapacity(gathered))
+  assert.equal(gathered.backpack.stone, 1)
+  assert.equal(gathered.resources.stone, initial.resources.stone)
+  assert.equal(gathered.deposits.stone, initial.deposits.stone-1)
+  assert.match(gatherAvailability(gathered, 'grove'), /Backpack full/)
+  const rejected = gameReducer(gathered, { type: 'GATHER_WOOD' })
+  assert.equal(rejected.xp, gathered.xp)
+  assert.deepEqual(rejected.deposits, gathered.deposits)
+  const water = gameReducer(gathered, { type: 'GATHER_AT_SITE', siteId: 'collector' })
+  assert.equal(water.lastInteraction.siteId, 'collector', 'A full backpack must not block survival resources')
+  assert.equal(backpackUsed(water), 20)
+})
+
+test('mixed harvests send materials to the backpack and survival supplies straight to town', () => {
+  const initial = { ...createInitialState(), connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }] }
+  const gathered = gameReducer(initial, { type: 'GATHER_AT_SITE', siteId: 'forage' })
+  assert.equal(gathered.backpack.seeds, 2)
+  assert.equal(gathered.backpack.food, undefined)
+  assert.equal(gathered.lastInteraction.reward.food, 5)
+  assert.deepEqual(gathered.lastInteraction.carried, { seeds: 2 })
+  assert.ok(gathered.resources.food > initial.resources.food)
+})
+
+test('depositing requires town storage and transfers supplies exactly once without advancing the economy', () => {
+  const initial = { ...createInitialState(), backpack: { wood: 8, crystals: 3, fish: 2 }, player: { island: 'verdant', x: 635, y: 610 } }
+  const rejected = gameReducer(initial, { type: 'DEPOSIT_BACKPACK' })
+  assert.deepEqual(rejected.resources, initial.resources)
+  assert.deepEqual(rejected.backpack, initial.backpack)
+  const stored = deposit(initial)
+  assert.equal(stored.resources.wood, initial.resources.wood+8)
+  assert.equal(stored.resources.crystals, 3)
+  assert.equal(stored.resources.fish, 2)
+  assert.equal(backpackUsed(stored), 0)
+  for (const key of ['xp', 'weather', 'forecast', 'population', 'counters', 'deposits', 'completed']) assert.deepEqual(stored[key], initial[key])
+  for (const key of ['food', 'water', 'energy', 'coins']) assert.equal(stored.resources[key], initial.resources[key])
+  assert.equal(gameReducer(stored, { type: 'DEPOSIT_BACKPACK' }), stored)
+})
+
+test('carried materials cannot pay for buildings until deposited', () => {
+  const initial = createInitialState()
+  const carrying = { ...initial, resources: { ...initial.resources, wood: 0 }, backpack: { wood: 20 } }
+  const action = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
+  assert.equal(gameReducer(carrying, action).buildings.length, carrying.buildings.length)
+  assert.equal(gameReducer(deposit(carrying), action).buildings.length, carrying.buildings.length+1)
+})
+
+test('save migration preserves town stock and backpack contents without inventing carried supplies', () => {
+  const initial = createInitialState(), { backpack, ...old } = initial
+  assert.equal(backpackUsed(migrateSave(old)), 0)
+  assert.deepEqual(migrateSave(old).resources, initial.resources)
+  const restored = migrateSave({ ...initial, backpack: { wood: 8, crystals: 3, stone: -5, seeds: 'bad' } })
+  assert.equal(restored.backpack.wood, 8)
+  assert.equal(restored.backpack.crystals, 3)
+  assert.equal(restored.backpack.stone, 0)
+  assert.equal(restored.backpack.seeds, 0)
+  assert.deepEqual(migrateSave(restored), restored)
+})
+
+test('the captain physically returns from an island before depositing and can cancel the journey', () => {
+  let state = { ...createInitialState(), connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }], backpack: { wood: 8 }, player: { island: 'verdant', x: 400, y: 190 } }
+  const player = new Player(state)
+  player.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
+  const unload = action => { state = gameReducer(state, action); player.sync(state) }
+  assert.equal(player.request({ type: 'DEPOSIT_BACKPACK' }, unload), true)
+  player.update(.1); player.cancel()
+  assert.equal(state.backpack.wood, 8)
+  assert.equal(player.request({ type: 'DEPOSIT_BACKPACK' }, unload), true)
+  let crossed = false
+  for (let i=0; player.pending && i<2000; i++) { player.update(.1); if (!player.avatar.isl) crossed = true }
+  assert.equal(crossed, true)
+  assert.equal(player.pending, null)
+  assert.equal(player.avatar.isl, 'newHaven')
+  assert.equal(backpackUsed(state), 0)
+  assert.equal(state.resources.wood, 32)
+  assert.equal(state.xp, 0)
+})
+
+test('a nearby town storehouse receives the backpack instead of sending the captain across town', () => {
+  const initial = createInitialState(), plot = ISLANDS.newHaven.plots[4]
+  let state = { ...initial, buildings: [...initial.buildings, { id: 'storehouse', type: 'storageHouse', island: 'newHaven', slot: 4 }], backpack: { wood: 8 }, player: { island: 'newHaven', x: 1000, y: 610 } }
+  const player = new Player(state)
+  player.onSave = position => { state = gameReducer(state, { type: 'PLAYER_POSITION', position }) }
+  assert.equal(player.request({ type: 'DEPOSIT_BACKPACK' }, action => { state = gameReducer(state, action); player.sync(state) }), true)
+  for (let i=0; player.pending && i<500; i++) player.update(.1)
+  assert.equal(player.pending, null)
+  assert.ok(Math.hypot(player.avatar.x-plot[0], player.avatar.y-plot[1]) < 45)
+  assert.ok(Math.hypot(player.avatar.x-635, player.avatar.y-610) > 150)
+  assert.equal(backpackUsed(state), 0)
+  assert.equal(state.resources.wood, initial.resources.wood+8)
+})
 
 test('every painted stair flight is walkable in both directions using up and down controls', () => {
   const state = { ...createInitialState(), connected: ['newHaven','verdant','prism'], bridges: [
@@ -70,7 +166,8 @@ test('the captain walks to a task before gathering, and movement itself grants n
   assert.deepEqual(state.resources, before)
   for (let i = 0; player.pending && i < 1000; i++) player.update(.1)
   assert.equal(player.pending, null)
-  assert.equal(state.resources.wood, before.wood + 6)
+  assert.equal(state.resources.wood, before.wood)
+  assert.equal(state.backpack.wood, 6)
   assert.ok(Math.hypot(player.avatar.x-start[0], player.avatar.y-start[1]) > 30)
 })
 
@@ -236,8 +333,8 @@ test('a building appearing under the captain recovers and saves a usable positio
 
 test('actions remain available and award XP beyond the former action limit', () => {
   let state = createInitialState()
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_WOOD' })
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
+  for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_WOOD' }))
+  for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' }))
   assert.ok(state.xp >= 120)
   assert.ok(getLevelInfo(state.xp).level >= 2)
   assert.ok(isUnlocked(state, 'garden'))
@@ -298,13 +395,13 @@ test('expanded home terraces preserve old buildings and accept shelters on new p
 
 test('starter timber and stone deplete; rejected harvesting grants neither XP nor effects', () => {
   let state = createInitialState()
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
+  for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' }))
   assert.equal(state.deposits.wood, 0)
   const rejected = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'grove' })
   assert.equal(rejected.xp, state.xp)
   assert.equal(rejected.resources.wood, state.resources.wood)
   assert.equal(rejected.lastInteraction, state.lastInteraction)
-  for (let i = 0; i < 6; i++) state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' })
+  for (let i = 0; i < 6; i++) state = deposit(gameReducer(state, { type: 'GATHER_AT_SITE', siteId: 'stone' }))
   assert.equal(state.deposits.stone, 0)
   assert.match(gatherAvailability(state, 'stone'), /depleted/)
 })
@@ -316,9 +413,9 @@ test('outer resource sites require a working bridge and provide their distinct r
   assert.equal(rejected.xp, state.xp)
   state = { ...state, connected: Object.keys(ISLANDS), bridges: ROUTES.map((r) => ({ route: r.id, type: 'reinforced', condition: 100 })) }
   for (const [siteId, resource] of [['forest', 'wood'], ['forage', 'seeds'], ['fishing', 'fish'], ['crystals', 'crystals'], ['salvage', 'materials']]) {
-    const before = state.resources[resource]
+    const before = state.backpack[resource]
     state = gameReducer(state, { type: 'GATHER_AT_SITE', siteId })
-    assert.ok(state.resources[resource] > before)
+    assert.ok(state.backpack[resource] > before)
     assert.equal(state.lastInteraction.siteId, siteId)
   }
   const closed = { ...state, bridges: state.bridges.map((b) => ({ ...b, condition: 0 })) }
@@ -361,7 +458,7 @@ test('older structures are preserved with hospital and village islands restored'
 
 test('a fresh town can build homes and reach all three resource islands before starter timber runs out', () => {
   let state = createInitialState()
-  const act = (action) => { state = gameReducer(state, action) }
+  const act = (action) => { state = gameReducer(state, action); if (action.type === 'GATHER_AT_SITE') state = deposit(state) }
   act({ type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 })
   act({ type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven', slot: 1 })
   act({ type: 'GATHER_AT_SITE', siteId: 'grove' })

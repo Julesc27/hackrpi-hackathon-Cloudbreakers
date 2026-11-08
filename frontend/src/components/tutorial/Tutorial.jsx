@@ -76,8 +76,8 @@ const PANEL_STEPS = {
     railTitle: 'The Storehouse',
     railText: 'Want the full picture of your supplies? Click Storage to open the Storehouse!',
     railHint: 'Click the Storage button in the bottom bar',
-    title: 'Stock and Flow',
-    text: 'See how much of each resource you have, how much you can hold, and how it will change after your next action.',
+    title: 'Backpack and Town Storage',
+    text: 'Gathered materials fill your captain’s backpack. Deposit All returns them to town for building. The Town Storage tab shows stored supplies and their production.',
     nextLabel: 'Got it \u203a',
     next: 15,
   },
@@ -108,7 +108,7 @@ export default function Tutorial() {
   // Record snapshots when step changes
   useEffect(() => {
     stepSnapshot.current = {
-      wood: state.resources.wood,
+      wood: state.resources.wood + (state.backpack?.wood || 0),
       shelters: state.buildings.filter((b) => b.type === 'shelter').length,
       wasInQuests: false,
       wasOpen: false,
@@ -144,7 +144,7 @@ export default function Tutorial() {
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
-      text = 'Choose Gather wood. Your captain will walk to the grove and collect timber when they arrive.'
+      text = 'Choose Gather wood. Your captain will walk to the grove and put the timber in their backpack. Open Storage to deposit carried materials before using them to build.'
       hint = 'Choose Gather wood, then watch your captain walk there'
       showNextBtn = false
     }
@@ -277,7 +277,7 @@ export default function Tutorial() {
     // Step 2: Auto-advance when wood is gathered from the popup
     if (tutorialStep === 2) {
       const snap = stepSnapshot.current
-      if (state.resources.wood > snap.wood) {
+      if (state.resources.wood + (state.backpack?.wood || 0) > snap.wood) {
         const timer = setTimeout(() => {
           if (ui.panel === 'island') ui.setPanel(null)
           setTutorialStep(3)
@@ -353,6 +353,7 @@ export default function Tutorial() {
     ui.selected,
     ui.placing,
     state.resources.wood,
+    state.backpack?.wood,
     state.buildings,
     setTutorialStep,
   ])

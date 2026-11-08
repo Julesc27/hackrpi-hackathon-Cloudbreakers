@@ -5,6 +5,12 @@ import {
 } from './data.js'
 
 export const METERS = ['energy', 'water', 'food']
+export const BACKPACK_RESOURCES = ['wood', 'stone', 'seeds', 'crystals', 'materials', 'fish']
+export const backpackCapacity = () => 20
+export const backpackUsed = state => BACKPACK_RESOURCES.reduce((sum, key) => sum + (state.backpack?.[key] || 0), 0)
+const emptyBackpack = () => Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, 0]))
+export const storageLocations = state => [[635, 610], ...state.buildings.filter(b => b.type === 'storageHouse' && b.island === 'newHaven' && b.slot >= 0).map(b => ISLANDS.newHaven.plots[b.slot]).filter(Boolean)]
+export const atTownStorage = state => state.player?.island === 'newHaven' && storageLocations(state).some(([x,y]) => Math.hypot(x-state.player.x,y-state.player.y) <= 45)
 const ALL_RES = Object.keys(RESOURCES)
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
@@ -13,6 +19,7 @@ export function createInitialState() {
     version: 5,
     townName: 'New Haven',
     resources: { wood: 24, water: 30, food: 24, energy: 12, coins: 40, stone: 8, seeds: 2, crystals: 0, materials: 0, fish: 0 },
+    backpack: emptyBackpack(),
     deposits: { ...STARTER_DEPOSITS },
     lastInteraction: null,
     happiness: 62,
@@ -385,6 +392,7 @@ export function gatherAvailability(state, siteId) {
   if (!islandAccess(state)[site.island]) return `Connect ${ISLANDS[site.island].name} first`
   if (site.deposit && (state.deposits?.[site.deposit] ?? STARTER_DEPOSITS[site.deposit]) <= 0) return 'Deposit depleted — expand to a resource island'
   if (!canAfford(state.resources, site.cost)) return 'Needs seeds from Verdant Reach'
+  if (Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && backpackUsed(state) >= backpackCapacity(state)) return 'Backpack full — return to town and deposit supplies'
   const cap = caps(state)
   if (!Object.keys(site.reward).some((key) => (state.resources[key] || 0) < (cap[key] ?? Infinity))) return 'Storage is full'
   return null
@@ -395,19 +403,24 @@ function gatherAtSite(state, siteId) {
   if (reason) return toast(state, 'warn', reason)
   const site = GATHER_SITES[siteId]
   const resources = pay(state.resources, site.cost)
+  const backpack = { ...emptyBackpack(), ...state.backpack }
+  let room = Math.max(0, backpackCapacity(state) - backpackUsed(state))
   const deposits = { ...STARTER_DEPOSITS, ...state.deposits }
   const reward = {}
   const cap = caps(state)
   for (const [key, value] of Object.entries(site.reward)) {
-    const amount = Math.min(value, site.deposit ? deposits[site.deposit] : Infinity, (cap[key] ?? Infinity) - (resources[key] || 0))
-    resources[key] = (resources[key] || 0) + amount
+    const carried = BACKPACK_RESOURCES.includes(key)
+    const amount = Math.max(0, Math.min(value, site.deposit ? deposits[site.deposit] : Infinity, carried ? room : (cap[key] ?? Infinity) - (resources[key] || 0)))
+    if (carried) { backpack[key] += amount; room -= amount }
+    else resources[key] = (resources[key] || 0) + amount
     reward[key] = amount
     if (site.deposit) deposits[site.deposit] -= amount
   }
-  let s = { ...state, resources, deposits, nextId: state.nextId + 1,
-    lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward },
+  let s = { ...state, resources, backpack, deposits, nextId: state.nextId + 1,
+    lastInteraction: { id: `i${state.nextId}`, siteId, island: site.island, kind: site.kind, reward, carried: Object.fromEntries(Object.entries(reward).filter(([key]) => BACKPACK_RESOURCES.includes(key))) },
   }
   s = progressSettlement(s, 10)
+  if (backpackUsed(s) >= backpackCapacity(s)) s = toast(s, 'warn', 'Backpack full! Open Storage to return and deposit your supplies.')
   if (site.deposit && deposits[site.deposit] === 0) s = journal(s, 'event', `${site.deposit === 'wood' ? 'Starter grove' : 'Stone deposit'} depleted`, 'New Haven’s supplies are limited. Build a bridge to bring in renewable resources.')
   return s
 }
@@ -416,6 +429,13 @@ function gatherAtSite(state, siteId) {
 
 export function gameReducer(state, action) {
   switch (action.type) {
+    case 'DEPOSIT_BACKPACK': {
+      if (!backpackUsed(state)) return state
+      if (!atTownStorage(state)) return toast(state, 'warn', 'Visit the workshop or a storehouse in New Haven to deposit supplies.')
+      const resources = { ...state.resources }
+      for (const key of BACKPACK_RESOURCES) resources[key] = (resources[key] || 0) + (state.backpack?.[key] || 0)
+      return toast({ ...state, resources, backpack: emptyBackpack(), nextId: state.nextId+1 }, 'success', 'Backpack deposited into town storage.')
+    }
     case 'GATHER_WOOD':
       return gatherAtSite(state, 'grove')
     case 'HARVEST_FOREST':
@@ -570,6 +590,7 @@ export function migrateSave(saved) {
   return {
     ...createInitialState(), ...rest, version: 5, toasts: [],
     resources: { ...createInitialState().resources, ...saved.resources },
+    backpack: Object.fromEntries(BACKPACK_RESOURCES.map(key => [key, Number.isFinite(saved.backpack?.[key]) ? Math.max(0, Math.floor(saved.backpack[key])) : 0])),
     deposits: { ...STARTER_DEPOSITS, ...saved.deposits },
     connected: [...new Set((saved.connected || ['newHaven']).map(remap))].filter((id) => ISLANDS[id]),
     discovered: Object.keys(ISLANDS),

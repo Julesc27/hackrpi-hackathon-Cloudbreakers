@@ -520,7 +520,7 @@ export function drawPerson(ctx, a, t, detail = true, motion = true) {
   const swing = walking ? Math.sin(a.phase) : 0
   const bob = walking ? Math.abs(Math.cos(a.phase)) * 0.6 : 0
   const working = a.act === 'work' && a.task
-  const sit = a.act === 'sit', tend = a.act === 'tend' || (working && ['garden', 'harvest', 'collect'].includes(a.task.kind))
+  const sit = a.act === 'sit', tend = a.act === 'tend' || (working && ['garden', 'harvest', 'collect', 'deposit'].includes(a.task.kind))
   const wind = Math.sin(t * 2.3 + a.id) * 0.5 + (walking ? 1 : 0.3)
   ctx.save()
   ctx.translate(a.x, a.y)

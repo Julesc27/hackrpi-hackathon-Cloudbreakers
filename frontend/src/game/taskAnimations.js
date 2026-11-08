@@ -11,6 +11,7 @@ const ANIMATIONS = {
   build: { duration: 2.4, color: '#f2ce83' },
   repair: { duration: 2, color: '#f2ce83' },
   beacon: { duration: 2.4, color: '#ffe5a1' },
+  deposit: { duration: 1.2, color: '#f2ce83' },
 }
 
 export function taskAnimation(action) {
@@ -21,6 +22,7 @@ export function taskAnimation(action) {
   if (site) kind = ({ fishing: 'fish', forage: 'harvest', lumber: 'build', salvage: 'repair' })[siteId]
     || ({ wood: 'chop', stone: 'mine', crystal: 'crystal', garden: 'garden', water: 'collect' })[site.kind]
   else if (action.type === 'RESTORE_BEACON') kind = 'beacon'
+  else if (action.type === 'DEPOSIT_BACKPACK') kind = 'deposit'
   else if (action.type === 'BUILD' || action.type === 'BUILD_BRIDGE') kind = 'build'
   else if (action.type === 'REPAIR_BRIDGE' || action.type === 'UPGRADE_BRIDGE') kind = 'repair'
   return kind ? { kind, ...ANIMATIONS[kind] } : null

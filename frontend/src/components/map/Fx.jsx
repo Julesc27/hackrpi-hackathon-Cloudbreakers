@@ -179,7 +179,7 @@ export function useWorldEvents() {
           // Convert world → screen and fire the flying token
           const { x: screenX, y: screenY } = worldToScreen(point[0], point[1], cam)
           window.dispatchEvent(new CustomEvent('cloudbreakers:fly-resource', {
-            detail: { res, amount, startX: screenX, startY: screenY, delayOffset: i * 120 },
+            detail: { res, amount, backpack: Boolean(interaction.carried?.[res]), startX: screenX, startY: screenY, delayOffset: i * 120 },
           }))
         })
       }

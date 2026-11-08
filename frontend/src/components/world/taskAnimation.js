@@ -58,11 +58,11 @@ export function drawTaskTool(ctx, task, top, hip, sleeve, hand, motion = true) {
       line(ctx,7+i*1.5,-.3,7+i*1.5,-2,col('#6f9b58'),.4)
       ellipse(ctx,6.5+i*1.5,-1.5,.85,.35,col('#b3cf79'))
     }
-  } else if (kind === 'harvest') {
+  } else if (kind === 'harvest' || kind === 'deposit') {
     arm(4.3,top+4+swing*1.3)
     ellipse(ctx,5,-1.8,3,1.8,col('#bc8b53'),col('#654c35'),.4)
-    for (let i=0;i<3;i++) circle(ctx,4+i,-2.5-(i%2)*.6,.8,col(i%2?'#a9d178':'#d89867'))
-    if (motion) ellipse(ctx,6+swing,top+4+swing*1.3,1,.5,col('#b8df87'))
+    for (let i=0;i<3;i++) circle(ctx,4+i,-2.5-(i%2)*.6,.8,col(kind === 'deposit' ? '#dfc78f' : i%2?'#a9d178':'#d89867'))
+    if (motion) ellipse(ctx,6+swing,top+4+swing*1.3,1,.5,col(kind === 'deposit' ? '#dfc78f' : '#b8df87'))
   } else if (kind === 'fish') {
     arm(3.5,top+3)
     const tipX=12+Math.sin(time*3)*.4, tipY=top-6+Math.sin(time*3)*.8

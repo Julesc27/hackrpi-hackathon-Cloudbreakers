@@ -2,12 +2,12 @@ import { Crowd, bridgeAt } from '../components/world/people.js'
 import { bridgePoints } from '../components/world/layout.js'
 import { GATHER_SITES, BUILDINGS, ISLANDS, ROUTES, BEACON_COST } from './data.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { islandAccess, gatherAvailability, canAfford } from './engine.js'
+import { islandAccess, gatherAvailability, canAfford, backpackUsed, storageLocations } from './engine.js'
 import { taskAnimation } from './taskAnimations.js'
 
 const WORKSHOP = [635, 610]
 const BEACON = [795, 407]
-const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON'])
+const TASKS = new Set(['GATHER_AT_SITE', 'GATHER_WOOD', 'HARVEST_FOREST', 'BUILD', 'BUILD_BRIDGE', 'UPGRADE_BRIDGE', 'REPAIR_BRIDGE', 'RESTORE_BEACON', 'DEPOSIT_BACKPACK'])
 export const isPlayerTask = action => TASKS.has(action.type)
 
 // The player uses the same traced paths and live bridge curves as the residents,
@@ -54,6 +54,11 @@ export class Player extends Crowd {
   }
 
   task(action) {
+    if (action.type === 'DEPOSIT_BACKPACK') {
+      const a = this.avatar
+      const focus = storageLocations(this.state).slice().sort((p,q) => Math.hypot(p[0]-a.x,p[1]-a.y)-Math.hypot(q[0]-a.x,q[1]-a.y))[0]
+      return { island: 'newHaven', point: this.recoveryPoint('newHaven', ...focus), focus, label: 'Deposit backpack' }
+    }
     const siteId = action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : action.siteId
     if (siteId && GATHER_SITES[siteId]) {
       const site = GATHER_SITES[siteId], focus = INTERACTION_POINTS[siteId]
@@ -73,6 +78,7 @@ export class Player extends Crowd {
   }
 
   request(action, dispatch) {
+    if (action.type === 'DEPOSIT_BACKPACK' && !backpackUsed(this.state)) { this.status = 'Your backpack is empty'; return false }
     const task = this.task(action)
     if (!task?.point) return false
     const site = action.siteId || (action.type === 'GATHER_WOOD' ? 'grove' : action.type === 'HARVEST_FOREST' ? 'forest' : null)
@@ -152,6 +158,7 @@ export class Player extends Crowd {
       id, point: this.task({ type: 'GATHER_AT_SITE', siteId: id }).point || INTERACTION_POINTS[id], label: site.label, action: { type: 'GATHER_AT_SITE', siteId: id }, reason: gatherAvailability(this.state, id),
     }))
     if (a.isl === 'newHaven') {
+      if (backpackUsed(this.state)) for (const point of storageLocations(this.state)) choices.push({ id: 'deposit', point, label: 'Deposit backpack', action: { type: 'DEPOSIT_BACKPACK' } })
       choices.push({ id: 'workshop', point: WORKSHOP, label: 'Open workshop', menu: 'build' })
       if (!this.state.beaconRestored) choices.push({ id: 'beacon', point: BEACON, label: 'Restore the beacon', action: { type: 'RESTORE_BEACON' },
         reason: canAfford(this.state.resources, BEACON_COST) ? null : 'Needs 20 wood and 10 energy' })

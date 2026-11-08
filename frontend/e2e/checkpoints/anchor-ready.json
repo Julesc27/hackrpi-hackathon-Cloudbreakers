@@ -13,16 +13,27 @@
     "materials": 0,
     "fish": 0
   },
+  "backpack": {
+    "wood": 0,
+    "stone": 0,
+    "seeds": 0,
+    "crystals": 0,
+    "materials": 0,
+    "fish": 0
+  },
   "deposits": {
     "wood": 24,
     "stone": 18
   },
   "lastInteraction": {
-    "id": "i17",
+    "id": "i19",
     "siteId": "grove",
     "island": "newHaven",
     "kind": "wood",
     "reward": {
+      "wood": 6
+    },
+    "carried": {
       "wood": 6
     }
   },
@@ -136,5 +147,10 @@
   ],
   "journalUnread": 6,
   "seenIntro": true,
-  "nextId": 18
+  "nextId": 22,
+  "player": {
+    "island": "newHaven",
+    "x": 642.5,
+    "y": 612.5
+  }
 }

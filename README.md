@@ -45,6 +45,8 @@ Progress saves to the browser's localStorage, and to your account when logged in
 
 **The camera:** drag the sky to pan, scroll or pinch to zoom, and press `0` or the target button to view New Haven. `+`/`−` zoom and Shift + arrows pan. The captain controls include **Find my avatar**, and the camera follows travel near the screen edges.
 
+**Backpack and town storage:** Storage has two tabs. Gathered wood, stone, seeds, crystals, materials and fish share a 20-item backpack; food, water, energy and coins go directly to town stock. Harvesting takes only what fits. **Deposit All** sends the captain back to the nearest workshop or storehouse in New Haven and unloads the backpack there. Only deposited supplies can pay for buildings. Depositing and walking do not advance the economy or grant XP. Older saves retain all existing town supplies and start with an empty backpack.
+
 ## Frontend layout
 
 ```

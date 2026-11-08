@@ -5,7 +5,7 @@ const shelters = (town) => town?.buildings?.filter((b) => b.type === 'shelter').
 
 export function gradeGatherWood(start, end) {
   return Boolean(
-    end && end.resources?.wood > start.resources.wood &&
+    end && (end.resources?.wood || 0) + (end.backpack?.wood || 0) > start.resources.wood + (start.backpack?.wood || 0) &&
     end.deposits?.wood < start.deposits.wood &&
     end.xp > start.xp &&
     end.lastInteraction?.siteId === 'grove',
@@ -29,7 +29,7 @@ export const scenarios = [
     maxSteps: 8,
     grade: gradeGatherWood,
     expectation: 'wood, grove deposit, XP, and gathering action should change through play',
-    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, startingXp: start.xp, finalXp: end?.xp }),
+    outcome: (start, end) => ({ startingWood: start.resources.wood, finalWood: end?.resources?.wood, backpackWood: end?.backpack?.wood || 0, startingXp: start.xp, finalXp: end?.xp }),
   },
   {
     id: 'first-steps',
