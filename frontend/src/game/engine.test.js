@@ -6,7 +6,7 @@ import { Crowd } from '../components/world/people.js'
 import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+import { STAIRWAYS, WALKWAYS, stairProjection } from '../components/world/stairways.js'
 
 const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
 
@@ -1222,4 +1222,18 @@ test('every save version up to the current one loads, including saves just writt
   for (let v = 2; v <= SAVE_VERSION; v++) assert.ok(isSupportedSave({ version: v }))
   for (const bad of [null, {}, { version: 1 }, { version: SAVE_VERSION + 1 }, { version: '7' }]) assert.equal(isSupportedSave(bad), false)
   assert.equal(migrateSave({ ...fresh, xp: 123 }).xp, 123)
+})
+
+test('the complete workshop paving loop connects to town and is walkable in both directions', () => {
+  const captain = new Player(createInitialState())
+  for (const [index, path] of WALKWAYS.entries()) {
+    assert.deepEqual(captain.recoveryPoint(path.island, ...path.from), path.from, `segment ${index} must connect to town`)
+    for (let step = 0; step < 25; step++) {
+      const point = t => path.from.map((value, axis) => value+(path.to[axis]-value)*t)
+      const from = point(step/25), to = point((step+1)/25)
+      assert.ok(captain.canStep(path.island, from, to), `segment ${index}, step ${step}`)
+      assert.ok(captain.canStep(path.island, to, from), `segment ${index}, reverse step ${step}`)
+    }
+    assert.ok(captain.gridLeg(path.island, ...path.from, ...path.to), `segment ${index} pathfinding`)
+  }
 })

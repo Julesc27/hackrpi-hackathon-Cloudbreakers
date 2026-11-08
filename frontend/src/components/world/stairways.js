@@ -28,6 +28,19 @@ export const STAIRWAYS = Object.entries(PAINTED_STAIRS).flatMap(([island, flight
     from: point(flight.from), to: point(flight.to), halfWidth: flight.width*Math.min(w/sw, h/sh)/2 }))
 })
 
+// The workshop roof, banner and lamp shadows hide paving from the colour tracer.
+// Trace the ground around them explicitly, without opening the workshop itself.
+const WORKSHOP_LOOP = [[432, 674], [423, 693], [375, 699], [325, 704], [265, 714],
+  [200, 720], [233, 766], [263, 796], [300, 823], [350, 849], [404, 875],
+  [457, 855], [505, 834], [539, 804], [530, 777], [485, 753], [471, 734],
+  [455, 704], [423, 693]]
+export const WALKWAYS = WORKSHOP_LOOP.slice(1).map((to, i) => {
+  const art = PAINTED_ISLANDS.newHaven, [x, y, w, h] = art.rect
+  const [sx, sy, sw, sh] = PAINTED_ATLASES[art.sheet].cells[art.cell]
+  const point = ([px, py]) => [x + (px-sx)*w/sw, y + (py-sy)*h/sh]
+  return { island: 'newHaven', from: point(WORKSHOP_LOOP[i]), to: point(to), halfWidth: 14*Math.min(w/sw, h/sh) }
+})
+
 export function stairProjection(stair, point) {
   const dx = stair.to[0]-stair.from[0], dy = stair.to[1]-stair.from[1]
   const length = Math.hypot(dx, dy)
