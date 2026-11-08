@@ -747,7 +747,7 @@ export function Toasts() {
   const { state, dispatch } = useGame()
 
   return (
-    <div className="toasts" aria-live="polite">
+    <div className="toasts" aria-hidden="true">
       {state.toasts.filter((t) => !QUIET.includes(t.kind)).slice(-3).map((t) => (
         <ToastItem key={t.id} t={t} onDone={() => dispatch({ type: 'DISMISS_TOAST', id: t.id })} />
       ))}

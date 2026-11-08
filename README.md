@@ -53,6 +53,8 @@ Progress saves to the browser's localStorage, and to your account when logged in
 
 ## Frontend layout
 
+**Player accessibility:** The **Game actions** button provides a text-based way to explore islands, gather, manage buildings and bridges, prepare for weather, and cancel a job. The first Tab stop skips the visual map to this menu. Build mode also has a labelled **Build location** selector and **Build here** button. Tab/Shift+Tab navigate controls; Enter activates them; Escape closes menus or cancels work. Modal dialogs contain keyboard focus and restore it when closed; nonmodal drawers allow returning to the map. Task results and resource rewards are announced in a persistent screen-reader log. Resource costs include text labels and a shortage symbol. System reduced-motion preferences disable camera flights, momentum, decorative CSS animation and flying resource tokens; forced-colour preferences retain borders and focus indicators. This improves the core play flow; it is not a claim of complete WCAG conformance or a substitute for testing with assistive-technology users.
+
 ```
 frontend/src/
 ├── game/                 ← all rules live here (no React)

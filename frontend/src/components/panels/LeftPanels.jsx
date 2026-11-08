@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import useDialogAccessibility from '../useDialogAccessibility.js'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { BUILDINGS, BUILD_ORDER, MISSIONS } from '../../game/data.js'
 import { activeMissions, canAffordConstruction, constructionResources, countType, isUnlocked, unlockLevel } from '../../game/engine.js'
@@ -31,6 +32,8 @@ export function QuestBook() {
   const { state } = useGame()
   const ui = useUI()
   const close = () => ui.setPanel(null)
+  const dialogRef = useRef(null)
+  useDialogAccessibility(dialogRef, { modal: !ui.tutorialActive, onClose: close })
   useEsc(close)
   const active = activeMissions(state)
   const activeIds = active.map((m) => m.id).join()
@@ -63,7 +66,7 @@ export function QuestBook() {
 
   return (
     <div className="modal-backdrop" onClick={(e) => eventShouldDismissOverlay(e) && close()}>
-      <div className="book" role="dialog" aria-label="Captain's Log">
+      <div ref={dialogRef} className="book" role="dialog" aria-label="Captain's Log">
         <button className="seal-close book-close" onClick={close} aria-label="Close"><Close size={20} /></button>
         <div className="book-page book-left">
           <div className="p-sub">New Haven Archives</div>
@@ -133,12 +136,14 @@ export function BuildPanel() {
   const { state, dispatch } = useGame()
   const ui = useUI()
   const close = () => ui.setPanel(null)
+  const dialogRef = useRef(null)
+  useDialogAccessibility(dialogRef, { modal: false, onClose: close })
   useEsc(close)
   const cards = useCardScroller(BUILD_ORDER.length)
   const { first, last, total } = cards.range
 
   return (
-    <aside className="workshop" role="dialog" aria-label="Town Workshop">
+    <aside ref={dialogRef} className="workshop" role="dialog" aria-label="Town Workshop">
       <div className="workshop-inner parchment">
         <button className="seal-close square" onClick={close} aria-label="Close"><Close size={20} /></button>
         <header className="ws-head">
@@ -178,6 +183,7 @@ export function BuildPanel() {
                   className={def.infrastructure ? 'btn-gold full' : 'gold-plus'}
                   disabled={disabled}
                   data-tutorial={`build-btn-${key}`}
+                  aria-label={def.infrastructure ? (managing ? 'Manage bridges' : 'Unlock bridges') : `Build ${def.name}`}
                   title={managing ? 'Manage bridges' : built ? 'Already built' : !unlocked ? `Unlocks at level ${unlockLevel(key)}` : !affordable ? 'Not enough resources' : `Build ${def.name}`}
                   onClick={() => {
                     if (def.infrastructure) {
@@ -213,13 +219,15 @@ export function AdvisorPanel() {
   const { state } = useGame()
   const ui = useUI()
   const close = () => ui.setPanel(null)
+  const dialogRef = useRef(null)
+  useDialogAccessibility(dialogRef, { modal: false, onClose: close })
   useEsc(close)
   const [n, setN] = useState(0)
   const all = getAdvice(state)
   const a = all[n % all.length]
 
   return (
-    <aside className="notes" role="dialog" aria-label="Cloud's Notes">
+    <aside ref={dialogRef} className="notes" role="dialog" aria-label="Cloud's Notes">
       <div className="notes-header" role="img" aria-label="Cloud's Notes — here for a brighter tomorrow">
         <svg viewBox="0 0 330 150" aria-hidden="true">
           <ellipse cx="118" cy="78" rx="78" ry="42" fill="#fff" />

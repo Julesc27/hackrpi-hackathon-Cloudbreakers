@@ -24,15 +24,15 @@ function siteStatus(state, id, now) {
   return { site, view, reason, badge, label }
 }
 
-export function SiteActions({ island }) {
+export function SiteActions({ island, compact = false }) {
   const { state, dispatch } = useGame()
   const now = useNow()
   return Object.entries(GATHER_SITES).filter(([, site]) => site.island === island).map(([id, site]) => {
     const { reason, view, label } = siteStatus(state, id, now)
     return <button key={id} data-tutorial={id === 'grove' ? 'gather-wood-btn' : undefined} className="btn-action" disabled={Boolean(reason)} title={reason || site.label} onClick={() => dispatch({ type: 'GATHER_AT_SITE', siteId: id })}>
       <span>{site.label}</span>
-      <small>Your captain will walk here and work on arrival.</small>
-      {Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && <small>Materials go into your backpack. Use them directly for construction or deposit them at a connected storage house.</small>}
+      {!compact && <small>Your captain will walk here and work on arrival.</small>}
+      {!compact && Object.keys(site.reward).some(key => BACKPACK_RESOURCES.includes(key)) && <small>Materials go into your backpack. Use them directly for construction or deposit them at a connected storage house.</small>}
       <small>{Object.entries(site.reward).map(([key, value]) => `+${value} ${RESOURCES[key].label.toLowerCase()}`).join(' · ')} · {label}{site.cost ? ' · uses 1 seed' : ''}</small>
       {reason && <small>{reason}</small>}
       {view.regrowing && <small>Regrows on its own. Waiting does not spend what you are carrying.</small>}

@@ -28,10 +28,12 @@ export function shouldHintTravel({ detail = 1, moved = false, uiBusy = false } =
 }
 
 const MOVE_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'])
+export const isNavigationTarget = target => !target?.closest?.('.center-me') && Boolean(
+  target?.closest?.('button, a, summary, [role="tab"]') || (!target?.ownerSVGElement && target?.closest?.('[role="button"]')))
 
 export function keyboardShouldWalk({ key, target, uiBusy = false, ctrlKey = false, altKey = false, metaKey = false, shiftKey = false } = {}) {
   if (ctrlKey || altKey || metaKey || shiftKey) return false
   if (!MOVE_KEYS.has(String(key || '').toLowerCase())) return false
-  if (uiBusy || isTypingTarget(target)) return false
+  if (uiBusy || isTypingTarget(target) || isNavigationTarget(target)) return false
   return true
 }

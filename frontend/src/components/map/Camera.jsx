@@ -94,6 +94,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     const sx = opts.sx ?? w / 2, sy = opts.sy ?? h / 2
     s = clamp(s, limits.current.min, limits.current.max)
     const target = clampCam({ s, x: sx - (wx - WORLD.x) * s, y: sy - (wy - WORLD.y) * s })
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { cam.current = target; apply(); return }
     const from = { ...cam.current }
     const dur = opts.duration ?? 700
     const t0 = performance.now()
@@ -251,7 +252,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
           markMoving()
           anim.current = requestAnimationFrame(glide)
         }
-        anim.current = requestAnimationFrame(glide)
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) anim.current = requestAnimationFrame(glide)
       }
       dragging = false
     }
@@ -281,6 +282,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
       const c = cam.current
       const factor = c.s > limits.current.fit * 1.9 ? limits.current.fit / c.s : 1.6
       const from = c.s, to = clamp(c.s * factor, limits.current.min, limits.current.max)
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { zoomAt(to/from,p.x,p.y); return }
       const t0 = performance.now()
       const step = (t) => {
         const k = ease(Math.min(1, (t - t0) / 320))
