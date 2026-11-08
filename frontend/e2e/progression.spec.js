@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { STAIRWAYS, stairProjection } from '../src/components/world/stairways.js'
 
 const saveKey = 'cloudbreakers-save-v1'
 const checkpoint = (name) => JSON.parse(readFileSync(new URL(`./checkpoints/${name}.json`, import.meta.url), 'utf8'))
 
-async function startAt(page, name) {
-  const save = checkpoint(name)
+async function startAt(page, name, overrides = {}) {
+  const save = { ...checkpoint(name), ...overrides }
   await page.addInitScript(({ key, state }) => {
     localStorage.setItem('cloudbreakers-guest', '1')
     localStorage.setItem(key, JSON.stringify(state))
@@ -21,6 +22,24 @@ async function savedTown(page) {
 
 async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page)), { timeout: 20_000 }).toBeTruthy()
+}
+
+for (const id of ['newHaven-central-front', 'verdant-bridge', 'prism-west-terrace']) {
+  test(`the captain can descend and climb ${id} with arrow keys`, async ({ page }, testInfo) => {
+    const stair = STAIRWAYS.find(stair => stair.id === id)
+    await startAt(page, 'all-bridges', { player: { island: stair.island, x: stair.from[0], y: stair.from[1] } })
+    const controls = page.getByRole('region', { name: 'Captain controls' })
+    await expect(controls).toHaveAttribute('data-player-island', stair.island)
+    await page.getByRole('button', { name: 'Find my avatar' }).click()
+    const progress = async () => stairProjection(stair, [Number(await controls.getAttribute('data-player-x')), Number(await controls.getAttribute('data-player-y'))]).t
+    await page.keyboard.down('ArrowDown')
+    await expect.poll(progress, { intervals: [50], timeout: 8_000 }).toBeGreaterThan(.98)
+    await page.keyboard.up('ArrowDown')
+    await page.screenshot({ path: testInfo.outputPath(`${id}-descended.png`) })
+    await page.keyboard.down('ArrowUp')
+    await expect.poll(progress, { intervals: [50], timeout: 8_000 }).toBeLessThan(.02)
+    await page.keyboard.up('ArrowUp')
+  })
 }
 
 test('the captain must arrive before harvesting and can interact again with E', async ({ page }) => {

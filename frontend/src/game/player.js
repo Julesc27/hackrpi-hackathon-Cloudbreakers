@@ -193,12 +193,13 @@ export class Player extends Crowd {
         const ends = bridgePoints(link.route), entry = link.from === 0 ? ends.a : ends.b, exit = link.from === 0 ? ends.b : ends.a
         const length = Math.hypot(exit[0]-entry[0], exit[1]-entry[1])
         const approach = this.walkPoint(a.isl, ...entry) || entry
-        if (Math.hypot(a.x-approach[0], a.y-approach[1]) < 16 && (dx*(exit[0]-entry[0])+dy*(exit[1]-entry[1]))/length > .4) {
+        if (Math.hypot(a.x-approach[0], a.y-approach[1]) < 16 && (dx*(exit[0]-entry[0])+dy*(exit[1]-entry[1]))/length > .75) {
           this.manualBridge = { ...link, toIsl: link.to, u: 0 }; return
         }
       }
       const from = [a.x, a.y], distance = a.speed*dt
-      const options = [[a.x+dx*distance,a.y+dy*distance], [a.x+dx*distance,a.y], [a.x,a.y+dy*distance]]
+      const guided = this.stairStep(a.isl, from, [dx,dy], distance)
+      const options = [guided, [a.x+dx*distance,a.y+dy*distance], [a.x+dx*distance,a.y], [a.x,a.y+dy*distance]].filter(Boolean)
       const next = options.find(p => Math.hypot(p[0]-from[0], p[1]-from[1]) > .001 && this.canStep(a.isl, from, p))
       if (next) { a.x=next[0]; a.y=next[1]; a.phase += distance*.6 }
       a.act = next ? 'walk' : 'idle'; if (dx) a.dir = dx < 0 ? -1 : 1; a.back = dy < -Math.abs(dx)*.3

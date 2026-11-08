@@ -4,6 +4,31 @@ import { ISLANDS, ROUTES } from './data.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability } from './engine.js'
 import { Player } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
+import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+
+test('every painted stair flight is walkable in both directions using up and down controls', () => {
+  const state = { ...createInitialState(), connected: ['newHaven','verdant','prism'], bridges: [
+    { route: 'verdant-haven', type: 'rope', condition: 100 }, { route: 'prism-haven', type: 'rope', condition: 100 },
+  ] }
+  const player = new Player(state)
+  for (const stair of STAIRWAYS) {
+    assert.equal(player.canStep(stair.island, stair.from, stair.to), true, `${stair.id} has a blocked tread`)
+    assert.equal(player.canStep(stair.island, stair.to, stair.from), true, `${stair.id} has a blocked return`)
+    Object.assign(player.avatar, { isl: stair.island, x: stair.from[0], y: stair.from[1], legs: [], leg: null })
+    player.setInput(0, 1)
+    for (let i = 0; i < 200 && stairProjection(stair, [player.avatar.x,player.avatar.y]).t < .99; i++) player.update(.02)
+    assert.ok(stairProjection(stair, [player.avatar.x,player.avatar.y]).t >= .99, `${stair.id} cannot be descended`)
+    if (stair.id === 'verdant-bridge') {
+      for (let i = 0; i < 8; i++) player.update(.02)
+      assert.equal(player.avatar.isl, 'verdant', 'Descending the stairs must not accidentally enter the bridge')
+    }
+    player.setInput(0, -1)
+    for (let i = 0; i < 200 && stairProjection(stair, [player.avatar.x,player.avatar.y]).t > .01; i++) player.update(.02)
+    assert.ok(stairProjection(stair, [player.avatar.x,player.avatar.y]).t <= .01, `${stair.id} cannot be climbed`)
+    player.setInput(0, 0)
+  }
+  assert.equal(player.canStep('newHaven', [780,760], [780,765]), false, 'Cliffs must remain blocked')
+})
 
 test('the captain walks to a task before gathering, and movement itself grants no resources or XP', () => {
   let state = createInitialState()

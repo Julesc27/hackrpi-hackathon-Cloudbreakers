@@ -8,6 +8,7 @@ import { WORLD_ISLANDS, BRIDGE_ENDS, bridgePoints } from './layout.js'
 import { WALK, CELL } from './walkGrid.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { shiftIslandPoint } from '../../game/mapLayout.js'
+import { STAIRWAYS, stairProjection } from './stairways.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
 
 /* ---------------- bridges ---------------- */
@@ -42,6 +43,19 @@ for (const [id, g] of Object.entries(WALK)) {
     const n = parseInt(g.cells[k + 1], 36)
     base.fill(+g.cells[k], i, i + n); i += n
   }
+  const [x, y] = shiftIslandPoint(id, [g.x, g.y])
+  // Explicit tread corridors bridge the grey/shadowed risers missed by tracing.
+  // Keep the overrides confined to the actual painted stair widths.
+  for (const stair of STAIRWAYS.filter(stair => stair.island === id)) {
+    const radius = stair.halfWidth + .5
+    const c0 = Math.max(0, Math.floor((Math.min(stair.from[0], stair.to[0])-radius-x)/CELL))
+    const c1 = Math.min(g.cols-1, Math.ceil((Math.max(stair.from[0], stair.to[0])+radius-x)/CELL))
+    const r0 = Math.max(0, Math.floor((Math.min(stair.from[1], stair.to[1])-radius-y)/CELL))
+    const r1 = Math.min(g.rows-1, Math.ceil((Math.max(stair.from[1], stair.to[1])+radius-y)/CELL))
+    for (let row = r0; row <= r1; row++) for (let column = c0; column <= c1; column++) {
+      if (stairProjection(stair, [x+(column+.5)*CELL, y+(row+.5)*CELL]).distance <= radius) base[row*g.cols+column] = 3
+    }
+  }
   // The art tracer joins diagonal cells; pathfinding deliberately forbids corner
   // cutting. Add a single step at those contacts so traced paths stay connected.
   const traced = base.slice()
@@ -51,7 +65,6 @@ for (const [id, g] of Object.entries(WALK)) {
     if (traced[b] && traced[c] && !traced[a] && !traced[d]) base[a] = 3
   }
   // Apply the same island movement as the painting, resources and bridge landings.
-  const [x, y] = shiftIslandPoint(id, [g.x, g.y])
   GRIDS[id] = { id, x, y, cols: g.cols, rows: g.rows, base, cost: base.slice(), poi: g.poi, paved: [] }
 }
 const cellOf = (G, x, y) => {
@@ -329,6 +342,21 @@ export class Crowd {
   canStep(island, from, to) {
     const grid = GRIDS[island]
     return Boolean(grid && clear(grid, from, to, 3) && grid.cost[cellOf(grid, ...to)])
+  }
+
+  stairStep(island, from, input, distance) {
+    let nearest = null
+    for (const stair of STAIRWAYS) {
+      if (stair.island !== island) continue
+      const projection = stairProjection(stair, from)
+      if (projection.t < -.04 || projection.t > 1.04 || projection.distance > stair.halfWidth) continue
+      const alignment = input[0]*projection.direction[0] + input[1]*projection.direction[1]
+      if (Math.abs(alignment) < .55 || (nearest && projection.distance >= nearest.distance)) continue
+      nearest = { ...projection, sign: Math.sign(alignment) }
+    }
+    if (!nearest) return null
+    const to = from.map((value, axis) => value + nearest.direction[axis]*nearest.sign*distance)
+    return this.canStep(island, from, to) ? to : null
   }
 
   update(dt) {
