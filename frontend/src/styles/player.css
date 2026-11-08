@@ -17,6 +17,14 @@
   margin: 0;
   pointer-events: auto;
 }
+.corner-tools .gear-btn {
+  padding: 0;
+}
+/* The gear artwork's bounds sit one viewBox unit right of the svg center. */
+.corner-tools .gear-btn svg {
+  display: block;
+  transform: translateX(calc(-100% / 24));
+}
 .center-me {
   min-height: 36px;
   padding: 8px 12px;
