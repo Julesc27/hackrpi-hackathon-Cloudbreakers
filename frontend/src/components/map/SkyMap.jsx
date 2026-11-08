@@ -135,6 +135,7 @@ export default function SkyMap() {
           return (
             <g role="button" tabIndex="0" aria-label={`Plan bridge to ${ISLANDS[state.connected.includes(r.a) ? r.b : r.a].name}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ui.setBridgeRoute(r.id) } }} key={r.id} className={`ghost-route${anchor ? '' : ' is-locked'}`} onClick={() => ui.setBridgeRoute(r.id)}>
               <g transform={`translate(${mx} ${my})`}><g className="route-btn">
+                <circle r="34" fill="transparent" />{/* a finger-sized hit area */}
                 <circle r="20" fill="url(#goldBtn)" stroke="#fff1c4" strokeWidth="1.5" />
                 {anchor ? (
                   <path d="M-7 0h14M0 -7v14" stroke="#4a3208" strokeWidth="3.4" strokeLinecap="round" />
