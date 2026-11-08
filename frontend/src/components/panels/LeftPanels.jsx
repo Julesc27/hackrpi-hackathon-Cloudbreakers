@@ -3,6 +3,7 @@ import { useGame, useUI } from '../../game/GameContext.jsx'
 import { BUILDINGS, BUILD_ORDER, MISSIONS } from '../../game/data.js'
 import { activeMissions, canAfford, countType, isUnlocked, unlockLevel } from '../../game/engine.js'
 import { getAdvice } from '../../game/advisor.js'
+import { eventShouldDismissOverlay } from '../../game/travelInput.js'
 import { CostChips, YieldChips, Progress, Corners } from './Panel.jsx'
 import { Check, Lock, Close, ArtIcon, Plus } from '../icons.jsx'
 import BuildingArt from '../BuildingArt.jsx'
@@ -61,7 +62,7 @@ export function QuestBook() {
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+    <div className="modal-backdrop" onClick={(e) => eventShouldDismissOverlay(e) && close()}>
       <div className="book" role="dialog" aria-label="Captain's Log">
         <button className="seal-close book-close" onClick={close} aria-label="Close"><Close size={20} /></button>
         <div className="book-page book-left">
