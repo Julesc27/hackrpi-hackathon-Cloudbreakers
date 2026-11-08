@@ -3,10 +3,12 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gameReducer, migrateSave } from '../src/game/engine.js'
 import { defaultModel, parseAction, requestGemini, requestTimeoutMs, retryableStatus, stepBudgetMs, thinkingLevel } from './agent.mjs'
-import { gradeFirstSteps, gradeGatherWood, scenarios } from './scenarios.mjs'
+import { gradeFirstSteps, gradeGatherWood, gradeHoldFast, scenarios } from './scenarios.mjs'
 
-const start = JSON.parse(readFileSync(new URL('../e2e/checkpoints/new-town.json', import.meta.url), 'utf8'))
-const play = (...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(start))
+const checkpoint = (name) => JSON.parse(readFileSync(new URL(`../e2e/checkpoints/${name}.json`, import.meta.url), 'utf8'))
+const start = checkpoint('new-town')
+const playFrom = (from, ...actions) => actions.reduce((state, action) => gameReducer(state, action), migrateSave(from))
+const play = (...actions) => playFrom(start, ...actions)
 const buildShelter = { type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }
 
 test('defaults to free-tier Flash, which can tell the wood and stone markers apart better than Flash Lite', () => {
@@ -103,6 +105,21 @@ test('First Steps grader requires a newly built shelter, not just gathering or a
   assert.equal(gradeFirstSteps(start, play({ type: 'GATHER_WOOD' }, buildShelter)), true)
   const alreadyDone = play(buildShelter)
   assert.equal(gradeFirstSteps(alreadyDone, alreadyDone), false)
+})
+
+test('Hold Fast grader requires the bridge-anchor upgrade built from the shelter-built save', () => {
+  const shelterBuilt = checkpoint('shelter-built')
+  const buildAnchor = { type: 'BUILD', buildingType: 'bridgeAnchor', island: 'newHaven' }
+  assert.equal(gradeHoldFast(shelterBuilt, shelterBuilt), false)
+  assert.equal(gradeHoldFast(shelterBuilt, playFrom(shelterBuilt, { type: 'GATHER_WOOD' })), false)
+  // The checkpoint can afford the anchor without gathering first.
+  assert.equal(gradeHoldFast(shelterBuilt, playFrom(shelterBuilt, buildAnchor)), true)
+  const anchorReady = checkpoint('anchor-ready')
+  assert.equal(gradeHoldFast(anchorReady, anchorReady), false)
+})
+
+test('scenarios run in the order a player meets them', () => {
+  assert.deepEqual(scenarios.map((s) => s.id), ['gather-wood', 'first-steps', 'hold-fast'])
 })
 
 test('model action parser scales normalized 0-1000 points to the viewport and rejects unsafe clicks', () => {
