@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import { ISLANDS } from '../../game/data.js'
 import { DRAG_THRESHOLD } from '../../game/travelInput.js'
+import { followStep } from '../../game/cameraFollow.js'
 
 // The playable world is larger than the painted art: the 1600x900 concept frame sits in
 // the middle of a WORLD-sized sky the player can pan around, like Dragon City / Homescapes.
@@ -30,6 +31,12 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
   const limits = useRef({ min: 0.4, max: 2, fit: 1 })
   const anim = useRef(null)
   const moving = useRef(0)
+  // Following the Captain: a getter for their position, the frame loop, and when the player
+  // last moved the camera themselves (following pauses briefly so it never fights a drag).
+  const tracker = useRef(null)
+  const followRaf = useRef(null)
+  const userAt = useRef(0)
+  const touched = () => { userAt.current = performance.now() }
 
   // Viewport size, cached: reading it with getBoundingClientRect on every camera move forced
   // the browser to recalculate layout mid-frame. A ResizeObserver keeps it up to date.
@@ -134,21 +141,47 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     flyTo(cx, cy, s, { sx })
   }, [flyTo])
 
+  // Glide after the Captain every frame while they walk (see game/cameraFollow.js).
+  // `getPoint` returns { x, y, moving } or null. Once they stop, the camera finishes settling
+  // and then leaves the view alone, so panning away from an idle Captain is never undone.
+  const track = useCallback((getPoint) => {
+    tracker.current = getPoint
+    if (followRaf.current) return () => { if (tracker.current === getPoint) tracker.current = null }
+    let last = 0, settling = false, vel = { x: 0, y: 0 }
+    const loop = (t) => {
+      if (!tracker.current || !viewport.current) { followRaf.current = null; return }
+      followRaf.current = requestAnimationFrame(loop)
+      const dt = last ? Math.min(0.05, (t - last) / 1000) : 1 / 60
+      last = t
+      const p = tracker.current()
+      if (!p) { settling = false; vel = { x: 0, y: 0 }; return }
+      if (p.moving) settling = true
+      // never fight a fly-to, a drag or a pinch; resume a moment after the player lets go
+      if (!settling || anim.current || t - userAt.current < 1200 || viewport.current.classList.contains('is-dragging')) { vel = { x: 0, y: 0 }; return }
+      const { w, h } = size()
+      const next = followStep(cam.current, [p.x, p.y], { w, h, origin: WORLD, dt,
+        reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches }, vel)
+      if (!next) { vel = { x: 0, y: 0 }; if (!p.moving) settling = false; return }
+      set(next.cam)
+      // the clamp at the edge of the sky can stop the camera: drop velocity it couldn't use
+      vel = { x: cam.current.x === next.cam.x ? next.vel.x : 0, y: cam.current.y === next.cam.y ? next.vel.y : 0 }
+      markMoving()
+    }
+    followRaf.current = requestAnimationFrame(loop)
+    return () => { if (tracker.current === getPoint) tracker.current = null }
+  }, [markMoving, set])
+
+  useEffect(() => () => { tracker.current = null; cancelAnimationFrame(followRaf.current) }, [])
+
   useImperativeHandle(apiRef, () => ({
-    flyTo, home, focusIsland,
-    followPoint: (x, y) => {
-      if (anim.current) return
-      const c = cam.current, { w, h } = size()
-      const sx = (x-WORLD.x)*c.s+c.x, sy = (y-WORLD.y)*c.s+c.y
-      if (sx < 170 || sx > w-200 || sy < 155 || sy > h-235) flyTo(x, y, c.s, { duration: 240, sy: h*.53 })
-    },
+    flyTo, home, focusIsland, track,
     zoomIn: () => { const { w, h } = size(); zoomAt(1.35, w / 2, h / 2) },
     zoomOut: () => { const { w, h } = size(); zoomAt(1 / 1.35, w / 2, h / 2) },
     view: () => cam.current,
     farOffset: () => farOffset.current,
     get scale() { return cam.current.s },
     get fitScale() { return limits.current.fit },
-  }), [flyTo, home, focusIsland, zoomAt])
+  }), [flyTo, home, focusIsland, track, zoomAt])
 
   // initial framing + keep framing sane on resize
   useEffect(() => {
@@ -201,6 +234,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
       const p = local(e)
       pointers.set(e.pointerId, p)
       if (pointers.size >= 2 && pinch) {
+        touched()
         const [a, b] = [...pointers.values()]
         const d = Math.hypot(a.x - b.x, a.y - b.y)
         const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
@@ -216,6 +250,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
         el.classList.add('is-dragging')
       }
       if (dragging) {
+        touched()
         const now = performance.now()
         const dx = p.x - last.x, dy = p.y - last.y
         const dt = Math.max(1, now - last.t)
@@ -247,6 +282,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
         const glide = () => {
           v = { x: v.x * 0.92, y: v.y * 0.92 }
           if (Math.hypot(v.x, v.y) < 0.3) { anim.current = null; return }
+          touched()
           const c = cam.current
           set({ ...c, x: c.x + v.x, y: c.y + v.y })
           markMoving()
@@ -262,6 +298,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
     const onWheel = (e) => {
       e.preventDefault()
       stop()
+      touched()
       const p = local(e)
       if (e.ctrlKey || Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
         // ctrlKey = trackpad pinch on most browsers
@@ -330,6 +367,7 @@ export default function Camera({ apiRef, children, far, mid, near, onMove }) {
       else if (k === '0' || k === 'home') home()
       else return
       e.preventDefault()
+      touched()
       markMoving()
     }
     window.addEventListener('keydown', onKey)
