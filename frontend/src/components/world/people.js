@@ -349,8 +349,11 @@ export class Crowd {
     for (const stair of STAIRWAYS) {
       if (stair.island !== island) continue
       const projection = stairProjection(stair, from)
-      if (projection.t < -.04 || projection.t > 1.04 || projection.distance > stair.halfWidth) continue
+      if (projection.distance > stair.halfWidth) continue
       const alignment = input[0]*projection.direction[0] + input[1]*projection.direction[1]
+      // Reconnect from either landing when heading back onto the stairs, but
+      // release guidance when walking away onto the terrace.
+      if ((projection.t < 0 && alignment < 0) || (projection.t > 1 && alignment > 0)) continue
       if (Math.abs(alignment) < .55 || (nearest && projection.distance >= nearest.distance)) continue
       nearest = { ...projection, sign: Math.sign(alignment) }
     }

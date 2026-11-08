@@ -197,12 +197,19 @@ export class Player extends Crowd {
           this.manualBridge = { ...link, toIsl: link.to, u: 0 }; return
         }
       }
-      const from = [a.x, a.y], distance = a.speed*dt
-      const guided = this.stairStep(a.isl, from, [dx,dy], distance)
-      const options = [guided, [a.x+dx*distance,a.y+dy*distance], [a.x+dx*distance,a.y], [a.x,a.y+dy*distance]].filter(Boolean)
-      const next = options.find(p => Math.hypot(p[0]-from[0], p[1]-from[1]) > .001 && this.canStep(a.isl, from, p))
-      if (next) { a.x=next[0]; a.y=next[1]; a.phase += distance*.6 }
-      a.act = next ? 'walk' : 'idle'; if (dx) a.dir = dx < 0 ? -1 : 1; a.back = dy < -Math.abs(dx)*.3
+      // Check each world unit so a slow frame cannot skip a stair landing or
+      // slide off its angled treads before guidance can reconnect.
+      const steps = Math.max(1, Math.ceil(a.speed*dt)), distance = a.speed*dt/steps
+      let moved = false
+      for (let i = 0; i < steps; i++) {
+        const from = [a.x, a.y]
+        const guided = this.stairStep(a.isl, from, [dx,dy], distance)
+        const options = [guided, [a.x+dx*distance,a.y+dy*distance], [a.x+dx*distance,a.y], [a.x,a.y+dy*distance]].filter(Boolean)
+        const next = options.find(p => Math.hypot(p[0]-from[0], p[1]-from[1]) > .001 && this.canStep(a.isl, from, p))
+        if (!next) break
+        a.x=next[0]; a.y=next[1]; a.phase += distance*.6; moved = true
+      }
+      a.act = moved ? 'walk' : 'idle'; if (dx) a.dir = dx < 0 ? -1 : 1; a.back = dy < -Math.abs(dx)*.3
       return
     }
     if (!this.pending) { a.act = 'idle'; return }
