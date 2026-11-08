@@ -134,7 +134,7 @@ test('touch controls fit on a phone and tapping a path moves the captain', async
     })
     await page.evaluate(() => new Promise(resolve => { let frames = 20; const next = () => --frames ? requestAnimationFrame(next) : resolve(); requestAnimationFrame(next) }))
     await page.screenshot({ path: testInfo.outputPath('captain-mobile-before.png') })
-    await page.getByRole('button', { name: 'Walk on New Haven', exact: true }).tap({ timeout: 5_000 })
+    await page.getByRole('button', { name: 'Walk on New Haven', exact: true }).dblclick({ timeout: 5_000 })
     await expect(controls).toHaveAttribute('data-player-busy', 'true')
     await expect(controls).toHaveAttribute('data-player-busy', 'false', { timeout: 20_000 })
     expect((await savedTown(page)).resources).toEqual(town.resources)

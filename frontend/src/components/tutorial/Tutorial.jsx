@@ -138,7 +138,7 @@ export default function Tutorial() {
     if (!isNewHavenDrawer) {
       targetSelector = '[data-tutorial="island-newHaven"]'
       title = 'Explore New Haven'
-      text = "Select New Haven's nameplate to view its supplies and send your captain to gather wood. Tap the paths themselves to walk."
+      text = "Select New Haven's nameplate to view its supplies and send your captain to gather wood. Double-click a path to walk there."
       hint = "Select New Haven's name on the map"
       showNextBtn = false
     } else {

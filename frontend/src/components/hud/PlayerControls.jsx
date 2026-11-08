@@ -1,12 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { centerCameraOnAvatar } from '../../game/player.js'
+import { isTypingTarget, keyboardShouldWalk } from '../../game/travelInput.js'
 import '../../styles/player.css'
 
 export default function PlayerControls() {
   const { player } = useGame()
   const ui = useUI()
   const [view, setView] = useState(null)
+  const keys = useRef(new Set())
+  const uiBusy = Boolean(ui.panel || ui.placing || ui.bridgeRoute)
+  useEffect(() => {
+    if (!uiBusy) return
+    keys.current.clear()
+    player.current.setInput(0, 0)
+  }, [uiBusy, player])
   useEffect(() => {
     const refresh = () => {
       const p = player.current, a = p.avatar
@@ -17,22 +25,26 @@ export default function PlayerControls() {
     }
     refresh()
     const timer = setInterval(refresh, 150)
-    const keys = new Set()
+    const held = keys.current
     const movement = () => player.current.setInput(
-      Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')),
-      Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')))
+      Number(held.has('d') || held.has('arrowright')) - Number(held.has('a') || held.has('arrowleft')),
+      Number(held.has('s') || held.has('arrowdown')) - Number(held.has('w') || held.has('arrowup')))
+    const blocked = (e) => isTypingTarget(e.target) || uiBusy || Boolean(document.querySelector('.modal-backdrop, .tutorial-root'))
     const down = e => {
-      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]') || document.querySelector('.modal-backdrop')) return
+      if (blocked(e) || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+        if (held.size) { held.clear(); movement() }
+        return
+      }
       const key = e.key.toLowerCase()
-      if (['w','a','s','d','arrowup','arrowleft','arrowdown','arrowright'].includes(key)) {
-        e.preventDefault(); e.stopImmediatePropagation(); keys.add(key); movement()
+      if (keyboardShouldWalk({ key, target: e.target, uiBusy })) {
+        e.preventDefault(); e.stopImmediatePropagation(); held.add(key); movement()
       } else if (key === 'e' && !e.repeat) { e.preventDefault(); player.current.interact() }
       else if (key === 'escape' && player.current.pending) player.current.cancel()
     }
-    const up = e => { if (keys.delete(e.key.toLowerCase())) { e.preventDefault(); movement() } }
+    const up = e => { if (held.delete(e.key.toLowerCase())) { e.preventDefault(); movement() } }
     const blur = () => {
-      const wasMoving = keys.size || player.current.input.some(Boolean)
-      keys.clear()
+      const wasMoving = held.size || player.current.input.some(Boolean)
+      held.clear()
       if (wasMoving) movement()
     }
     window.addEventListener('keydown', down, true)
@@ -42,7 +54,7 @@ export default function PlayerControls() {
       clearInterval(timer); blur()
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true); window.removeEventListener('blur', blur)
     }
-  }, [player, ui.camera])
+  }, [player, ui.camera, uiBusy])
   if (!view || ui.placing) return null
   return (
     <button
