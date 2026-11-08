@@ -195,6 +195,20 @@ export const LEVELS = [
   { level: 4, title: 'Steward', xp: 450, unlocks: ['clinic', 'communityHall'] },
   { level: 5, title: 'Sky Engineer', xp: 700, unlocks: ['windTurbine', 'battery'] },
   { level: 6, title: 'Cloud Mayor', xp: 1000, unlocks: [] },
+  { level: 7, title: 'Sky Warden', xp: 1350, unlocks: [] },
+  { level: 8, title: 'Wind Navigator', xp: 1750, unlocks: [] },
+  { level: 9, title: 'Aether Architect', xp: 2200, unlocks: [] },
+  { level: 10, title: 'Zephyr Marshal', xp: 2700, unlocks: [] },
+  { level: 11, title: 'Sky Pioneer', xp: 3250, unlocks: [] },
+  { level: 12, title: 'Storm Tamer', xp: 3850, unlocks: [] },
+  { level: 13, title: 'Isle Keeper', xp: 4500, unlocks: [] },
+  { level: 14, title: 'Horizon Watcher', xp: 5200, unlocks: [] },
+  { level: 15, title: 'Sky Commander', xp: 5950, unlocks: [] },
+  { level: 16, title: 'Nimbus Sovereign', xp: 6750, unlocks: [] },
+  { level: 17, title: 'High Archon', xp: 7600, unlocks: [] },
+  { level: 18, title: 'Celestial Steward', xp: 8500, unlocks: [] },
+  { level: 19, title: 'Paragon of the Skies', xp: 9450, unlocks: [] },
+  { level: 20, title: 'Ascendant of Cloudbreak', xp: 10450, unlocks: [] },
 ]
 
 // progress(state) => [value, goal]
