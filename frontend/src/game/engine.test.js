@@ -6,7 +6,7 @@ import { Crowd } from '../components/world/people.js'
 import { createInitialState, gameReducer, isSupportedSave, SAVE_VERSION, getLevelInfo, isUnlocked, migrateSave, gatherAvailability, projectProduction, caps, housing, activeMissions, checkMissions, backpackUsed, backpackCapacity, storageDepots, storageUsed, storageAccepts, removalInfo, bridgeCost, openRoutes, constructionResources, canAffordConstruction, BACKPACK_RESOURCES } from './engine.js'
 import { Player, centerCameraOnAvatar } from './player.js'
 import { INTERACTION_POINTS } from './mapLayout.js'
-import { STAIRWAYS, stairProjection } from '../components/world/stairways.js'
+import { STAIRWAYS, WALKWAYS, stairProjection } from '../components/world/stairways.js'
 
 const deposit = state => gameReducer(gameReducer(state, { type: 'PLAYER_POSITION', position: { island: 'newHaven', x: 635, y: 610 } }), { type: 'DEPOSIT_BACKPACK' })
 
