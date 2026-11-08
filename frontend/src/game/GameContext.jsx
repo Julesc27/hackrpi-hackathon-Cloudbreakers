@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react'
 import { createInitialState, gameReducer, migrateSave } from './engine.js'
+import { Player, isPlayerTask } from './player.js'
 
 const SAVE_KEY = 'cloudbreakers-save-v1'
 
@@ -18,7 +19,32 @@ const GameCtx = createContext(null)
 const UICtx = createContext(null)
 
 export function GameProvider({ children }) {
-  const [state, dispatch] = useReducer(gameReducer, undefined, loadSave)
+  const [state, rawDispatch] = useReducer(gameReducer, undefined, loadSave)
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const player = useRef(null)
+  const resetPlayer = useRef(false)
+  if (!player.current) player.current = new Player(state)
+  player.current.state = state
+  player.current.dispatchTask = rawDispatch
+  player.current.onSave = position => {
+    const saved = stateRef.current.player
+    if (!saved || saved.island !== position.island || saved.x !== position.x || saved.y !== position.y) {
+      rawDispatch({ type: 'PLAYER_POSITION', position })
+    }
+  }
+  const dispatch = useCallback(action => {
+    if (action.type === 'LOAD' || action.type === 'NEW_GAME') {
+      player.current.cancel()
+      resetPlayer.current = true
+    }
+    if (isPlayerTask(action)) player.current.request(action, rawDispatch)
+    else rawDispatch(action)
+  }, [])
+  useEffect(() => {
+    if (resetPlayer.current) { Object.assign(player.current, new Player(state)); resetPlayer.current = false }
+    else player.current.sync(state)
+  }, [state.bridges, state.connected, state.buildings])
 
   // Local backup on every change; CloudSync also saves logged-in towns to the server.
   useEffect(() => {
@@ -28,12 +54,12 @@ export function GameProvider({ children }) {
     } catch { /* ignore */ }
   }, [state])
 
-  return <GameCtx.Provider value={{ state, dispatch }}>{children}</GameCtx.Provider>
+  return <GameCtx.Provider value={{ state, dispatch, player }}>{children}</GameCtx.Provider>
 }
 
 // UI-only state (which panel is open, what is being placed, tutorial, etc.)
 export function UIProvider({ children }) {
-  const { state, dispatch } = useContext(GameCtx)
+  const { state, dispatch, player } = useContext(GameCtx)
   const [panel, setPanel] = useState(null) // quests | build | advisor | island | journal | storage | store | map | settings
   const [selected, setSelected] = useState(null) // island id
   const [placing, setPlacing] = useState(null) // building type
@@ -53,6 +79,15 @@ export function UIProvider({ children }) {
   const clearFx = useCallback((id) => setFx((cur) => cur.filter((x) => x.id !== id)), [])
   // The camera registers itself here so panels can ask it to fly somewhere
   const camera = useRef(null)
+  useEffect(() => {
+    player.current.onTaskStart = () => {
+      setPanel(null); setBridgeRoute(null); setPlacing(null)
+      const a = player.current.avatar, cam = camera.current
+      if (cam) cam.flyTo(a.x, a.y, Math.max(1.05, cam.view().s), { duration: 350 })
+    }
+    player.current.onOpenBuild = () => { setPlaceFocus(player.current.avatar.isl); setPanel('build') }
+    player.current.onOpenBridge = route => setBridgeRoute(route)
+  }, [player])
 
   // Tutorial state
   const [tutorialActive, setTutorialActive] = useState(!state.seenIntro)

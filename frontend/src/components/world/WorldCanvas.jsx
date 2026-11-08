@@ -124,7 +124,7 @@ const propKey = (p) => `${p.type}:${Math.round(p.x)}:${Math.round(p.y)}:${p.pts 
 
 /* ---------------- the component ---------------- */
 export default function WorldCanvas({ hoverRef }) {
-  const { state } = useGame()
+  const { state, player } = useGame()
   const ui = useUI()
   const canvasRef = useRef(null)
   const stateRef = useRef(state)
@@ -227,6 +227,7 @@ export default function WorldCanvas({ hoverRef }) {
       // Resident travel is part of the living town. Reduced motion only pauses
       // decorative effects; it must not stop residents from following their paths.
       crowd.current.update(lastSim ? (now - lastSim) / 1000 : 0)
+      player.current.update(lastSim ? (now - lastSim) / 1000 : 0)
       lastSim = now
       const t = reducedMotion.matches ? 0 : now / 1000
       const cam = uiRef.current.camera.current
@@ -387,6 +388,8 @@ export default function WorldCanvas({ hoverRef }) {
 
       // 4. buildings, trees, props and residents, depth-sorted so buildings hide people behind them.
       const items = crowd.current.items()
+      const captain = player.current.items()[0]
+      if (captain) items.push({ ...captain, captain: true })
       // far out, people are only a few pixels tall: draw a simple figure instead
       // (on a struggling device: half the crowd, and the simple figure unless zoomed right in)
       const personDetail = v.s * dpr * 14 >= (lowQuality ? 16 : 10)
@@ -405,9 +408,22 @@ export default function WorldCanvas({ hoverRef }) {
       for (const it of items) {
         if (it.person) {
           const a = it.person
-          if (lowQuality && a.id % 2) continue
+          if (!it.captain && lowQuality && a.id % 2) continue
           if (a.x < vx0 - 20 || a.x > vx1 + 20 || a.y + it.bob < vy0 - 4 || a.y + it.bob > vy1 + 36) continue
-          ctx.save(); ctx.translate(0, it.bob); drawPerson(ctx, a, t, personDetail); ctx.restore()
+          ctx.save(); ctx.translate(0, it.bob)
+          if (it.captain) {
+            ellipse(ctx, a.x, a.y+1, 9, 4, 'rgba(255,213,115,.2)', '#ffe3a1', 1.1)
+            poly(ctx, [[a.x-3,a.y-42],[a.x+3,a.y-42],[a.x,a.y-38]], '#ffe3a1')
+          }
+          if (it.captain) {
+            ctx.save(); ctx.translate(a.x, a.y); ctx.scale(1.3, 1.3)
+            drawPerson(ctx, { ...a, x: 0, y: 0 }, t, true); ctx.restore()
+          } else drawPerson(ctx, a, t, personDetail)
+          if (it.captain) {
+            ctx.font = 'bold 6px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#fff1cf'
+            ctx.fillText('YOU', a.x, a.y-46)
+          }
+          ctx.restore()
           const l = personLight(a)
           if (l) lights.push([l[0], l[1] + it.bob, l[2]])
           continue

@@ -2,6 +2,92 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ISLANDS, ROUTES } from './data.js'
 import { createInitialState, gameReducer, getLevelInfo, isUnlocked, migrateSave, gatherAvailability } from './engine.js'
+import { Player } from './player.js'
+import { INTERACTION_POINTS } from './mapLayout.js'
+
+test('the captain walks to a task before gathering, and movement itself grants no resources or XP', () => {
+  let state = createInitialState()
+  const player = new Player(state), before = { ...state.resources }, start = [player.avatar.x, player.avatar.y]
+  assert.equal(player.request({ type: 'GATHER_WOOD' }, action => { state = gameReducer(state, action); player.sync(state) }), true)
+  assert.deepEqual(state.resources, before)
+  assert.equal(state.xp, 0)
+  player.update(.1)
+  assert.deepEqual(state.resources, before)
+  for (let i = 0; player.pending && i < 1000; i++) player.update(.1)
+  assert.equal(player.pending, null)
+  assert.equal(state.resources.wood, before.wood + 6)
+  assert.ok(Math.hypot(player.avatar.x-start[0], player.avatar.y-start[1]) > 30)
+})
+
+test('keyboard movement stops on release and cancels a queued task without spending resources', () => {
+  const state = createInitialState(), player = new Player(state)
+  let dispatched = false
+  player.request({ type: 'GATHER_WOOD' }, () => { dispatched = true })
+  const start = [player.avatar.x, player.avatar.y]
+  player.setInput(1, 0)
+  for (let i = 0; i < 20; i++) player.update(.1)
+  player.setInput(0, 0)
+  const stopped = [player.avatar.x, player.avatar.y]
+  assert.notDeepEqual(stopped, start)
+  for (let i = 0; i < 20; i++) player.update(.1)
+  assert.deepEqual([player.avatar.x, player.avatar.y], stopped)
+  assert.equal(player.pending, null)
+  assert.equal(dispatched, false)
+})
+
+test('the captain crosses a working bridge to reach tasks and cannot reach disconnected islands', () => {
+  const initial = createInitialState(), player = new Player(initial)
+  assert.equal(player.go('verdant', INTERACTION_POINTS.forest), false)
+  const state = { ...initial, connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'reinforced', condition: 100 }] }
+  player.sync(state)
+  assert.equal(player.go('verdant', INTERACTION_POINTS.forest), true)
+  let crossed = false
+  for (let i = 0; player.pending && i < 2000; i++) { player.update(.1); if (!player.avatar.isl) crossed = true }
+  assert.equal(player.pending, null)
+  assert.equal(player.avatar.isl, 'verdant')
+  assert.equal(crossed, true)
+})
+
+test('saved captain positions restore without advancing the town', () => {
+  const initial = createInitialState(), player = new Player(initial)
+  const position = { island: player.avatar.isl, x: player.avatar.x + .1, y: player.avatar.y + .1 }
+  const saved = gameReducer(initial, { type: 'PLAYER_POSITION', position })
+  assert.equal(saved.xp, initial.xp)
+  assert.deepEqual(saved.resources, initial.resources)
+  const restored = new Player(migrateSave(saved))
+  assert.deepEqual([restored.avatar.isl, restored.avatar.x, restored.avatar.y], [position.island, position.x, position.y])
+})
+
+test('manual bridge landings save island coordinates without adding the floating offset twice', async () => {
+  const { WORLD_ISLANDS, bridgePoints } = await import('../components/world/layout.js')
+  const state = { ...createInitialState(), connected: ['newHaven', 'verdant'], bridges: [{ route: 'verdant-haven', type: 'rope', condition: 100 }] }
+  const player = new Player(state), ends = bridgePoints('verdant-haven')
+  const previous = WORLD_ISLANDS.verdant._bob
+  try {
+    WORLD_ISLANDS.verdant._bob = 2.2
+    player.manualBridge = { route: 'verdant-haven', from: 1, toIsl: 'verdant', u: .995 }
+    player.avatar.isl = null
+    player.input = [ends.a[0]-ends.b[0], ends.a[1]-ends.b[1]]
+    player.update(.1)
+    assert.equal(player.avatar.isl, 'verdant')
+    assert.deepEqual([player.avatar.x, player.avatar.y], ends.a)
+    assert.deepEqual(player.safePosition, { island: 'verdant', x: ends.a[0], y: ends.a[1] })
+  } finally { WORLD_ISLANDS.verdant._bob = previous }
+})
+
+test('building through the captain waits for arrival and leaves the captain outside the new footprint', () => {
+  let state = createInitialState()
+  const player = new Player(state), wood = state.resources.wood
+  assert.equal(player.request({ type: 'BUILD', buildingType: 'shelter', island: 'newHaven', slot: 0 }, action => {
+    state = gameReducer(state, action); player.sync(state)
+  }), true)
+  assert.equal(state.resources.wood, wood)
+  assert.equal(state.buildings.some(b => b.type === 'shelter'), false)
+  for (let i = 0; player.pending && i < 1000; i++) player.update(.1)
+  assert.ok(state.buildings.some(b => b.type === 'shelter'))
+  const a = player.avatar
+  assert.equal(player.canStep(a.isl, [a.x,a.y], [a.x,a.y]), true)
+})
 
 test('actions remain available and award XP beyond the former action limit', () => {
   let state = createInitialState()

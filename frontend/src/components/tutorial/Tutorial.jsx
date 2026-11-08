@@ -8,7 +8,7 @@ const INFO_STEPS = {
   9: {
     target: 'hud-level',
     title: 'Level & XP',
-    text: 'Every action earns XP. Level up to unlock new buildings and stronger bridges!',
+    text: 'Complete tasks to earn XP. Level up to unlock new buildings and stronger bridges!',
     label: 'Next \u203a',
     next: 10,
   },
@@ -138,14 +138,14 @@ export default function Tutorial() {
     if (!isNewHavenDrawer) {
       targetSelector = '[data-tutorial="island-newHaven"]'
       title = 'Explore New Haven'
-      text = "Let's gather some wood for building! Click on New Haven island to open its menu."
-      hint = 'Click the New Haven island on the map'
+      text = "Select New Haven's nameplate to view its supplies and send your captain to gather wood. Tap the paths themselves to walk."
+      hint = "Select New Haven's name on the map"
       showNextBtn = false
     } else {
       targetSelector = '[data-tutorial="gather-wood-btn"]'
       title = 'Gather Wood'
-      text = 'Click the Gather wood button in the panel to collect timber for building structures!'
-      hint = 'Click the Gather wood button'
+      text = 'Choose Gather wood. Your captain will walk to the grove and collect timber when they arrive.'
+      hint = 'Choose Gather wood, then watch your captain walk there'
       showNextBtn = false
     }
   }

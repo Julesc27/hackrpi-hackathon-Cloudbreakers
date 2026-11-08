@@ -130,7 +130,10 @@ let stampN = 0
 function findPath(G, from, to) {
   if (from < 0 || to < 0) return null
   const N = G.cost.length
-  if (!G.g || G.g.length !== N) { G.g = new Float32Array(N); G.came = new Int32Array(N); G.seen = new Uint32Array(N) }
+  if (!G.g || G.g.length !== N) {
+    G.g = new Float64Array(N); G.came = new Int32Array(N)
+    G.seen = new Uint32Array(N); G.closed = new Uint32Array(N)
+  }
   const stamp = ++stampN, cols = G.cols
   const tc = to % cols, tr = (to / cols) | 0
   const h = (i) => { const dc = Math.abs((i % cols) - tc), dr = Math.abs(((i / cols) | 0) - tr); return Math.max(dc, dr) + 0.414 * Math.min(dc, dr) }
@@ -140,6 +143,8 @@ function findPath(G, from, to) {
   let guard = 0
   while (heap.n && guard++ < 9000) {
     const cur = hpop()
+    if (G.closed[cur] === stamp) continue
+    G.closed[cur] = stamp
     if (cur === to) {
       const out = []
       for (let i = to; i >= 0; i = G.came[i]) out.push(i)
@@ -152,7 +157,7 @@ function findPath(G, from, to) {
         const nc = c + dc, nr = r + dr
         if (nc < 0 || nr < 0 || nc >= cols || nr >= G.rows) continue
         const n = nr * cols + nc, w = G.cost[n]
-        if (!w) continue
+        if (!w || G.closed[n] === stamp) continue
         if (dr && dc && (!G.cost[r * cols + nc] || !G.cost[nr * cols + c])) continue // no corner cutting
         const g = G.g[cur] + STEP[w] * (dr && dc ? 1.414 : 1)
         if (G.seen[n] === stamp && g >= G.g[n]) continue
@@ -312,6 +317,18 @@ export class Crowd {
     }
     pts.push([tx, ty])
     return { isl, pts, i: 0 }
+  }
+
+  walkPoint(island, x, y) {
+    const grid = GRIDS[island]
+    if (!grid) return null
+    const cell = nearestOpen(grid, x, y)
+    return cell < 0 ? null : centre(grid, cell)
+  }
+
+  canStep(island, from, to) {
+    const grid = GRIDS[island]
+    return Boolean(grid && clear(grid, from, to, 3) && grid.cost[cellOf(grid, ...to)])
   }
 
   update(dt) {

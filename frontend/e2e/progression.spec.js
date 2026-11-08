@@ -20,8 +20,85 @@ async function savedTown(page) {
 }
 
 async function expectSave(page, predicate) {
-  await expect.poll(async () => predicate(await savedTown(page))).toBeTruthy()
+  await expect.poll(async () => predicate(await savedTown(page)), { timeout: 20_000 }).toBeTruthy()
 }
+
+test('the captain must arrive before harvesting and can interact again with E', async ({ page }) => {
+  const town = await startAt(page, 'new-town')
+  await page.locator('[data-tutorial="gather-wood-site"]').click()
+  const captain = page.getByRole('region', { name: 'Captain controls' })
+  await expect(captain).toHaveAttribute('data-player-busy', 'true')
+  expect((await savedTown(page)).resources.wood).toBe(town.resources.wood)
+  await captain.getByRole('button', { name: 'Cancel task' }).click()
+  await expect(captain).toHaveAttribute('data-player-busy', 'false')
+  expect((await savedTown(page)).resources.wood).toBe(town.resources.wood)
+  await page.locator('[data-tutorial="gather-wood-site"]').click()
+  await expectSave(page, s => s.resources.wood === town.resources.wood + 6)
+  await expect(captain).toHaveAttribute('data-player-busy', 'false')
+  await page.keyboard.press('e')
+  await expectSave(page, s => s.resources.wood === town.resources.wood + 12)
+})
+
+test('WASD moves the captain, saves their position, and does not advance the town', async ({ page }) => {
+  const town = await startAt(page, 'new-town')
+  const captain = page.getByRole('region', { name: 'Captain controls' })
+  await expect(captain).toBeVisible()
+  const startX = Number(await captain.getAttribute('data-player-x'))
+  await page.keyboard.down('d')
+  await expect.poll(async () => Number(await captain.getAttribute('data-player-x'))).toBeGreaterThan(startX + 4)
+  await page.keyboard.up('d')
+  await expectSave(page, s => s.player?.x > startX + 4)
+  const saved = await savedTown(page)
+  expect(saved.xp).toBe(town.xp)
+  expect(saved.resources).toEqual(town.resources)
+  // A new tab uses the saved town without rerunning this page's checkpoint initializer.
+  const restored = await page.context().newPage()
+  await restored.goto('/')
+  const restoredCaptain = restored.getByRole('region', { name: 'Captain controls' })
+  await expect(restoredCaptain).toHaveAttribute('data-player-island', 'newHaven')
+  await expect.poll(async () => Number(await restoredCaptain.getAttribute('data-player-x'))).toBeCloseTo(saved.player.x, 0)
+})
+
+test('the captain walks across built bridges to a selected island', async ({ page }, testInfo) => {
+  const town = await startAt(page, 'all-bridges')
+  const captain = page.getByRole('region', { name: 'Captain controls' })
+  await page.getByRole('button', { name: 'Walk on Verdant Reach', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(captain).toHaveAttribute('data-player-island', 'newHaven')
+  await expect(captain).toHaveAttribute('data-player-island', 'verdant', { timeout: 25_000 })
+  await expect(captain).toHaveAttribute('data-player-busy', 'false', { timeout: 20_000 })
+  const saved = await savedTown(page)
+  expect(saved.resources).toEqual(town.resources)
+  expect(saved.xp).toBe(town.xp)
+  await page.getByRole('button', { name: 'Find my avatar' }).click()
+  await page.evaluate(() => new Promise(resolve => { let frames = 30; const next = () => --frames ? requestAnimationFrame(next) : resolve(); requestAnimationFrame(next) }))
+  await page.screenshot({ path: testInfo.outputPath('captain-on-verdant.png') })
+})
+
+test('touch controls fit on a phone and tapping a path moves the captain', async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  try {
+    const page = await context.newPage()
+    const town = await startAt(page, 'new-town')
+    const controls = page.getByRole('region', { name: 'Captain controls' })
+    await expect(controls.getByRole('button', { name: 'Walk right', exact: true })).toBeVisible()
+    await page.waitForFunction(async () => {
+      const { PAINTED_ATLASES, getPaintedAtlas } = await import('/src/components/world/paintedArt.js')
+      return Object.keys(PAINTED_ATLASES).every(key => getPaintedAtlas(key).ready)
+    })
+    await page.evaluate(() => new Promise(resolve => { let frames = 20; const next = () => --frames ? requestAnimationFrame(next) : resolve(); requestAnimationFrame(next) }))
+    await page.screenshot({ path: testInfo.outputPath('captain-mobile-before.png') })
+    await page.getByRole('button', { name: 'Walk on New Haven', exact: true }).tap({ timeout: 5_000 })
+    await expect(controls).toHaveAttribute('data-player-busy', 'true')
+    await expect(controls).toHaveAttribute('data-player-busy', 'false', { timeout: 20_000 })
+    expect((await savedTown(page)).resources).toEqual(town.resources)
+    const box = await controls.boundingBox()
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x+box.width).toBeLessThanOrEqual(390)
+    expect(box.y+box.height).toBeLessThanOrEqual(844)
+    await page.screenshot({ path: testInfo.outputPath('captain-mobile.png') })
+  } finally { await context.close() }
+})
 
 for (const reducedMotion of ['reduce', 'no-preference']) {
   test(`residents keep walking with reduced motion set to ${reducedMotion}`, async ({ page }) => {
@@ -98,7 +175,7 @@ test('the tutorial advances through gathering, building and the quest book', asy
   await page.getByRole('dialog', { name: 'Tutorial - Welcome' }).getByRole('button', { name: /Let's Begin/ }).click()
   await page.locator('[data-tutorial="island-newHaven"]').click()
   await page.locator('[data-tutorial="gather-wood-btn"]').click()
-  await expect(page.getByRole('dialog', { name: 'Tutorial Step 2' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Tutorial Step 2' })).toBeVisible({ timeout: 20_000 })
   await page.locator('[data-tutorial="rail-build"]').click()
   await expect(page.getByRole('dialog', { name: 'Tutorial Step 3' })).toBeVisible()
   await page.locator('[data-tutorial="build-btn-shelter"]').click()
