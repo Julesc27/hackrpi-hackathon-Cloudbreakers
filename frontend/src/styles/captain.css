@@ -1,0 +1,62 @@
+/* =====================================================================
+   Your Captain: the avatar editor and the HUD portrait.
+   ===================================================================== */
+
+/* The rail button shows your Captain's face in a little medallion */
+.rail-avatar {
+  width: 50px; height: 50px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #3e5bb0, #1a2766 75%);
+  box-shadow: 0 0 0 2px rgba(227, 194, 122, 0.9), inset 0 -6px 10px rgba(5, 10, 40, 0.45);
+}
+
+/* ---------- Editor ---------- */
+.captain-editor { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: start; }
+.cap-preview {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 12px 12px;
+  border-radius: 18px;
+  background: radial-gradient(ellipse 70% 30% at 50% 88%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%), linear-gradient(180deg, #a9c4ef 0%, #d9e5f7 62%, #f1eadb 100%);
+  box-shadow: 0 0 0 2px rgba(227, 194, 122, 0.75), inset 0 0 24px rgba(40, 60, 120, 0.25);
+}
+.cap-preview canvas { width: 180px; height: 225px; }
+.cap-preview .cap-note { margin: 0; font-size: 12px; line-height: 1.35; text-align: center; color: #2b3566; }
+
+.cap-field { border: 0; margin: 0 0 14px; padding: 0; min-width: 0; }
+.cap-field legend {
+  padding: 0; margin-bottom: 7px;
+  font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b4a18;
+}
+.cap-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.cap-chip {
+  min-height: 36px; padding: 6px 13px; border-radius: 999px;
+  border: 1px solid rgba(138, 100, 36, 0.45); background: rgba(255, 255, 255, 0.55);
+  color: var(--ink); font-weight: 700; font-size: 13px;
+}
+.cap-chip:hover { border-color: #b8862f; background: rgba(255, 255, 255, 0.8); }
+.cap-chip.is-on { background: #1f2a5a; border-color: #1f2a5a; color: #fff6d6; box-shadow: 0 0 0 2px rgba(227, 194, 122, 0.75); }
+.cap-swatches { display: flex; flex-wrap: wrap; gap: 9px; }
+.cap-swatch {
+  width: 34px; height: 34px; padding: 0; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 1px rgba(80, 50, 10, 0.45);
+}
+.cap-swatch.is-on { box-shadow: 0 0 0 3px #1f2a5a, 0 0 0 5px #e3c27a; }
+.cap-chip:focus-visible, .cap-swatch:focus-visible { outline: 2px solid #1f2a5a; outline-offset: 3px; }
+.cap-foot { justify-content: center; margin-top: 0; }
+
+@media (pointer: coarse) {
+  .cap-swatch { width: 40px; height: 40px; }
+  .cap-chip { min-height: 40px; }
+}
+
+/* Phones: the preview stays pinned at the top while you scroll the options */
+@media (max-width: 640px) {
+  .captain-editor { grid-template-columns: 1fr; gap: 12px; }
+  .cap-preview { top: -10px; flex-direction: row; justify-content: center; padding: 8px; border-radius: 14px; }
+  .cap-preview canvas { width: 96px; height: 120px; }
+  .cap-preview .cap-note { max-width: 150px; text-align: left; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .captain-editor { grid-template-columns: 150px minmax(0, 1fr); gap: 14px; }
+  .cap-preview canvas { width: 120px; height: 150px; }
+  .cap-preview .cap-note { display: none; }
+}

@@ -34,6 +34,43 @@ export function bridgeCurve(routeId, n = 10, type = 'rope') {
   return out
 }
 
+/** The older node graph from layout.js nav data. Residents now walk walkGrid.js instead; this is
+ * kept because the bridge-network test still checks the nav layout with it. */
+export function buildGraph(state, access) {
+  const nodes = new Map()
+  const adj = new Map()
+  const add = (k, x, y, island, tag) => { nodes.set(k, { k, x, y, island, tag }); adj.set(k, []) }
+  const link = (a, b) => { if (nodes.has(a) && nodes.has(b)) { adj.get(a).push(b); adj.get(b).push(a) } }
+  const easternRoutes = new Set(state.bridges.map(b => b.route).filter(r => r === 'hearth-haven' || r === 'prism-haven'))
+  for (const [id, isl] of Object.entries(WORLD_ISLANDS)) {
+    if (!access[id]) continue
+    for (const [nid, [x, y, tag]] of Object.entries(isl.nav.nodes)) {
+      if (id === 'newHaven') {
+        if (nid.startsWith('east') && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'crystalPath' && !easternRoutes.has('prism-haven')) continue
+        if (nid === 'e_hearth' && !easternRoutes.has('hearth-haven')) continue
+        if (nid === 'e_prism' && !easternRoutes.has('prism-haven')) continue
+      }
+      add(`${id}:${nid}`, x, y, id, tag)
+    }
+    for (const [a, b] of isl.nav.edges) link(`${id}:${a}`, `${id}:${b}`)
+  }
+  for (const b of state.bridges) {
+    if (b.condition <= 0) continue
+    const e = BRIDGE_ENDS[b.route]
+    if (!e || !access[e.a[0]] || !access[e.b[0]]) continue
+    const pts = bridgeCurve(b.route, 8, b.type)
+    let prev = `${e.a[0]}:${e.a[1]}`
+    for (let i = 1; i < pts.length - 1; i++) {
+      const k = `br:${b.route}:${i}`
+      add(k, pts[i][0], pts[i][1], 'bridge')
+      link(prev, k); prev = k
+    }
+    link(prev, `${e.b[0]}:${e.b[1]}`)
+  }
+  return { nodes, adj }
+}
+
 /* ---------------- walk grids ---------------- */
 const STEP = [0, 1, 2.4, 3.2] // cost per cell: blocked, paving, lawn, steps
 const GRIDS = {}
@@ -220,8 +257,10 @@ function makeLook(r) {
   const role = kid ? 'kid' : pick(r, ROLES)
   const look = {
     kid, role, skin: pick(r, SKIN), hair: pick(r, HAIR), pants: pick(r, ['#3a3550', '#5b4636', '#2b3a66', '#6b5a44']),
-    long: r() < 0.4, // long hair
+    body: r() < 0.5 ? 'woman' : 'man',
   }
+  look.hairStyle = look.body === 'woman' ? pick(r, ['long', 'ponytail', 'bun', 'curly', 'short']) : pick(r, ['short', 'short', 'curly', 'bald'])
+  look.beard = look.body === 'man' && !kid && r() < 0.3 ? pick(r, ['stubble', 'beard']) : 'none'
   switch (role) {
     case 'skywright': Object.assign(look, { shirt: pick(r, NAVY), trim: '#e3c27a', hat: 'aviator', carry: r() < 0.6 ? 'plank' : 'toolbag' }); break
     case 'farmer': Object.assign(look, { shirt: pick(r, ['#5f9e4f', '#d39a3a', '#b8573a']), apron: '#f3e6c6', hat: 'straw', carry: 'basket' }); break
@@ -229,6 +268,7 @@ function makeLook(r) {
     case 'courier': Object.assign(look, { shirt: pick(r, ['#f3e6c6', '#3f8f9a', '#6a5ac8']), scarf: pick(r, ['#d9534f', '#e3a13a', '#c0603e']), hat: r() < 0.5 ? 'aviator' : null, carry: 'satchel' }); break
     case 'kid': Object.assign(look, { shirt: pick(r, BRIGHT), carry: r() < 0.55 ? 'kite' : r() < 0.5 ? 'pinwheel' : null, kite: pick(r, ['#d9534f', '#e3c27a', '#3f8f9a', '#6a5ac8']) }); break
     default: Object.assign(look, { shirt: pick(r, [...BRIGHT, ...NAVY]), cloak: r() < 0.45 ? pick(r, ['#2c4fb0', '#6a5ac8', '#3f8f9a', '#8f3f27']) : null, hat: r() < 0.25 ? 'hood' : null })
+      if (look.body === 'woman' && !look.cloak && r() < 0.5) look.dress = true
   }
   return look
 }
@@ -270,9 +310,9 @@ export class Crowd {
     if (this.agents.length > target) this.agents.length = target
   }
 
-  spawn() {
+  spawn(at = null) {
     const r = this.r
-    const isl = this.islands.includes('newHaven') && r() < 0.5 ? 'newHaven' : pick(r, this.islands)
+    const isl = at || (this.islands.includes('newHaven') && r() < 0.5 ? 'newHaven' : pick(r, this.islands))
     const G = GRIDS[isl]
     const [x, y] = centre(G, pick(r, G.paved))
     const look = makeLook(r)
@@ -461,7 +501,7 @@ function drawPersonFar(ctx, a) {
   ctx.fillStyle = col(a.cloak || a.shirt); ctx.fill()
   ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.5 * s; ctx.stroke()
   circle(ctx, x, y - 11.8 * s, 2.1 * s, col(a.skin))
-  const top = a.hat === 'straw' ? '#e8c77a' : a.hat === 'cap' ? '#1f2d6a' : a.hat === 'aviator' ? '#7a4b2a' : a.hat === 'hood' ? a.cloak || '#6a5ac8' : a.hair
+  const top = a.hat === 'straw' ? '#e8c77a' : a.hat === 'cap' || a.hat === 'captain' ? '#1f2d6a' : a.hat === 'aviator' ? '#7a4b2a' : a.hat === 'hood' ? a.cloak || '#6a5ac8' : a.hairStyle === 'bald' ? a.skin : a.hair
   ctx.beginPath(); ctx.arc(x, y - 12.1 * s, 2.2 * s, Math.PI, TAU); ctx.fillStyle = col(top); ctx.fill()
 }
 
@@ -525,13 +565,30 @@ export function drawPerson(ctx, a, t, detail = true) {
     ellipse(ctx, l2 + 0.3, -0.3, 0.95, 0.5, boot)
   }
 
+  // a dress, flaring a little as they walk
+  if (a.dress) {
+    const fl = walking ? Math.abs(swing) * 0.5 : 0
+    ctx.beginPath()
+    if (sit) { ctx.moveTo(-2.1, hip - 0.4); ctx.lineTo(3.4, hip + 0.2); ctx.lineTo(3.5, hip + 1.5); ctx.lineTo(-2.3, hip + 1.3) }
+    else { ctx.moveTo(-2.1, hip - 0.6); ctx.lineTo(2.1, hip - 0.6); ctx.lineTo(3 + fl, -1.7); ctx.quadraticCurveTo(0, -1.1, -3 - fl, -1.7) }
+    ctx.closePath()
+    ctx.fillStyle = col(shade(a.shirt, 0.9)); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.4; ctx.stroke()
+  }
+
   // torso (leans in while tending crops)
   ctx.save()
   if (tend) { ctx.translate(0, hip); ctx.rotate(0.45 + Math.sin(a.phase) * 0.1); ctx.translate(0, -hip) }
   const body = new Path2D()
-  body.moveTo(-2.4, hip + 0.6); body.lineTo(-2.1, top + 1.2)
-  body.quadraticCurveTo(0, top - 0.9, 2.1, top + 1.2); body.lineTo(2.4, hip + 0.6)
-  body.quadraticCurveTo(0, hip + 1.4, -2.4, hip + 0.6)
+  if (a.body === 'woman') {
+    // narrower shoulders and a waist
+    body.moveTo(-2.2, hip + 0.6); body.quadraticCurveTo(-1.3, hip - 2.3, -1.85, top + 1.2)
+    body.quadraticCurveTo(0, top - 0.8, 1.85, top + 1.2); body.quadraticCurveTo(1.3, hip - 2.3, 2.2, hip + 0.6)
+  } else {
+    const sh = a.body === 'man' ? 2.35 : 2.1
+    body.moveTo(-2.4, hip + 0.6); body.lineTo(-sh, top + 1.2)
+    body.quadraticCurveTo(0, top - 0.9, sh, top + 1.2); body.lineTo(2.4, hip + 0.6)
+  }
+  body.quadraticCurveTo(0, hip + 1.4, a.body === 'woman' ? -2.2 : -2.4, hip + 0.6)
   ctx.fillStyle = col(a.shirt); ctx.fill(body)
   // soft shading on the side away from the light, then the painted outline
   ctx.save(); ctx.clip(body)
@@ -616,27 +673,51 @@ export function drawPerson(ctx, a, t, detail = true) {
 
   // head
   const hy = top - 2.1
+  const style = a.hairStyle || 'short'
+  const hairCol = col(a.hair)
+  const sway = Math.sin(a.phase * (walking ? 1 : 0.3)) * 0.35
+  // hair that hangs behind the head goes first
+  ctx.fillStyle = hairCol
+  if (style === 'long') { ctx.beginPath(); ctx.ellipse(a.back ? 0 : -1.2, hy + 1.5, a.back ? 2.1 : 1.5, 2.6, a.back ? 0 : 0.15, 0, TAU); ctx.fill() }
+  else if (style === 'ponytail') { ctx.beginPath(); ctx.ellipse(a.back ? sway : -2.4 + sway, hy + (a.back ? 1.6 : 0.9), 0.8, 1.9, a.back ? 0 : 0.35, 0, TAU); ctx.fill() }
+  if (a.hat === 'hood') {
+    ctx.beginPath(); ctx.ellipse(a.back ? 0 : -0.5, hy + 0.2, 2.75, 2.85, 0, 0, TAU)
+    ctx.fillStyle = col(a.cloak || '#6a5ac8'); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.3; ctx.stroke()
+  }
   circle(ctx, 0, hy, 2.05, col(a.skin))
   ctx.beginPath(); ctx.arc(0, hy, 2.05, 0, TAU); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.38; ctx.stroke()
-  // hair
-  ctx.fillStyle = col(a.hair)
-  ctx.beginPath()
-  if (a.back) {
-    ctx.arc(0, hy, 2.15, 0, TAU)
-  } else {
-    ctx.arc(0, hy - 0.15, 2.15, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(0.2, hy - 1.2, -2.1, hy + 0.1)
+  // hair on top
+  ctx.fillStyle = hairCol
+  if (style !== 'bald') {
+    ctx.beginPath()
+    if (a.back) ctx.arc(0, hy, 2.15, 0, TAU)
+    else { ctx.arc(0, hy - 0.15, 2.15, Math.PI * 1.02, Math.PI * 1.98); ctx.quadraticCurveTo(0.2, hy - 1.2, -2.1, hy + 0.1) }
+    ctx.fill()
+    if (style === 'curly') for (let k = 0; k <= 4; k++) { const an = Math.PI * (1.05 + k * 0.22); circle(ctx, Math.cos(an) * 2.05, hy - 0.1 + Math.sin(an) * 2.05, 0.78, hairCol) }
+    if (style === 'bun') circle(ctx, a.back ? 0 : -1.1, hy - 1.9, 1.05, hairCol)
+  } else if (!a.back) {
+    circle(ctx, -0.6, hy - 1.1, 0.5, col('#ffffff', 0.22)) // a little shine
   }
-  ctx.fill()
-  if (a.long) { ctx.beginPath(); ctx.ellipse(-1.5, hy + 1.2, 1, 2, 0.2, 0, TAU); ctx.fill() }
   if (!a.back) {
     // a face: two dot eyes and a little rosy cheek
     circle(ctx, 0.9, hy + 0.15, 0.26, '#2a1f2e')
     circle(ctx, 1.9, hy + 0.1, 0.22, '#2a1f2e')
     circle(ctx, 1.2, hy + 0.95, 0.4, 'rgba(232,120,110,.45)')
+    if (a.body === 'woman') {
+      line(ctx, 1.9, hy - 0.12, 2.35, hy - 0.42, '#2a1f2e', 0.22)
+      line(ctx, 0.85, hy - 0.08, 0.55, hy - 0.42, '#2a1f2e', 0.2)
+    }
+    if (a.beard && a.beard !== 'none') {
+      // along the jaw, below the cheeks, leaving a little gap for the mouth
+      ctx.beginPath(); ctx.arc(0, hy, 2.15, Math.PI * 0.08, Math.PI * 0.82)
+      ctx.quadraticCurveTo(-0.2, hy + 1.1, 0.6, hy + 1.35)
+      ctx.quadraticCurveTo(1.3, hy + 1.05, 2.13, hy + 0.35); ctx.closePath()
+      ctx.fillStyle = col(a.beard === 'stubble' ? shade(a.hair, 0.7) : a.hair, a.beard === 'stubble' ? 0.5 : 1); ctx.fill()
+    }
   }
   // hats
   if (a.hat === 'aviator') {
-    ctx.beginPath(); ctx.arc(0, hy - 0.2, 2.25, Math.PI, TAU); ctx.lineTo(2.2, hy + 0.4); ctx.lineTo(-2.2, hy + 0.8); ctx.closePath()
+    ctx.beginPath(); ctx.arc(0, hy - 0.2, 2.25, Math.PI, TAU); ctx.lineTo(2.25, hy - 0.45); ctx.lineTo(-0.4, hy - 0.2); ctx.lineTo(-2.2, hy + 0.9); ctx.closePath() // leaves the eyes clear
     ctx.fillStyle = col('#7a4b2a'); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.3; ctx.stroke()
     if (!a.back) { // brass goggles pushed up on the forehead
       ctx.beginPath(); ctx.arc(0.6, hy - 1.1, 0.7, 0, TAU); ctx.arc(2, hy - 1.1, 0.6, 0, TAU)
@@ -651,8 +732,19 @@ export function drawPerson(ctx, a, t, detail = true) {
     ctx.fillStyle = col('#1f2d6a'); ctx.fill()
     ctx.fillStyle = col('#e3c27a'); ctx.fillRect(-2.1, hy - 1.05, 4.2, 0.45)
     ellipse(ctx, 1.4, hy - 0.7, 1.6, 0.4, col('#1f2d6a'))
+  } else if (a.hat === 'captain') {
+    // a navy captain's hat with gold trim
+    ctx.beginPath(); ctx.moveTo(-1.9, hy - 0.8); ctx.quadraticCurveTo(-2.1, hy - 3.3, 0, hy - 3.4); ctx.quadraticCurveTo(2.1, hy - 3.3, 1.9, hy - 0.8); ctx.closePath()
+    ctx.fillStyle = col('#24357a'); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.35; ctx.stroke()
+    ctx.fillStyle = col('#e3c27a'); ctx.fillRect(-1.95, hy - 1.45, 3.9, 0.5)
+    ellipse(ctx, 0.5, hy - 0.75, 3, 0.7, col('#1a2766'), col('#e3c27a'), 0.35)
+    if (!a.back) circle(ctx, 0.5, hy - 2.25, 0.5, col('#f3d98f'))
   } else if (a.hat === 'hood') {
-    ctx.beginPath(); ctx.arc(0, hy, 2.6, Math.PI * 0.8, Math.PI * 2.05); ctx.quadraticCurveTo(-0.5, hy + 2.4, -2.4, hy + 1.6); ctx.closePath()
+    // the hood's rim frames the face instead of covering it
+    ctx.beginPath()
+    if (a.back) ctx.ellipse(0, hy, 2.6, 2.6, 0, 0, TAU)
+    else { ctx.arc(-0.5, hy + 0.2, 2.75, Math.PI * 0.62, Math.PI * 1.9); ctx.quadraticCurveTo(0.2, hy - 1.1, -1.4, hy + 1.9) }
+    ctx.closePath()
     ctx.fillStyle = col(a.cloak || '#6a5ac8'); ctx.fill(); ctx.strokeStyle = OUTLINE; ctx.lineWidth = 0.3; ctx.stroke()
   }
   ctx.restore()

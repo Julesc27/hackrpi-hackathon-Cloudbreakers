@@ -8,6 +8,7 @@ import './styles/map.css'
 import './styles/auth.css'
 import './styles/storybook.css'
 import './styles/layout.css'
+import './styles/captain.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

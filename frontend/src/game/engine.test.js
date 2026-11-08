@@ -446,3 +446,20 @@ test('Friendly Cloud points to the Store and notices when the gods disagree', as
   assert.equal(godsWord({ ...agree, xp: agree.xp + GODS_FRESH_XP }, tip).kind, 'nudge') // stale
   assert.ok(getAdvice(start).every((t) => t.focus))
 })
+
+test('the Captain avatar can be changed, is sanitised, and survives old saves', () => {
+  const initial = createInitialState()
+  assert.equal(initial.avatar.body, 'woman')
+  const man = gameReducer(initial, { type: 'SET_AVATAR', avatar: { ...initial.avatar, body: 'man', beard: 'beard', top: '#5f9e4f', hat: 'straw' } })
+  assert.deepEqual([man.avatar.body, man.avatar.beard, man.avatar.top, man.avatar.hat], ['man', 'beard', '#5f9e4f', 'straw'])
+  assert.equal(man.xp, initial.xp)
+  // unknown values fall back to the default; beards only for the man body
+  const odd = gameReducer(initial, { type: 'SET_AVATAR', avatar: { body: 'woman', beard: 'beard', top: 'javascript:alert(1)', hat: 'crown' } })
+  assert.equal(odd.avatar.beard, 'none')
+  assert.equal(odd.avatar.top, initial.avatar.top)
+  assert.equal(odd.avatar.hat, initial.avatar.hat)
+  // a save from before avatars existed gets the default Captain
+  const { avatar, ...old } = initial
+  assert.deepEqual(migrateSave(old).avatar, initial.avatar)
+  assert.equal(migrateSave(man).avatar.beard, 'beard')
+})
