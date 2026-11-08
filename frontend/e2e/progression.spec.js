@@ -26,6 +26,33 @@ async function expectSave(page, predicate) {
   await expect.poll(async () => predicate(await savedTown(page)), { timeout: 20_000 }).toBeTruthy()
 }
 
+test('the captain and residents walk around a built shelter', async ({ page }) => {
+  const plot = ISLANDS.newHaven.plots[0], initial = checkpoint('new-town')
+  await startAt(page, 'new-town', { buildings: [...initial.buildings, { id: 'obstacle', type: 'shelter', island: 'newHaven', slot: 0 }], player: { island: 'newHaven', x: plot[0]-55, y: plot[1] } })
+  await page.evaluate(async plot => {
+    const { Player } = await import('/src/game/player.js')
+    const { Crowd } = await import('/src/components/world/people.js')
+    window.buildingViolations = 0; window.captainDetoured = false; window.residentSamples = 0
+    const inspect = a => {
+      if (a.isl !== 'newHaven') return
+      if (Math.abs(a.x-plot[0])/26+Math.abs(a.y-plot[1])/13 < 1) window.buildingViolations++
+    }
+    const updatePlayer = Player.prototype.update, updateCrowd = Crowd.prototype.update
+    Player.prototype.update = function(dt) { updatePlayer.call(this,dt); inspect(this.avatar); if (Math.abs(this.avatar.y-plot[1]) > 13) window.captainDetoured = true }
+    Crowd.prototype.update = function(dt) { updateCrowd.call(this,dt); for (const a of this.agents) if (a.role !== 'captain') { inspect(a); window.residentSamples++ } }
+  }, plot)
+  const goal = [plot[0]+65,plot[1]]
+  const screen = await page.evaluate(([x,y]) => { const p = new DOMPoint(x,y).matrixTransform(document.querySelector('.skymap').getScreenCTM()); return { x:p.x, y:p.y } }, goal)
+  await page.mouse.dblclick(screen.x,screen.y)
+  const captain = page.getByRole('button', { name: 'Center me', exact: true })
+  await expect(captain).toHaveAttribute('data-player-busy', 'true')
+  await expect(captain).toHaveAttribute('data-player-busy', 'false', { timeout: 15_000 })
+  expect(Number(await captain.getAttribute('data-player-x'))).toBeGreaterThan(plot[0]+40)
+  expect(await page.evaluate(() => window.captainDetoured)).toBe(true)
+  expect(await page.evaluate(() => window.residentSamples)).toBeGreaterThan(30)
+  expect(await page.evaluate(() => window.buildingViolations)).toBe(0)
+})
+
 for (const id of ['newHaven-central-front', 'verdant-bridge', 'prism-west-terrace']) {
   test(`the captain can descend and climb ${id} with arrow keys`, async ({ page }, testInfo) => {
     const stair = STAIRWAYS.find(stair => stair.id === id)

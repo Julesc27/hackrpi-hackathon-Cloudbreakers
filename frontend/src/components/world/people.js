@@ -9,7 +9,7 @@ import { WALK, CELL } from './walkGrid.js'
 import { ISLANDS, BUILDINGS } from '../../game/data.js'
 import { shiftIslandPoint } from '../../game/mapLayout.js'
 import { STAIRWAYS, stairProjection } from './stairways.js'
-import { buildingLayout } from './buildingLayout.js'
+import { buildingObstacle } from './buildingLayout.js'
 import { drawTaskTool } from './taskAnimation.js'
 import { rng, circle, ellipse, line, col, TAU } from './iso.js'
 
@@ -134,13 +134,12 @@ function blockBuilding(G, b, clearance = 0) {
   if (!G || b.slot < 0 || BUILDINGS[b.type]?.infrastructure) return
   const plot = ISLANDS[b.island]?.plots?.[b.slot]
   if (!plot) return
-  // Match the visible foundation, including smaller buildings on outer islands.
-  const footprint = buildingLayout(b.type, b.island, b.slot)
-  const rx = footprint.groundWidth + 3 + clearance, ry = footprint.groundDepth + 3 + clearance
+  const { rx, ry } = buildingObstacle(b.type, b.island, b.slot, 1.5 + clearance)
   for (let r = 0; r < G.rows; r++) {
     for (let c = 0; c < G.cols; c++) {
       const [cx, cy] = [G.x + (c + 0.5) * CELL, G.y + (r + 0.5) * CELL]
-      if (Math.abs(cx - plot[0]) / rx + Math.abs(cy - plot[1]) / ry < 1) G.cost[r * G.cols + c] = 0
+      // Block every cell touched by the base, including its thin corners.
+      if (Math.max(0,Math.abs(cx-plot[0])-CELL/2)/rx + Math.max(0,Math.abs(cy-plot[1])-CELL/2)/ry < 1) G.cost[r * G.cols + c] = 0
     }
   }
 }
@@ -175,8 +174,8 @@ function applyBuildings(state) {
   for (const G of Object.values(GRIDS)) {
     G.egress = mainWalkableArea(G)
     G.paved = []
-    for (let i = 0; i < G.cost.length; i++) if (G.cost[i] === 1) G.paved.push(i)
-    G.pois = G.poi.map(([c, r, tag]) => ({ i: nearestOpen(G, ...centre(G, r * G.cols + c)), tag })).filter((p) => p.i >= 0)
+    for (let i = 0; i < G.cost.length; i++) if (G.cost[i] === 1 && G.egress[i]) G.paved.push(i)
+    G.pois = G.poi.map(([c, r, tag]) => ({ i: nearestOpen(G, ...centre(G, r * G.cols + c), G.egress), tag })).filter((p) => p.i >= 0)
   }
 }
 
@@ -248,10 +247,23 @@ function findPath(G, from, to) {
 }
 function clear(G, a, b, maxCost) {
   const [ax, ay] = a, [bx, by] = b
-  const n = Math.ceil(Math.hypot(bx - ax, by - ay) / (CELL * 0.5))
-  for (let k = 1; k < n; k++) {
-    const i = cellOf(G, ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n)
-    if (i < 0 || !G.cost[i] || G.cost[i] > maxCost) return false
+  let c = Math.floor((ax-G.x)/CELL), r = Math.floor((ay-G.y)/CELL)
+  const tc = Math.floor((bx-G.x)/CELL), tr = Math.floor((by-G.y)/CELL)
+  const open = (x,y) => x >= 0 && y >= 0 && x < G.cols && y < G.rows && G.cost[y*G.cols+x] > 0 && G.cost[y*G.cols+x] <= maxCost
+  if (!open(c,r) || !open(tc,tr)) return false
+  const dx = bx-ax, dy = by-ay, sx = Math.sign(dx), sy = Math.sign(dy)
+  let tx = dx ? (G.x+(c+(sx>0?1:0))*CELL-ax)/dx : Infinity
+  let ty = dy ? (G.y+(r+(sy>0?1:0))*CELL-ay)/dy : Infinity
+  const dtx = dx ? CELL/Math.abs(dx) : Infinity, dty = dy ? CELL/Math.abs(dy) : Infinity
+  // Traverse every crossed cell rather than sampling: even a very short corner
+  // cut must respect both neighbours, just like the A* search does.
+  while (c !== tc || r !== tr) {
+    if (Math.abs(tx-ty) < 1e-10) {
+      if (!open(c+sx,r) || !open(c,r+sy)) return false
+      c += sx; r += sy; tx += dtx; ty += dty
+    } else if (tx < ty) { c += sx; tx += dtx }
+    else { r += sy; ty += dty }
+    if (!open(c,r)) return false
   }
   return true
 }
@@ -395,11 +407,17 @@ export class Crowd {
     const off = (this.r() - 0.5) * 5
     for (let k = 1; k < pts.length - 1; k++) {
       const [px, py] = pts[k], q = [px + off, py + off * 0.5]
-      const i = cellOf(G, q[0], q[1])
-      if (i >= 0 && G.cost[i]) pts[k] = q
+      if (clear(G, pts[k-1], q, 3) && clear(G, q, pts[k+1], 3)) pts[k] = q
     }
-    pts.push([tx, ty])
+    if (clear(G, pts[pts.length-1], [tx,ty], 3)) pts.push([tx, ty])
     return { isl, pts, i: 0 }
+  }
+
+  reroute(a) {
+    const point = this.recoveryPoint(a.isl, a.x, a.y)
+    if (point) [a.x,a.y] = point
+    a.leg = null; a.legs = []; a.act = 'idle'; a.wait = 0
+    this.plan(a)
   }
 
   walkPoint(island, x, y) {
@@ -414,7 +432,7 @@ export class Crowd {
     if (!grid || !plot) return null
     const preview = { ...grid, cost: grid.cost.slice() }
     // Stand beside the completed foundation, with room for the captain's feet.
-    blockBuilding(preview, { type, island, slot }, 6)
+    blockBuilding(preview, { type, island, slot }, 3)
     const cell = nearestOpen(preview, ...plot, mainWalkableArea(preview))
     return cell < 0 ? null : centre(preview, cell)
   }
@@ -502,6 +520,8 @@ export class Crowd {
       while (step > 0 && leg.i < leg.pts.length) {
         const [tx, ty] = leg.pts[leg.i]
         const dx = tx - a.x, dy = ty - a.y, d = Math.hypot(dx, dy)
+        const next = d <= step ? [tx,ty] : [a.x+(dx/d)*step,a.y+(dy/d)*step]
+        if (!this.canStep(a.isl, [a.x,a.y], next)) { this.reroute(a); break }
         if (d <= step) { a.x = tx; a.y = ty; step -= d; leg.i++; continue }
         a.x += (dx / d) * step; a.y += (dy / d) * step
         if (Math.abs(dx) > 0.15) a.dir = dx > 0 ? 1 : -1

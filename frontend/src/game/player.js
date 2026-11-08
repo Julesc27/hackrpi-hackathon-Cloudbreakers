@@ -51,6 +51,16 @@ export class Player extends Crowd {
   }
   plan() {} // No autonomous wandering for the player.
 
+  reroute(a) {
+    const pending = this.pending
+    super.reroute(a)
+    if (pending) {
+      const point = pending.action?.type === 'BUILD' ? this.task(pending.action)?.point : pending.point
+      if (!point || !this.go(pending.island, point, pending.action, pending.label)) { this.pending = null; a.task = null }
+    }
+    this.remember()
+  }
+
   sync(state) {
     this.state = state
     if (this.avatar && state.avatar !== this.lastAvatar) this.dress()
