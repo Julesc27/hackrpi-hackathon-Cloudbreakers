@@ -30,7 +30,7 @@ test('a forecast can be prepared for by upgrading a shelter, with cancellable ca
   const initial = checkpoint('shelter-built')
   const town = await startAt(page,'shelter-built',{ version:7, weather:'clear', forecast:'heavyRain', weatherCycle:{...initial.weatherCycle,phase:'warning',remaining:1} })
   const watch=page.getByRole('button',{name:'Weather and shelter readiness'})
-  await expect(watch).toContainText('Heavy Rain in 1 jobs')
+  await expect(watch).toContainText('Heavy Rain in 1 job')
   await watch.click()
   const dialog=page.getByRole('dialog',{name:'Weather readiness',exact:true})
   await expect(dialog.getByRole('status')).toContainText('0 of 1 shelters meet level 2')

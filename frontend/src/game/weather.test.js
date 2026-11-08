@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createInitialState, gameReducer, migrateSave, housing, shelterLevel, shelterCondition, shelterWork, weatherReadiness, removalInfo } from './engine.js'
+import { createInitialState, gameReducer, migrateSave, housing, shelterLevel, shelterCondition, shelterWork, weatherReadiness, removalInfo, projectProduction } from './engine.js'
 import { WEATHER, SHELTER_LEVELS, ISLANDS } from './data.js'
 import { Player } from './player.js'
 
@@ -55,6 +55,22 @@ test('walking, menus, deposits, removals and failed jobs never consume a warning
   }
   const removed=gameReducer(s,{type:'REMOVE_BUILDING',buildingId:'house'})
   assert.deepEqual(removed.weatherCycle,s.weatherCycle)
+})
+
+test('solar storms require all preparation milestones, and alternate weather projections use the right shelter threshold', () => {
+  for(const setup of [{xp:1000,events:1,connected:['newHaven','prism']},{xp:450,events:2,connected:['newHaven','prism']},{xp:1000,events:2,connected:['newHaven']},{xp:1000,events:2,connected:['newHaven','prism']}]){
+    const scheduled=new Set()
+    for(let i=1;i<=80;i++){
+      const s=createInitialState(Math.imul(i,0x9e3779b9))
+      const next=job({...s,xp:setup.xp,connected:setup.connected,weatherCycle:{...s.weatherCycle,remaining:1,events:setup.events}},i)
+      scheduled.add(next.forecast)
+    }
+    assert.equal(scheduled.has('solarStorm'),setup.xp>=700&&setup.events>=2&&setup.connected.includes('prism'))
+  }
+  const s={...withHomes(),buildings:[home('house',2)]}
+  assert.equal(weatherReadiness(s,'solarStorm').vulnerable,1)
+  assert.equal(weatherReadiness(s,'heavyRain').vulnerable,0)
+  assert.equal(projectProduction(s,'solarStorm').net.happiness,projectProduction(s,'heavyRain').net.happiness-2)
 })
 
 test('weather damages only underprepared shelters and disabled housing is recoverable', () => {

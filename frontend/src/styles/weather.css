@@ -14,7 +14,10 @@
 .shelter-care p { margin-top: 5px; }
 .shelter-care label { display: block; font-size: 13px; margin: 10px 0; }
 .shelter-care .action-stack { margin-top: 12px; }
-.shelter-level { pointer-events: none; font: 600 10px var(--font-body); }
+.shelter-level { cursor: pointer; font: 600 10px var(--font-body); }
+.weather-rules { border-top: 1px solid #ad925955; margin-top: 4px; }
+.weather-rules summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
+.weather-rules summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 800px) {
   .weather-watch { top: auto; bottom: 150px; left: 76px; right: 12px; transform: none; width: auto; max-width: 340px; padding: 7px 10px; gap: 7px; }
   .weather-watch strong { font-size: 10px; }

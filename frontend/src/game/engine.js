@@ -37,7 +37,7 @@ function normalizeWeatherSave(saved) {
       lastWeather: WEATHER[cycle.lastWeather] && cycle.lastWeather !== 'clear' ? cycle.lastWeather : null } }
 }
 export const shelterLevel = building => clamp(Math.floor(Number(building.shelterLevel) || 1), 1, 3)
-export const shelterCondition = building => Number.isFinite(building.condition) ? clamp(building.condition, 0, 100) : 100
+export const shelterCondition = building => Number.isFinite(building.condition) ? clamp(Math.floor(building.condition), 0, 100) : 100
 export function shelterWork(state, buildingId, repair = false) {
   const building = state.buildings.find(b => b.id === buildingId && b.type === 'shelter')
   if (!building) return null
@@ -48,9 +48,7 @@ export function shelterWork(state, buildingId, repair = false) {
     : !next ? 'This shelter is already stormproof.' : getLevelInfo(state.xp).level < next.unlock ? `Reach player level ${next.unlock} first.` : null
   return { building, next, cost, reason: reason || (!canAfford(state.resources,cost) ? 'Deposit more construction supplies in Town Storage.' : null) }
 }
-export function weatherReadiness(state) {
-  const cycle = state.weatherCycle || freshWeather()
-  const key = cycle.phase === 'warning' ? state.forecast : state.weather
+export function weatherReadiness(state, key = state.weatherCycle?.phase === 'warning' ? state.forecast : state.weather) {
   const required = WEATHER[key]?.shelterLevel || 1
   const shelters = state.buildings.filter(b => b.type === 'shelter')
   const ready = shelters.filter(b => shelterLevel(b) >= required && shelterCondition(b) > 0).length
@@ -290,7 +288,7 @@ export function projectProduction(state, weatherKey = state.weather) {
     Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
   if (bh) dh += bh
   net.happiness = dh
-  if (w.shelterLevel) net.happiness -= Math.min(8,weatherReadiness(state).vulnerable*2)
+  if (w.shelterLevel) net.happiness -= Math.min(8,weatherReadiness(state,weatherKey).vulnerable*2)
 
   return { gain, use, net, sources }
 }
@@ -455,7 +453,7 @@ function progressSettlement(state, xp) {
   const house = housing(state)
   if (state.population > house) { dh -= 3; reasons.push(['Overcrowding', -3]) }
   if (w.happiness) { dh += w.happiness; reasons.push([w.name, w.happiness]) }
-  if (w.shelterLevel) dh -= Math.min(8,weatherReadiness(state).vulnerable*2)
+  if (w.shelterLevel) dh -= Math.min(8,weatherReadiness(state,state.weather).vulnerable*2)
   const bh =
     state.buildings.reduce((s, b) => s + (access[b.island] ? BUILDINGS[b.type].happiness || 0 : 0), 0) +
     Object.keys(access).reduce((s, id) => s + (access[id] === 1 ? ISLANDS[id].happiness || 0 : 0), 0)
