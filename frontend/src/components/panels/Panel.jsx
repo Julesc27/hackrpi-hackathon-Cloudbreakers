@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useRef } from 'react'
 import { Close, RES_ICON, Compass } from '../icons.jsx'
 import { eventShouldDismissOverlay } from '../../game/travelInput.js'
+import useDialogAccessibility from '../useDialogAccessibility.js'
+import { RESOURCES } from '../../game/data.js'
 
 function SealClose({ onClose }) {
   return (
@@ -31,8 +33,10 @@ export function Corners() {
 }
 
 export function Drawer({ side = 'left', title, kicker, onClose, children, className = '' }) {
+  const ref = useRef(null)
+  useDialogAccessibility(ref, { modal: false, onClose })
   return (
-    <aside className={`drawer drawer-${side} parchment ${className}`} role="dialog" aria-label={title}>
+    <aside ref={ref} className={`drawer drawer-${side} parchment ${className}`} role="dialog" aria-label={title}>
       <Corners />
       <header className="p-head">
         {kicker && <div className="p-kicker">{kicker}</div>}
@@ -46,20 +50,16 @@ export function Drawer({ side = 'left', title, kicker, onClose, children, classN
 
 // Parchment modal, modelled on "The Skyway Chart"
 export function Modal({ title, kicker, onClose, children, footer, size = 'md', dismissable = true, crest = true, className = '' }) {
-  useEffect(() => {
-    if (!dismissable) return
-    const onKey = (e) => e.key === 'Escape' && onClose?.()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, dismissable])
+  const ref = useRef(null)
+  useDialogAccessibility(ref, { onClose, dismissable })
   return (
     <div className="modal-backdrop" onClick={(e) => dismissable && eventShouldDismissOverlay(e) && onClose?.()}>
-      <div className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
+      <div ref={ref} className={`modal modal-${size} parchment ${className}`} role="dialog" aria-label={title}>
         <Corners />
         {crest && <div className="crest"><Compass size={52} /></div>}
         {dismissable && <SealClose onClose={onClose} />}
         <header className="p-head">
-          <h2 className="p-title"><span className="spark">✦</span>{title}<span className="spark">✦</span></h2>
+          <h2 className="p-title"><span className="spark" aria-hidden="true">✦</span>{title}<span className="spark" aria-hidden="true">✦</span></h2>
           {kicker && <div className="p-sub">{kicker}</div>}
         </header>
         <div className="modal-body">{children}</div>
@@ -77,7 +77,7 @@ export function CostChips({ cost = {}, resources }) {
         const short = resources && (resources[k] ?? 0) < v
         return (
           <span key={k} className={`chip${short ? ' is-short' : ''}`} title={`${v} ${k}`}>
-            {Icon && <Icon size={16} />}{v}
+            <span aria-hidden="true">{Icon && <Icon size={16} />}{v}{short && <strong> !</strong>}</span><span className="sr-only">{v} {RESOURCES[k]?.label || k}{short ? ', not enough available' : ''}</span>
           </span>
         )
       })}
@@ -94,7 +94,7 @@ export function YieldChips({ yields = {}, sign = '+', suffix = '/action' }) {
         const Icon = RES_ICON[k]
         return (
           <span key={k} className="chip chip-yield">
-            {Icon && <Icon size={16} />}{sign}{v}<small>{suffix}</small>
+            <span aria-hidden="true">{Icon && <Icon size={16} />}{sign}{v}<small>{suffix}</small></span><span className="sr-only">{sign}{v} {RESOURCES[k]?.label || k} {suffix === '/action' ? 'per completed job' : suffix}</span>
           </span>
         )
       })}
@@ -102,8 +102,8 @@ export function YieldChips({ yields = {}, sign = '+', suffix = '/action' }) {
   )
 }
 
-export function Progress({ value, max, color = 'linear-gradient(90deg,#e3b84f,#ffe28a)' }) {
+export function Progress({ value, max = 100, color = 'linear-gradient(90deg,#e3b84f,#ffe28a)', label }) {
   return (
-    <div className="bar"><div className="bar-fill" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: color }} /></div>
+    <div className="bar" role={label ? 'progressbar' : undefined} aria-label={label} aria-valuemin={label ? 0 : undefined} aria-valuemax={label ? max : undefined} aria-valuenow={label ? value : undefined} aria-hidden={label ? undefined : true}><div className="bar-fill" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: color }} /></div>
   )
 }

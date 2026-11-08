@@ -54,3 +54,12 @@ test('keyboard walking still works when the map is free, and stops while a menu 
   assert.equal(keyboardShouldWalk({ key: 'd', target: map, shiftKey: true }), false)
   assert.equal(keyboardShouldWalk({ key: 'e', target: map }), false)
 })
+
+test('navigation controls keep arrow keys while the map and center control still support walking', () => {
+  const button = { closest: selector => selector.includes('button,') ? {} : null }
+  assert.equal(keyboardShouldWalk({key:'ArrowRight',target:button}),false)
+  const center = { closest: selector => selector === '.center-me' || selector.includes('button,') ? {} : null }
+  assert.equal(keyboardShouldWalk({key:'ArrowRight',target:center}),true)
+  const mapButton = { ownerSVGElement:{},closest:selector=>selector==='[role="button"]'?{}:null }
+  assert.equal(keyboardShouldWalk({key:'ArrowRight',target:mapButton}),true)
+})

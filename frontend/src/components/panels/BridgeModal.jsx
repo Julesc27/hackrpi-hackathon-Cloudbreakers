@@ -10,7 +10,7 @@ function Stat({ label, value, max = 100, suffix = '%', color }) {
   return (
     <div className="stat">
       <div className="stat-top"><span>{label}</span><strong>{value}{suffix}</strong></div>
-      <Progress value={value} max={max} color={color} />
+      <Progress value={value} max={max} color={color} label={label} />
     </div>
   )
 }

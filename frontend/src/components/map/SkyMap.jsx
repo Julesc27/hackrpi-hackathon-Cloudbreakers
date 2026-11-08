@@ -110,7 +110,7 @@ export default function SkyMap() {
 
   return (
     <Camera apiRef={ui.camera} far={<Backdrop />} mid={<WorldCanvas hoverRef={hoverRef} />} near={near}>
-      <svg className={`skymap${ui.placing ? ' is-placing' : ''}`} viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} width="100%" height="100%">
+      <svg role="group" aria-label="Island map" className={`skymap${ui.placing ? ' is-placing' : ''}`} viewBox={`${WORLD.x} ${WORLD.y} ${WORLD.w} ${WORLD.h}`} width="100%" height="100%">
         <defs><CloudDefs /></defs>
         <Defs />
 
