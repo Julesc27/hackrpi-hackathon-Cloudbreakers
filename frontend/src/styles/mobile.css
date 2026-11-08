@@ -1,0 +1,169 @@
+/* =====================================================================
+   Mobile. Loaded last, after layout.css.
+   Checked on iPhone SE (320x568), iPhone 13 (390x664 with Safari bars),
+   Galaxy S9+ (320x658) and iPhone 13 landscape (750x342).
+   ===================================================================== */
+
+/* The game container never scrolls. With overflow: hidden the browser can
+   still scroll it to bring a focused button into view, which slid the whole
+   HUD up and left a black band on phones. `clip` forbids that. */
+.game { overflow: clip; overscroll-behavior: none; }
+
+/* ---------- Touch: bigger targets without changing the look ---------- */
+@media (pointer: coarse) {
+  .cam-btn { width: 40px; height: 40px; }
+  .advisor-fold { position: relative; }
+  .advisor-fold::after { content: ''; position: absolute; inset: -12px; }
+  /* Pinch zooms the map, so the +/− buttons are only clutter on a phone;
+     "back to New Haven" stays. */
+  .cam-controls .cam-btn[aria-label^="Zoom"] { display: none; }
+}
+
+/* ---------- Phones (portrait) ---------- */
+@media (max-width: 640px) {
+  /* Resource numbers stay on one line ("12 / 100" wrapped to two on small phones) */
+  .res-num { white-space: nowrap; word-spacing: -2px; letter-spacing: -0.02em; }
+
+  /* Left rail: compact buttons so it no longer runs into the level card on short screens */
+  .rail-btn { min-height: 0; height: 50px; padding: 4px 2px; gap: 2px; font-size: 7px; line-height: 1.05; }
+  .rail-btn .art-icon { width: 22px; height: 22px; }
+  .rail-item + .rail-item { margin-top: 3px; }
+
+  /* Close seals sat half off the screen edge; keep them inside */
+  .modal .seal-close, .book-close, .drawer .seal-close { top: 6px; right: 6px; }
+  .notes-close { top: 8px; right: 8px; }
+
+  /* Island panel: a smaller picture so the actions (gather, mine, tend…) come into view sooner */
+  .drawer .island-art, .drawer .painted-island-preview.island-art { max-height: 108px; height: 108px; margin-bottom: 4px; }
+  .drawer .p-head { padding-top: 16px; }
+  .drawer-body { padding: 6px 14px 16px; }
+  .drawer-body > p { font-size: 14px; line-height: 1.4; }
+
+  /* Town Workshop: cards fit the panel, with the build button always visible */
+  .ws-head p { display: none; }
+  .ws-cards { overflow-y: hidden; align-items: stretch; grid-auto-columns: minmax(160px, 56vw); }
+  .ws-card { padding: 8px 8px 10px; }
+  .ws-name { font-size: 14px; }
+  .ws-art, .ws-art.vignette, .painted-building-preview { height: 64px; }
+  .painted-building-preview > div { width: 64px; height: 64px; left: calc(50% - 32px); }
+  .anchor-upgrade-art .art-icon { width: 40px; height: 40px; }
+  .ws-desc { font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0; }
+  .ws-meta { font-size: 12px; }
+  .ws-cost { margin-top: auto; }
+  .ws-card .gold-plus { margin-top: 6px; flex: none; }
+}
+
+/* Very narrow phones (iPhone SE, small Androids) */
+@media (max-width: 360px) {
+  .res-num { font-size: 9px; }
+  .res-big { font-size: 15px; }
+  .nav-btn { min-width: 0; padding: 5px 6px; }
+}
+
+/* ---------- Phones in landscape ----------
+   Only ~340px of height: one-row HUD, slimmer nav, and panels that use the
+   full height while the HUD steps aside. */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* HUD: a single row of resources with the level badge beside it */
+  .hud-top { top: 6px; left: 8px; right: 8px; gap: 6px; grid-template-columns: minmax(0, 1fr) 34px; }
+  .title-block { display: none; }
+  .topbar { grid-column: 1; grid-row: 1; min-height: 40px; }
+  .res { padding: 3px 4px; }
+  .res-label { font-size: 7px; }
+  .res .bar { height: 4px; }
+  .level-badge { grid-column: 2; grid-row: 1; }
+  .level-orb { width: 32px; height: 32px; }
+  .objective { top: 54px; }
+
+  /* Left rail: icon-sized buttons between the HUD and the bottom */
+  .left-rail { top: 54px; left: 6px; padding: 3px; }
+  .rail-btn { width: 44px; min-height: 0; height: 46px; padding: 3px 2px; gap: 1px; font-size: 7px; line-height: 1.05; }
+  .rail-btn .art-icon { width: 22px; height: 22px; }
+  .rail-item + .rail-item { margin-top: 3px; }
+
+  /* Bottom nav: short buttons, centred */
+  .bottom-nav { left: 50%; right: auto; bottom: 6px; transform: translateX(-50%); gap: 6px; }
+  .nav-btn { min-width: 0; height: 38px; padding: 0 12px; flex-direction: row; gap: 6px; font-size: 10px; }
+  .nav-btn .art-icon, .nav-btn svg { width: 18px; height: 18px; }
+  .gear-btn { width: 38px; height: 38px; right: 8px; bottom: 6px; }
+
+  .progression-card { left: auto; right: 54px; bottom: 6px; max-width: 150px; padding: 5px 10px 6px 8px; gap: 6px; border-radius: 12px; }
+  .progression-card .progression-label { font-size: 7px; }
+  .progression-card strong { font-size: 10px; }
+  .progression-bar { height: 3px; margin-top: 3px; }
+  .cam-controls { right: 8px; bottom: 52px; top: auto; }
+  .cloud-advisor { top: 54px; }
+
+  /* Any panel open: it gets the whole height, and the HUD around it steps aside */
+  .game.has-panel .bottom-nav,
+  .game.has-panel .left-rail,
+  .game.has-panel .progression-card,
+  .game.has-panel .gear-btn,
+  .game.has-panel .cam-controls,
+  .game.has-panel .objective { opacity: 0; pointer-events: none; }
+
+  .modal-backdrop { padding: 6px; }
+  .modal { max-height: calc(100dvh - 12px); }
+  .modal .p-head { padding-top: 10px; }
+  .modal .seal-close, .book-close, .drawer .seal-close { top: 6px; right: 6px; }
+
+  .drawer, .drawer-left, .drawer-right { top: 6px; bottom: 6px; left: auto; right: 6px; width: min(440px, 64vw); }
+  .drawer .p-head { padding-top: 12px; }
+  .drawer .island-art, .drawer .painted-island-preview.island-art { max-height: 84px; height: 84px; }
+
+  .notes { top: 6px; bottom: 6px; left: auto; right: 6px; width: min(460px, 66vw); padding-top: 14px; }
+  .notes-header { display: none; }
+  .notes-close { top: 6px; right: 6px; }
+
+  .book { height: calc(100dvh - 12px); }
+  .book-left { display: none; }
+  .book-right { min-height: 0; flex: 1; }
+
+  .workshop { top: 6px; bottom: 6px; left: 6px; right: 6px; width: auto; max-height: none; padding: 6px; }
+  .workshop-inner { padding: 8px 12px 10px; height: 100%; }
+  .ws-head h2 { font-size: 17px; }
+  .ws-sub { font-size: 14px; }
+  .ws-head p { display: none; }
+  .ws-cards { overflow-y: hidden; align-items: stretch; grid-auto-columns: 190px; gap: 10px; padding-top: 6px; }
+  .ws-card { padding: 6px 8px 8px; }
+  .ws-art, .ws-art.vignette, .painted-building-preview { height: 54px; }
+  .painted-building-preview > div { width: 54px; height: 54px; left: calc(50% - 27px); }
+  .ws-desc { font-size: 12px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 2px 0; min-height: 0; }
+  .ws-cost { margin-top: auto; }
+  .gold-plus { width: 40px; height: 40px; }
+
+  .chart-cards { grid-auto-columns: 220px; padding-top: 14px; }
+  .cc-art, .cc-art .painted-island-preview { height: 80px; }
+}
+
+/* ---------- Short screens: compact workshop cards ----------
+   Picture beside the description, cost and build button on one row, so a
+   whole card fits in the ~200px a short phone leaves for it. */
+@media (max-height: 700px) and (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  .ws-sub { display: none; }
+  .ws-head h2 { font-size: 17px; }
+  .ws-head h2 .art-icon { width: 24px; height: 24px; }
+  .ws-cards { grid-auto-columns: minmax(200px, 64vw); }
+  .ws-card {
+    display: grid; align-items: center; text-align: left; column-gap: 8px; row-gap: 4px;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    grid-template-areas: "name name name" "art desc desc" "meta meta meta" "cost cost btn";
+  }
+  .ws-name { grid-area: name; text-align: center; }
+  .ws-art, .ws-art.vignette, .painted-building-preview, .anchor-upgrade-art { grid-area: art; width: 52px; height: 52px; margin: 0; }
+  .painted-building-preview > div { width: 52px; height: 52px; left: 0; }
+  .anchor-upgrade-art span { display: none; }
+  .anchor-upgrade-art .art-icon { width: 36px; height: 36px; }
+  .ws-desc { grid-area: desc; margin: 0; font-size: 12px; -webkit-line-clamp: 3; }
+  .ws-meta { grid-area: meta; justify-content: center; }
+  .ws-cost { grid-area: cost; margin: 0; justify-content: flex-start; }
+  .ws-card > button { grid-area: btn; margin: 0; }
+  .ws-card > .btn-gold.full { width: auto; padding: 8px 12px; font-size: 12px; }
+  .ws-card .gold-plus { width: 40px; height: 40px; margin: 0; }
+  .ws-cost .small { font-size: 11px; line-height: 1.2; }
+}
+
+/* Narrow phones: the workshop title ran under the close button */
+@media (max-width: 360px) {
+  .ws-head h2 { font-size: 15px; letter-spacing: 0.04em; padding-right: 40px; justify-content: flex-start; }
+}

@@ -23,8 +23,9 @@ export function BottomNav() {
             className={`nav-btn panel${isActive(id) ? ' is-active' : ''}`}
             onClick={() => (id === null ? ui.closeAll() : ui.toggle(id))}
             data-tutorial={id ? `nav-${id}` : 'nav-town'}
+            aria-label={badge ? `${label}, new entries` : undefined}
           >
-            {badge && <span className="badge">!</span>}
+            {badge && <span className="badge" aria-hidden="true">!</span>}
             <Icon size={44} />
             <span>{label}</span>
           </button>
