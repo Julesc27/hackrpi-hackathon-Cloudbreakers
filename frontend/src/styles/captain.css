@@ -9,6 +9,15 @@
   box-shadow: 0 0 0 2px rgba(227, 194, 122, 0.9), inset 0 -6px 10px rgba(5, 10, 40, 0.45);
 }
 
+/* The "Your captain" panel's badge is your portrait too; tap it to edit */
+.captain-portrait { padding: 0; overflow: hidden; cursor: pointer; background: radial-gradient(circle at 50% 38%, #3e5bb0, #1a2766 75%); }
+.captain-portrait .avatar-portrait { width: 100%; height: 100%; display: block; }
+.captain-portrait:hover { box-shadow: 0 0 0 2px #ffe3a1; }
+@media (pointer: coarse) { .captain-portrait { width: 44px; height: 44px; } }
+
+/* Phones: the rail is already tall, and the Captain panel's portrait opens the editor */
+@media (max-width: 800px) { .rail-item:has([data-tutorial="rail-captain"]) { display: none; } }
+
 /* ---------- Editor ---------- */
 .captain-editor { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: start; }
 .cap-preview {

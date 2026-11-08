@@ -532,3 +532,10 @@ test('the Captain avatar can be changed, is sanitised, and survives old saves', 
   assert.deepEqual(migrateSave(old).avatar, initial.avatar)
   assert.equal(migrateSave(man).avatar.beard, 'beard')
 })
+
+test('Captain eyes are a style and a colour from the editor', () => {
+  const s = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { body: 'man', eyes: 'happy', eyeColor: '#3a6fb8' } })
+  assert.deepEqual([s.avatar.eyes, s.avatar.eyeColor], ['happy', '#3a6fb8'])
+  const bad = gameReducer(createInitialState(), { type: 'SET_AVATAR', avatar: { eyes: 'laser', eyeColor: 'red' } })
+  assert.deepEqual([bad.avatar.eyes, bad.avatar.eyeColor], ['lashes', '#5a3a24'])
+})

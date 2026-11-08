@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useGame, useUI } from '../../game/GameContext.jsx'
 import { ISLANDS } from '../../game/data.js'
 import '../../styles/player.css'
+import AvatarPortrait from '../AvatarPortrait.jsx'
 
 export default function PlayerControls() {
-  const { player } = useGame()
+  const { player, state } = useGame()
   const ui = useUI()
   const [view, setView] = useState(null)
   useEffect(() => {
@@ -49,7 +50,9 @@ export default function PlayerControls() {
     camera?.flyTo(a.x, a.y, Math.max(1.2, camera.view().s), { duration: 300 })
   }
   return <section className="player-controls" aria-label="Captain controls" data-player-island={view.island || 'bridge'} data-player-x={view.x.toFixed(1)} data-player-y={view.y.toFixed(1)} data-player-busy={view.busy}>
-    <div className="captain-badge" aria-hidden="true">✦</div>
+    <button type="button" className="captain-badge captain-portrait" onClick={() => ui.setPanel('captain')} aria-label="Edit your Captain's look" title="Edit your Captain's look">
+      <AvatarPortrait avatar={state.avatar} size={38} />
+    </button>
     <div className="captain-info"><strong>Your captain <span>{ISLANDS[view.island]?.name || 'Crossing the sky'}</span></strong>
       <span role="status">{view.status}</span><small>WASD / arrows to walk · E to interact · tap a path to walk</small></div>
     <button className="captain-use" aria-label={view.busy ? 'Cancel task' : undefined} onClick={() => view.busy ? player.current.cancel() : player.current.interact()} disabled={!view.busy && !view.available} title={view.busy ? 'Stop this task without spending resources' : view.target || 'Walk closer to a resource or workshop'}><kbd>{view.busy ? 'Esc' : 'E'}</kbd> {view.busy ? 'Cancel task' : view.target || 'Explore'}</button>

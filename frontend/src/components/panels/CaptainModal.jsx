@@ -58,6 +58,8 @@ export function CaptainModal() {
         <div className="cap-options">
           <Choice label="Body" field="body" draft={draft} set={set} />
           <Choice label="Skin tone" field="skin" draft={draft} set={set} swatch />
+          <Choice label="Eyes" field="eyes" draft={draft} set={set} />
+          <Choice label="Eye colour" field="eyeColor" draft={draft} set={set} swatch />
           <Choice label="Hair style" field="hairStyle" draft={draft} set={set} />
           <Choice label="Hair colour" field="hair" draft={draft} set={set} swatch />
           {draft.body === 'man' && <Choice label="Beard" field="beard" draft={draft} set={set} />}

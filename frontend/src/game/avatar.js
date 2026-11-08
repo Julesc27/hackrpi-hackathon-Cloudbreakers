@@ -14,6 +14,21 @@ export const AVATAR_OPTIONS = {
     { id: '#a06a48', label: 'Brown' },
     { id: '#7a4e34', label: 'Deep' },
   ],
+  eyes: [
+    { id: 'round', label: 'Round' },
+    { id: 'lashes', label: 'Lashes' },
+    { id: 'happy', label: 'Smiling' },
+    { id: 'wide', label: 'Bright' },
+    { id: 'sleepy', label: 'Sleepy' },
+  ],
+  eyeColor: [
+    { id: '#2a1f2e', label: 'Dark' },
+    { id: '#5a3a24', label: 'Brown' },
+    { id: '#7a6a2e', label: 'Hazel' },
+    { id: '#3f7a4a', label: 'Green' },
+    { id: '#3a6fb8', label: 'Blue' },
+    { id: '#6b7480', label: 'Grey' },
+  ],
   hairStyle: [
     { id: 'short', label: 'Short' },
     { id: 'curly', label: 'Curly' },
@@ -71,7 +86,7 @@ export const AVATAR_OPTIONS = {
 }
 
 export const DEFAULT_AVATAR = {
-  body: 'woman', skin: '#e2b08a', hairStyle: 'ponytail', hair: '#6b4426', beard: 'none',
+  body: 'woman', skin: '#e2b08a', eyes: 'lashes', eyeColor: '#5a3a24', hairStyle: 'ponytail', hair: '#6b4426', beard: 'none',
   outfit: 'coat', top: '#2c4fb0', bottom: '#3a3550', hat: 'captain',
 }
 
@@ -98,7 +113,7 @@ export function avatarLook(a) {
   const v = normalizeAvatar(a)
   return {
     kid: false, role: 'captain', body: v.body, scarf: null, kite: null,
-    skin: v.skin, hair: v.hair, hairStyle: v.hairStyle, beard: v.beard,
+    skin: v.skin, eyes: v.eyes, eyeColor: v.eyeColor, hair: v.hair, hairStyle: v.hairStyle, beard: v.beard,
     shirt: v.top, pants: v.bottom,
     coat: v.outfit === 'coat', trim: v.outfit === 'coat' || v.outfit === 'tunic' ? '#e3c27a' : null,
     cloak: v.outfit === 'cloak' ? v.top : null, dress: v.outfit === 'dress',

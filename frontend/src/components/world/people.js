@@ -288,6 +288,8 @@ function makeLook(r) {
   }
   look.hairStyle = look.body === 'woman' ? pick(r, ['long', 'ponytail', 'bun', 'curly', 'short']) : pick(r, ['short', 'short', 'curly', 'bald'])
   look.beard = look.body === 'man' && !kid && r() < 0.3 ? pick(r, ['stubble', 'beard']) : 'none'
+  look.eyes = look.body === 'woman' && r() < 0.6 ? 'lashes' : pick(r, ['round', 'round', 'happy', 'wide', 'sleepy'])
+  look.eyeColor = pick(r, ['#2a1f2e', '#2a1f2e', '#5a3a24', '#3a6fb8', '#3f7a4a'])
   switch (role) {
     case 'skywright': Object.assign(look, { shirt: pick(r, NAVY), trim: '#e3c27a', hat: 'aviator', carry: r() < 0.6 ? 'plank' : 'toolbag' }); break
     case 'farmer': Object.assign(look, { shirt: pick(r, ['#5f9e4f', '#d39a3a', '#b8573a']), apron: '#f3e6c6', hat: 'straw', carry: 'basket' }); break
@@ -551,6 +553,40 @@ function drawPersonFar(ctx, a) {
   ctx.beginPath(); ctx.arc(x, y - 12.1 * s, 2.2 * s, Math.PI, TAU); ctx.fillStyle = col(top); ctx.fill()
 }
 
+/* Eyes, in the three-quarter view every figure uses: the near eye at x≈1.45, the far one at x≈0.5.
+ * Styles: round (default), lashes, happy (smiling arcs), wide (big and bright), sleepy (half-closed). */
+const EYES = [[0.5, 0.12, 0.26], [1.45, 0.08, 0.25]]
+function drawEyes(ctx, a, hy) {
+  const ink = '#2a1f2e', iris = a.eyeColor || ink, style = a.eyes || 'round'
+  for (const [i, [ex, dy, r0]] of EYES.entries()) {
+    const ey = hy + dy
+    if (style === 'happy') {
+      ctx.beginPath(); ctx.arc(ex, ey + 0.12, r0 * 1.15, Math.PI * 1.1, Math.PI * 1.9)
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.2; ctx.lineCap = 'round'; ctx.stroke()
+      continue
+    }
+    const r = style === 'wide' ? r0 * 1.45 : r0
+    if (style === 'wide') circle(ctx, ex, ey, r + 0.08, '#ffffff')
+    circle(ctx, ex, ey, r, iris)
+    if (iris !== ink) circle(ctx, ex + 0.03, ey + 0.02, r * 0.5, ink)
+    circle(ctx, ex + r * 0.35, ey - r * 0.4, r * 0.32, 'rgba(255,255,255,.95)')
+    if (style === 'sleepy') {
+      // a heavy upper lid over the top half
+      ctx.beginPath(); ctx.arc(ex, ey, r + 0.06, Math.PI, Math.PI * 2); ctx.closePath()
+      ctx.fillStyle = col(a.skin); ctx.fill()
+      line(ctx, ex - r - 0.05, ey, ex + r + 0.05, ey, ink, 0.18)
+    }
+    if (style === 'lashes') {
+      // two short lashes flicking out from each eye's outer corner
+      const out = i === 1 ? 1 : -1
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.16; ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.arc(ex, ey, r + 0.03, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(ex + out * r * 0.85, ey - r * 0.55); ctx.lineTo(ex + out * (r + 0.24), ey - r * 0.95); ctx.lineWidth = 0.13; ctx.stroke()
+    }
+  }
+}
+
 /** Draw one resident with their feet at (a.x, a.y). `detail` false draws the far-zoom figure. */
 export function drawPerson(ctx, a, t, detail = true) {
   if (!detail) { drawPersonFar(ctx, a); return }
@@ -745,14 +781,11 @@ export function drawPerson(ctx, a, t, detail = true) {
     circle(ctx, -0.6, hy - 1.1, 0.5, col('#ffffff', 0.22)) // a little shine
   }
   if (!a.back) {
-    // a face: two dot eyes and a little rosy cheek
-    circle(ctx, 0.9, hy + 0.15, 0.26, '#2a1f2e')
-    circle(ctx, 1.9, hy + 0.1, 0.22, '#2a1f2e')
-    circle(ctx, 1.2, hy + 0.95, 0.4, 'rgba(232,120,110,.45)')
-    if (a.body === 'woman') {
-      line(ctx, 1.9, hy - 0.12, 2.35, hy - 0.42, '#2a1f2e', 0.22)
-      line(ctx, 0.85, hy - 0.08, 0.55, hy - 0.42, '#2a1f2e', 0.2)
-    }
+    // a face: two eyes (see drawEyes), a rosy cheek and a small smile
+    drawEyes(ctx, a, hy)
+    circle(ctx, 1.6, hy + 0.75, 0.38, 'rgba(232,120,110,.45)')
+    ctx.beginPath(); ctx.arc(1.0, hy + 0.85, 0.38, Math.PI * 0.2, Math.PI * 0.8)
+    ctx.strokeStyle = 'rgba(90,40,40,.75)'; ctx.lineWidth = 0.2; ctx.lineCap = 'round'; ctx.stroke()
     if (a.beard && a.beard !== 'none') {
       // along the jaw, below the cheeks, leaving a little gap for the mouth
       ctx.beginPath(); ctx.arc(0, hy, 2.15, Math.PI * 0.08, Math.PI * 0.82)
